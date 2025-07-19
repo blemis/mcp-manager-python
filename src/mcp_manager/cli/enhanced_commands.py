@@ -39,7 +39,7 @@ async def _get_available_docker_desktop_servers(name: str):
     try:
         import subprocess
         result = subprocess.run(
-            ["docker", "mcp", "catalog", "show", "docker-mcp"],
+            ["/opt/homebrew/bin/docker", "mcp", "catalog", "show", "docker-mcp"],
             capture_output=True,
             text=True,
             timeout=10,

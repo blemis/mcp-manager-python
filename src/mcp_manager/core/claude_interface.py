@@ -29,7 +29,7 @@ class ClaudeInterface:
         """Check if Claude CLI is available."""
         try:
             result = subprocess.run(
-                ["claude", "--version"],
+                ["/opt/homebrew/bin/claude", "--version"],
                 capture_output=True,
                 timeout=10,
                 env=self._get_env(),
@@ -62,7 +62,7 @@ class ClaudeInterface:
         """
         try:
             result = subprocess.run(
-                ["claude", "mcp", "list"],
+                ["/opt/homebrew/bin/claude", "mcp", "list"],
                 capture_output=True,
                 text=True,
                 timeout=30,
@@ -128,17 +128,16 @@ class ClaudeInterface:
         try:
             # Build command - handle Docker commands specially  
             if command == "docker" and args:
-                # For Docker commands, we need to pass them as: docker arg1 arg2 arg3
-                # But claude mcp add expects a single command string
-                full_command = f"{command} {' '.join(args)}"
-                cmd_args = ["claude", "mcp", "add", name, full_command]
+                # For Docker commands, use full path to docker to avoid ENOENT
+                full_command = f"/opt/homebrew/bin/docker {' '.join(args)}"
+                cmd_args = ["/opt/homebrew/bin/claude", "mcp", "add", name, full_command]
             else:
                 # For other commands, use full command string
                 if args:
                     full_command = f"{command} {' '.join(args)}"
                 else:
                     full_command = command
-                cmd_args = ["claude", "mcp", "add", name, full_command]
+                cmd_args = ["/opt/homebrew/bin/claude", "mcp", "add", name, full_command]
             
             # Set up environment
             cmd_env = self._get_env()
@@ -176,7 +175,7 @@ class ClaudeInterface:
         """
         try:
             result = subprocess.run(
-                ["claude", "mcp", "remove", name],
+                ["/opt/homebrew/bin/claude", "mcp", "remove", name],
                 capture_output=True,
                 text=True,
                 timeout=30,
@@ -206,7 +205,7 @@ class ClaudeInterface:
         """
         try:
             result = subprocess.run(
-                ["claude", "mcp", "get", name],
+                ["/opt/homebrew/bin/claude", "mcp", "get", name],
                 capture_output=True,
                 text=True,
                 timeout=30,

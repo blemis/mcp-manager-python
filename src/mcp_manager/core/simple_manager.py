@@ -212,7 +212,7 @@ class SimpleMCPManager:
             
             # Step 1: Enable the server in Docker Desktop
             result = subprocess.run(
-                ["docker", "mcp", "server", "enable", server_name],
+                ["/opt/homebrew/bin/docker", "mcp", "server", "enable", server_name],
                 capture_output=True,
                 text=True,
                 timeout=30,
@@ -308,7 +308,7 @@ class SimpleMCPManager:
             
             # Step 1: Disable the server in Docker Desktop
             result = subprocess.run(
-                ["docker", "mcp", "server", "disable", server_name],
+                ["/opt/homebrew/bin/docker", "mcp", "server", "disable", server_name],
                 capture_output=True,
                 text=True,
                 timeout=30,
