@@ -11,7 +11,10 @@ from typing import Any, Dict, List, Optional, Union
 
 import toml
 from pydantic import BaseModel, Field, validator
-from pydantic_settings import BaseSettings
+try:
+    from pydantic_settings import BaseSettings
+except ImportError:
+    from pydantic import BaseSettings
 
 from mcp_manager.utils.logging import get_logger
 
