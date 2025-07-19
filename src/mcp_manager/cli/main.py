@@ -438,6 +438,28 @@ def install_package(install_id: str):
         
         console.print(f"[blue]Installing[/blue] {target_result.package} as [cyan]{server_name}[/cyan]")
         
+        # Check if server already exists
+        existing_servers = await manager.list_servers()
+        if any(s.name == server_name for s in existing_servers):
+            console.print(f"[yellow]⚠[/yellow] Server '{server_name}' already exists")
+            from rich.prompt import Confirm
+            if not Confirm.ask("Replace existing server?"):
+                console.print("[dim]Installation cancelled[/dim]")
+                return
+        
+        # Check for similar servers that might provide the same functionality
+        from mcp_manager.cli.enhanced_commands import _find_similar_servers
+        similar_servers = _find_similar_servers(server_name, target_result.server_type.value, existing_servers)
+        if similar_servers:
+            console.print(f"[yellow]⚠[/yellow] Found similar servers that might provide the same functionality:")
+            for similar in similar_servers:
+                console.print(f"  • {similar.name} ({similar.server_type.value}) - {similar.description or 'No description'}")
+            console.print(f"\n[yellow]Installing multiple servers for the same functionality may cause conflicts.[/yellow]")
+            from rich.prompt import Confirm
+            if not Confirm.ask("Continue anyway?"):
+                console.print("[dim]Installation cancelled[/dim]")
+                return
+        
         # Install the server
         try:
             server = await manager.add_server(
