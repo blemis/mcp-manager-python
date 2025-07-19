@@ -10,7 +10,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class ServerScope(str, Enum):
@@ -62,7 +62,8 @@ class Server(BaseModel):
     last_error: Optional[str] = Field(default=None, description="Last error message")
     restart_count: int = Field(default=0, description="Number of restarts")
     
-    @validator("name")
+    @field_validator("name")
+    @classmethod
     def validate_name(cls, v: str) -> str:
         """Validate server name."""
         if not v.strip():
@@ -71,7 +72,8 @@ class Server(BaseModel):
             raise ValueError("Server name too long (max 100 characters)")
         return v.strip()
         
-    @validator("command")  
+    @field_validator("command")
+    @classmethod
     def validate_command(cls, v: str) -> str:
         """Validate server command."""
         if not v.strip():

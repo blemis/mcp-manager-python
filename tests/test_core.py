@@ -15,15 +15,10 @@ from mcp_manager.utils.config import Config
 
 class TestMCPManager:
     """Test MCPManager class."""
-    
-    def setup_method(self):
-        """Setup test fixtures."""
-        self.config = Config()
-        self.manager = MCPManager(self.config)
         
-    def test_add_server(self):
+    def test_add_server(self, manager):
         """Test adding a server."""
-        server = self.manager.add_server(
+        server = manager.add_server(
             name="test-server",
             command="echo test",
             scope=ServerScope.USER,
@@ -35,58 +30,60 @@ class TestMCPManager:
         assert server.scope == ServerScope.USER
         assert server.server_type == ServerType.CUSTOM
         
-    def test_add_duplicate_server(self):
+    def test_add_duplicate_server(self, manager):
         """Test adding duplicate server raises error."""
-        self.manager.add_server(
+        manager.add_server(
             name="test-server",
             command="echo test",
             scope=ServerScope.USER,
+            server_type=ServerType.CUSTOM,
         )
         
         with pytest.raises(ServerError):
-            self.manager.add_server(
+            manager.add_server(
                 name="test-server",
                 command="echo test2",
                 scope=ServerScope.USER,
+                server_type=ServerType.CUSTOM,
             )
             
-    def test_list_servers(self):
+    def test_list_servers(self, manager):
         """Test listing servers."""
-        self.manager.add_server("server1", "cmd1", ServerScope.USER)
-        self.manager.add_server("server2", "cmd2", ServerScope.LOCAL)
+        manager.add_server("server1", "cmd1", ServerScope.USER, server_type=ServerType.CUSTOM)
+        manager.add_server("server2", "cmd2", ServerScope.LOCAL, server_type=ServerType.CUSTOM)
         
-        all_servers = self.manager.list_servers()
+        all_servers = manager.list_servers()
         assert len(all_servers) == 2
         
-        user_servers = self.manager.list_servers(ServerScope.USER)
+        user_servers = manager.list_servers(ServerScope.USER)
         assert len(user_servers) == 1
         assert user_servers[0].name == "server1"
         
-    def test_enable_disable_server(self):
+    def test_enable_disable_server(self, manager):
         """Test enabling and disabling servers."""
-        server = self.manager.add_server("test", "cmd", ServerScope.USER)
+        server = manager.add_server("test", "cmd", ServerScope.USER, server_type=ServerType.CUSTOM)
         assert server.enabled is True
         
-        disabled = self.manager.disable_server("test")
+        disabled = manager.disable_server("test")
         assert disabled.enabled is False
         
-        enabled = self.manager.enable_server("test")
+        enabled = manager.enable_server("test")
         assert enabled.enabled is True
         
-    def test_remove_server(self):
+    def test_remove_server(self, manager):
         """Test removing a server."""
-        self.manager.add_server("test", "cmd", ServerScope.USER)
+        manager.add_server("test", "cmd", ServerScope.USER, server_type=ServerType.CUSTOM)
         
-        result = self.manager.remove_server("test")
+        result = manager.remove_server("test")
         assert result is True
         
-        servers = self.manager.list_servers()
+        servers = manager.list_servers()
         assert len(servers) == 0
         
-    def test_remove_nonexistent_server(self):
+    def test_remove_nonexistent_server(self, manager):
         """Test removing nonexistent server raises error."""
         with pytest.raises(ServerError):
-            self.manager.remove_server("nonexistent")
+            manager.remove_server("nonexistent")
 
 
 class TestServer:

@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 import toml
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 try:
     from pydantic_settings import BaseSettings
 except ImportError:
@@ -31,7 +31,8 @@ class LoggingConfig(BaseModel):
     max_bytes: int = Field(default=10 * 1024 * 1024, description="Max log file size")
     backup_count: int = Field(default=5, description="Number of backup files")
     
-    @validator("level")
+    @field_validator("level")
+    @classmethod
     def validate_level(cls, v: str) -> str:
         """Validate logging level."""
         valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
@@ -39,7 +40,8 @@ class LoggingConfig(BaseModel):
             raise ValueError(f"Invalid log level: {v}")
         return v.upper()
         
-    @validator("format_type")
+    @field_validator("format_type")
+    @classmethod
     def validate_format_type(cls, v: str) -> str:
         """Validate format type."""
         if v not in ["text", "json"]:
@@ -87,7 +89,8 @@ class UIConfig(BaseModel):
         description="Auto-refresh interval in seconds"
     )
     
-    @validator("theme")
+    @field_validator("theme")
+    @classmethod
     def validate_theme(cls, v: str) -> str:
         """Validate theme."""
         if v not in ["dark", "light"]:
@@ -112,11 +115,11 @@ class Config(BaseSettings):
     discovery: DiscoveryConfig = Field(default_factory=DiscoveryConfig)
     ui: UIConfig = Field(default_factory=UIConfig)
     
-    class Config:
-        """Pydantic configuration."""
-        env_prefix = "MCP_MANAGER_"
-        env_nested_delimiter = "__"
-        case_sensitive = False
+    model_config = {
+        "env_prefix": "MCP_MANAGER_",
+        "env_nested_delimiter": "__",
+        "case_sensitive": False,
+    }
         
     def get_config_dir(self) -> Path:
         """Get configuration directory path."""
