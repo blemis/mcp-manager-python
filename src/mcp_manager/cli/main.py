@@ -23,6 +23,7 @@ from mcp_manager.core.models import ServerScope, ServerType
 from mcp_manager.utils.config import get_config
 from mcp_manager.utils.logging import setup_logging
 from mcp_manager.utils.logging import get_logger
+from mcp_manager.cli import enhanced_commands
 
 console = Console()
 logger = get_logger(__name__)
@@ -235,26 +236,17 @@ def add(
     """Add a new MCP server."""
     manager = cli_context.get_manager()
     
-    # Parse environment variables
-    env_dict = {}
-    for env_var in env:
-        if "=" not in env_var:
-            raise click.BadParameter(f"Invalid environment variable format: {env_var}")
-        key, value = env_var.split("=", 1)
-        env_dict[key] = value
-        
-    # Create server
-    server = manager.add_server(
+    # Use enhanced validation
+    enhanced_commands.validate_and_add_server(
+        manager=manager,
         name=name,
         command=command,
-        scope=ServerScope(scope),
-        server_type=ServerType(server_type),
+        scope=scope,
+        server_type=server_type,
         description=description,
-        env=env_dict,
-        args=list(args),
+        env=env,
+        args=args,
     )
-    
-    console.print(f"[green]✓[/green] Added server: {server.name} ({server.scope.value})")
 
 
 @cli.command()
@@ -264,15 +256,23 @@ def add(
     type=click.Choice([s.value for s in ServerScope], case_sensitive=False),
     help="Configuration scope"
 )
+@click.option(
+    "--force", "-f",
+    is_flag=True,
+    help="Force removal without confirmation"
+)
 @handle_errors
-def remove(name: str, scope: Optional[str]):
+def remove(name: str, scope: Optional[str], force: bool):
     """Remove an MCP server."""
     manager = cli_context.get_manager()
     
-    scope_filter = ServerScope(scope) if scope else None
-    
-    if manager.remove_server(name, scope_filter):
-        console.print(f"[green]✓[/green] Removed server: {name}")
+    # Use enhanced validation and confirmation
+    enhanced_commands.validate_and_remove_server(
+        manager=manager,
+        name=name,
+        scope=scope,
+        force=force,
+    )
 
 
 @cli.command()
@@ -282,8 +282,11 @@ def enable(name: str):
     """Enable an MCP server."""
     manager = cli_context.get_manager()
     
-    server = manager.enable_server(name)
-    console.print(f"[green]✓[/green] Enabled server: {server.name}")
+    # Use enhanced validation
+    enhanced_commands.validate_and_enable_server(
+        manager=manager,
+        name=name,
+    )
 
 
 @cli.command()
@@ -293,8 +296,11 @@ def disable(name: str):
     """Disable an MCP server."""
     manager = cli_context.get_manager()
     
-    server = manager.disable_server(name)
-    console.print(f"[yellow]⚠[/yellow] Disabled server: {server.name}")
+    # Use enhanced validation
+    enhanced_commands.validate_and_disable_server(
+        manager=manager,
+        name=name,
+    )
 
 
 @cli.command()

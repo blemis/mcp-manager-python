@@ -36,19 +36,38 @@ def validate_server_name(name: str) -> bool:
     if len(name) > 100:
         raise ValidationError("Server name too long (max 100 characters)")
         
-    # Check for invalid characters
-    if not re.match(r"^[a-zA-Z0-9_-]+$", name):
-        raise ValidationError("Server name can only contain letters, numbers, hyphens, and underscores")
+    if len(name) < 2:
+        raise ValidationError("Server name too short (min 2 characters)")
+        
+    # Reserved names
+    reserved_names = ["all", "none", "true", "false", "null", "undefined"]
+    if name.lower() in reserved_names:
+        raise ValidationError(f"'{name}' is a reserved name. Please choose a different name")
+        
+    # Check for invalid characters - allow @ for scoped packages
+    if not re.match(r"^[@a-zA-Z0-9/_.-]+$", name):
+        raise ValidationError(
+            "Server name can only contain letters, numbers, hyphens, underscores, "
+            "forward slashes, dots, and @ symbol (for scoped packages)"
+        )
+        
+    # Check for valid scoped package format if @ is present
+    if "@" in name:
+        if not re.match(r"^@[a-zA-Z0-9-]+/[a-zA-Z0-9_.-]+$", name):
+            raise ValidationError(
+                "Invalid scoped package format. Expected: @scope/package-name"
+            )
         
     return True
 
 
-def validate_command(command: str) -> bool:
+def validate_command(command: str, server_type: Optional[str] = None) -> bool:
     """
     Validate server command.
     
     Args:
         command: Command to validate
+        server_type: Type of server (npm, docker, custom)
         
     Returns:
         True if valid
@@ -62,6 +81,44 @@ def validate_command(command: str) -> bool:
     # Check if command is too long
     if len(command) > 1000:
         raise ValidationError("Server command too long (max 1000 characters)")
+        
+    # Security checks
+    dangerous_patterns = [
+        r";\s*rm\s+-rf",  # rm -rf command
+        r"&&\s*rm\s+-rf",
+        r"\|\s*rm\s+-rf",
+        r">\s*/dev/.*",  # redirecting to device files
+        r"curl.*\|\s*sh",  # curl piped to shell
+        r"wget.*\|\s*sh",
+    ]
+    
+    for pattern in dangerous_patterns:
+        if re.search(pattern, command, re.IGNORECASE):
+            raise ValidationError(
+                f"Command contains potentially dangerous pattern. "
+                "Please review the command for security concerns."
+            )
+    
+    # Type-specific validation
+    if server_type == "npm":
+        if not command.startswith(("npx", "npm", "node")):
+            logger.warning(
+                f"NPM server command doesn't start with npx/npm/node: {command}"
+            )
+            
+    elif server_type == "docker":
+        if not command.startswith("docker"):
+            raise ValidationError(
+                "Docker server command must start with 'docker'. "
+                f"Got: {command.split()[0] if command.split() else ''}"
+            )
+            
+        # Check for required docker flags
+        if "-i" not in command and "--interactive" not in command:
+            logger.warning(
+                "Docker command missing interactive flag (-i). "
+                "MCP servers typically require interactive mode."
+            )
         
     return True
 
@@ -289,6 +346,82 @@ def validate_server_config(config: dict) -> bool:
             
     # Validate individual fields
     validate_server_name(config["name"])
-    validate_command(config["command"])
+    validate_command(config["command"], config.get("server_type"))
     
     return True
+
+
+def suggest_server_name_correction(invalid_name: str) -> Optional[str]:
+    """
+    Suggest a corrected server name based on invalid input.
+    
+    Args:
+        invalid_name: The invalid server name
+        
+    Returns:
+        Suggested correction or None
+    """
+    if not invalid_name:
+        return None
+        
+    # Remove invalid characters
+    suggested = re.sub(r"[^@a-zA-Z0-9/_.-]", "-", invalid_name)
+    
+    # Replace multiple consecutive hyphens
+    suggested = re.sub(r"-+", "-", suggested)
+    
+    # Remove leading/trailing hyphens
+    suggested = suggested.strip("-")
+    
+    # Ensure minimum length
+    if len(suggested) < 2:
+        suggested = f"server-{suggested}" if suggested else "server-name"
+        
+    # Truncate if too long
+    if len(suggested) > 100:
+        suggested = suggested[:100]
+        
+    return suggested
+
+
+def validate_server_availability(server_type: str, server_name: str) -> Tuple[bool, Optional[str]]:
+    """
+    Check if a server is available for installation.
+    
+    Args:
+        server_type: Type of server (npm, docker)
+        server_name: Name/package of the server
+        
+    Returns:
+        Tuple of (available, error_message)
+    """
+    if server_type == "npm":
+        # Check if NPM is available
+        if not shutil.which("npm"):
+            return False, "NPM is not installed. Install Node.js and NPM to use NPM-based servers."
+            
+        # Could check NPM registry here, but that would be async
+        # For now, assume it's available
+        return True, None
+        
+    elif server_type == "docker":
+        # Check if Docker is available
+        if not shutil.which("docker"):
+            return False, "Docker is not installed. Install Docker Desktop to use Docker-based servers."
+            
+        # Check if Docker daemon is running
+        try:
+            result = subprocess.run(
+                ["docker", "info"],
+                capture_output=True,
+                timeout=5,
+            )
+            if result.returncode != 0:
+                return False, "Docker daemon is not running. Start Docker Desktop and try again."
+        except (subprocess.SubprocessError, subprocess.TimeoutExpired):
+            return False, "Cannot connect to Docker. Ensure Docker Desktop is running."
+            
+        return True, None
+        
+    # Custom servers are always "available"
+    return True, None
