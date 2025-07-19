@@ -163,6 +163,7 @@ class DiscoveryResult(BaseModel):
     keywords: List[str] = Field(default_factory=list, description="Keywords")
     server_type: ServerType = Field(description="Server type")
     install_command: str = Field(description="Installation command")
+    install_args: List[str] = Field(default_factory=list, description="Installation command arguments")
     downloads: Optional[int] = Field(default=None, description="Download count")
     last_updated: Optional[datetime] = Field(default=None, description="Last update")
     

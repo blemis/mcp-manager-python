@@ -359,6 +359,45 @@ def discover(query: Optional[str], server_type: Optional[str], limit: int):
 
 
 @cli.command()
+@click.argument("name")
+@handle_errors
+def install(name: str):
+    """Install a server from discovery results."""
+    discovery = cli_context.get_discovery()
+    manager = cli_context.get_manager()
+    
+    # Search for the server
+    async def find_and_install():
+        results = await discovery.discover_servers(query=name, limit=10)
+        
+        # Find exact match or best match
+        exact_match = next((r for r in results if r.name == name), None)
+        if not exact_match:
+            # Try partial match
+            partial_matches = [r for r in results if name.lower() in r.name.lower()]
+            if not partial_matches:
+                console.print(f"[red]✗[/red] Server '{name}' not found in discovery")
+                console.print("[yellow]💡[/yellow] Try: [cyan]mcp-manager discover --query {name}[/cyan]")
+                return
+            exact_match = partial_matches[0]
+            console.print(f"[yellow]ℹ[/yellow] Using closest match: {exact_match.name}")
+        
+        # Install the server
+        server = await manager.add_server(
+            name=exact_match.name,
+            server_type=exact_match.server_type,
+            command=exact_match.install_command,
+            description=exact_match.description,
+        )
+        
+        console.print(f"[green]✓[/green] Installed server: {server.name}")
+        console.print(f"[dim]Command: {exact_match.install_command}[/dim]")
+        console.print("\n[green]✓[/green] Server is now active in Claude Code!")
+    
+    asyncio.run(find_and_install())
+
+
+@cli.command()
 @handle_errors
 def sync():
     """No longer needed - MCP Manager works directly with Claude's internal state."""

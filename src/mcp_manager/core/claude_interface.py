@@ -126,11 +126,13 @@ class ClaudeInterface:
             True if successful
         """
         try:
-            # Build command
-            cmd_args = ["claude", "mcp", "add", name, command]
-            
+            # Build command - Claude expects the full command as one string
             if args:
-                cmd_args.extend(args)
+                full_command = f"{command} {' '.join(args)}"
+            else:
+                full_command = command
+                
+            cmd_args = ["claude", "mcp", "add", name, full_command]
             
             # Set up environment
             cmd_env = self._get_env()

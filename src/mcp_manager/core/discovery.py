@@ -364,13 +364,17 @@ class ServerDiscovery:
                 if not (name_match or desc_match):
                     continue
                     
+            # Build full Docker command for Claude
+            full_docker_command = f"docker run -i --rm --network bridge --pull always {server_info['package']}:latest"
+            
             result = DiscoveryResult(
                 name=f"docker-desktop-{server_info['name']}",
                 package=server_info["package"],
                 version=server_info["version"],
                 description=server_info["description"],
                 server_type=ServerType.DOCKER,
-                install_command=f"docker run -i --rm --network bridge --pull always {server_info['package']}:latest",
+                install_command=full_docker_command,
+                install_args=[],  # Not needed since command is full
                 keywords=["mcp", "docker-desktop", server_info["name"], "docker"],
             )
             results.append(result)

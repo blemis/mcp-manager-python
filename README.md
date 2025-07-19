@@ -29,6 +29,35 @@ MCP Manager is a professional tool for managing MCP servers used by Claude Code.
 - **Comprehensive Testing**: Unit and integration test coverage
 - **Type Safety**: Full type hints and mypy validation
 
+## Key Insights
+
+- How CLAUDE works.
+
+  1. Global Level
+
+  File: ~/.config/claude-code/mcp-servers.json
+  - User-wide servers available across all projects
+  - Format: Standard MCP JSON schema
+  - Managed by: External tools, manual editing
+
+  2. Project Level
+
+  File: ./.mcp.json (in project directory)
+  - Project-specific servers
+  - Format: Standard MCP JSON schema
+  - Managed by: External tools, manual editing
+
+  3. Internal (Claude Code's State)
+
+  File: ~/.claude.json
+  - Location: .projectConfigs["/path/to/project"].mcpServers
+  - Contains the actual active configuration Claude Code uses
+  - Managed by: claude mcp CLI commands only
+
+  The Key Insight
+  Claude Code primarily uses its internal state (.claude.json)
+  Claude Code's internal state is the source of truth for what actually runs!
+
 ## Quick Start
 
 ### Installation
