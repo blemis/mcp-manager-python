@@ -86,7 +86,9 @@ class ServerDiscovery:
         if not server_type or server_type == ServerType.NPM:
             source_count += 1
         if not server_type or server_type == ServerType.DOCKER:
-            source_count += 2  # Docker Hub and Docker Desktop
+            source_count += 1
+        if not server_type or server_type == ServerType.DOCKER_DESKTOP:
+            source_count += 1
         
         per_source_limit = limit // source_count if source_count > 0 else limit
         
@@ -95,6 +97,8 @@ class ServerDiscovery:
             
         if not server_type or server_type == ServerType.DOCKER:
             tasks.append(self._discover_docker_hub_servers(query, per_source_limit))
+            
+        if not server_type or server_type == ServerType.DOCKER_DESKTOP:
             tasks.append(self._discover_docker_desktop_servers(query, per_source_limit))
         
         # Run discovery tasks concurrently

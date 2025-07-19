@@ -58,6 +58,17 @@ MCP Manager is a professional tool for managing MCP servers used by Claude Code.
   Claude Code primarily uses its internal state (.claude.json)
   Claude Code's internal state is the source of truth for what actually runs!
 
+The key insight is that the claude mcp add-from-claude-desktop docker-gateway command automatically imports ALL active Docker Desktop MCPs at once. So the MCP Manager
+  should:
+
+  1. Discovery: Use docker mcp catalog to find available Docker Desktop MCPs
+  2. Management: Use docker mcp server enable/disable to control which ones are active in Docker Desktop
+  3. Integration: Use claude mcp add-from-claude-desktop docker-gateway to sync all active DD MCPs into Claude Code
+
+  The user just sees simple commands like mcp-manager add aws-diagram and behind the scenes it:
+  - Enables aws-diagram in Docker Desktop
+  - Re-imports the gateway to Claude Code (which now includes aws-diagram)
+
 ## Quick Start
 
 ### Installation
