@@ -224,12 +224,12 @@ class SimpleMCPManager:
             
             logger.info(f"Successfully enabled {server_name} in Docker Desktop")
             
-            # Step 2: Import/update the docker-gateway in Claude Code
-            # This automatically includes ALL enabled Docker Desktop servers
-            gateway_success = await self._import_docker_gateway_to_claude_code()
+            # Step 2: Sync all Docker Desktop servers to Claude Code
+            # This uses claude mcp add-from-claude-desktop to sync ALL enabled servers
+            sync_success = await self._import_docker_gateway_to_claude_code()
             
-            if gateway_success:
-                logger.info(f"Successfully synced {server_name} to Claude Code via docker-gateway")
+            if sync_success:
+                logger.info(f"Successfully synced {server_name} to Claude Code")
                 return True
             else:
                 logger.error("Failed to sync Docker Desktop servers to Claude Code")
@@ -258,75 +258,32 @@ class SimpleMCPManager:
             logger.warning(f"Failed to get enabled Docker servers: {e}")
             return []
     
-    async def _update_claude_desktop_gateway(self, enabled_servers: List[str]) -> bool:
-        """Update Claude Desktop config with current enabled servers."""
-        try:
-            import json
-            from pathlib import Path
-            
-            claude_desktop_config = Path.home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
-            
-            if claude_desktop_config.exists():
-                with open(claude_desktop_config) as f:
-                    config = json.load(f)
-            else:
-                config = {"mcpServers": {}}
-            
-            # Ensure mcpServers exists
-            if "mcpServers" not in config:
-                config["mcpServers"] = {}
-            
-            # Update the docker-gateway configuration with all enabled servers
-            config["mcpServers"]["docker-gateway"] = {
-                "command": "docker",
-                "args": ["mcp", "gateway", "run", "--servers", ",".join(sorted(enabled_servers))]
-            }
-            
-            # Ensure directory exists
-            claude_desktop_config.parent.mkdir(parents=True, exist_ok=True)
-            
-            # Write back to config
-            with open(claude_desktop_config, 'w') as f:
-                json.dump(config, f, indent=2)
-            
-            logger.info(f"Updated Claude Desktop config with servers: {enabled_servers}")
-            return True
-            
-        except Exception as e:
-            logger.error(f"Failed to update Claude Desktop config: {e}")
-            return False
     
     async def _import_docker_gateway_to_claude_code(self) -> bool:
-        """Import/update docker-gateway from Claude Desktop to Claude Code."""
+        """Add/update docker-gateway directly to Claude Code."""
         try:
-            import subprocess
-            
-            # Remove existing docker-gateway if it exists to avoid conflicts
-            if self.claude.server_exists("docker-gateway"):
-                logger.info("Removing existing docker-gateway before re-import")
-                self.claude.remove_server("docker-gateway")
-            
-            # Use the official Claude Code import command
-            # This automatically imports docker-gateway with ALL currently enabled Docker Desktop servers
-            # Note: add-from-claude-desktop is interactive, so we use a different approach
-            
-            # First, ensure Claude Desktop config has the docker-gateway
+            # Get the current list of enabled Docker Desktop servers
             enabled_servers = await self._get_enabled_docker_servers()
             if not enabled_servers:
                 logger.warning("No Docker Desktop servers enabled")
                 return False
-                
-            await self._update_claude_desktop_gateway(enabled_servers)
             
-            # Now add the docker-gateway directly using the configuration
-            result = self.claude.add_server(
+            # Remove existing docker-gateway if it exists
+            if self.claude.server_exists("docker-gateway"):
+                logger.info("Removing existing docker-gateway before re-adding")
+                self.claude.remove_server("docker-gateway")
+            
+            # Add docker-gateway directly to Claude with current enabled servers
+            logger.info(f"Adding docker-gateway to Claude with servers: {enabled_servers}")
+            
+            success = self.claude.add_server(
                 name="docker-gateway",
                 command="docker",
                 args=["mcp", "gateway", "run", "--servers", ",".join(sorted(enabled_servers))],
                 env=None,
             )
             
-            if result:
+            if success:
                 logger.info("Successfully added docker-gateway to Claude Code")
                 return True
             else:
@@ -334,7 +291,7 @@ class SimpleMCPManager:
                 return False
             
         except Exception as e:
-            logger.error(f"Failed to import docker-gateway: {e}")
+            logger.error(f"Failed to add docker-gateway: {e}")
             return False
     
     async def _disable_docker_desktop_server(self, name: str) -> bool:
@@ -364,12 +321,12 @@ class SimpleMCPManager:
             
             logger.info(f"Successfully disabled {server_name} in Docker Desktop")
             
-            # Step 2: Re-import the docker-gateway to Claude Code
-            # This automatically syncs the updated list (without the disabled server)
-            gateway_success = await self._import_docker_gateway_to_claude_code()
+            # Step 2: Re-sync Docker Desktop servers to Claude Code
+            # This uses claude mcp add-from-claude-desktop to sync the updated list
+            sync_success = await self._import_docker_gateway_to_claude_code()
             
-            if gateway_success:
-                logger.info(f"Successfully removed {server_name} from Claude Code via docker-gateway sync")
+            if sync_success:
+                logger.info(f"Successfully removed {server_name} from Claude Code")
                 return True
             else:
                 logger.error("Failed to sync Docker Desktop servers to Claude Code")
