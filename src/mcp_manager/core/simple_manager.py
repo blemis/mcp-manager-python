@@ -212,7 +212,7 @@ class SimpleMCPManager:
             
             # Step 1: Enable the server in Docker Desktop
             result = subprocess.run(
-                ["/opt/homebrew/bin/docker", "mcp", "server", "enable", server_name],
+                [self.claude.docker_path, "mcp", "server", "enable", server_name],
                 capture_output=True,
                 text=True,
                 timeout=30,
@@ -225,8 +225,8 @@ class SimpleMCPManager:
             logger.info(f"Successfully enabled {server_name} in Docker Desktop")
             
             # Step 2: Sync all Docker Desktop servers to Claude Code
-            # This uses claude mcp add-from-claude-desktop to sync ALL enabled servers
-            sync_success = await self._import_docker_gateway_to_claude_code()
+            # Refresh the gateway to include the newly enabled server
+            sync_success = await self._refresh_docker_gateway()
             
             if sync_success:
                 logger.info(f"Successfully synced {server_name} to Claude Code")
@@ -259,6 +259,21 @@ class SimpleMCPManager:
             return []
     
     
+    async def _refresh_docker_gateway(self) -> bool:
+        """Refresh docker-gateway by removing and re-adding it with updated servers."""
+        try:
+            # Remove existing gateway if it exists
+            if self.claude.server_exists("docker-gateway"):
+                self.claude.remove_server("docker-gateway")
+                logger.debug("Removed existing docker-gateway")
+            
+            # Re-add with current server list
+            return await self._import_docker_gateway_to_claude_code()
+            
+        except Exception as e:
+            logger.error(f"Failed to refresh docker-gateway: {e}")
+            return False
+    
     async def _import_docker_gateway_to_claude_code(self) -> bool:
         """Ensure docker-gateway is set up in Claude Code."""
         try:
@@ -283,7 +298,7 @@ class SimpleMCPManager:
             # Add docker-gateway to Claude Code with the current enabled servers
             success = self.claude.add_server(
                 name="docker-gateway",
-                command="/opt/homebrew/bin/docker",
+                command=self.claude.docker_path,
                 args=["mcp", "gateway", "run", "--servers", servers_list],
                 env=None,
             )
@@ -314,7 +329,7 @@ class SimpleMCPManager:
             
             # Step 1: Disable the server in Docker Desktop
             result = subprocess.run(
-                ["/opt/homebrew/bin/docker", "mcp", "server", "disable", server_name],
+                [self.claude.docker_path, "mcp", "server", "disable", server_name],
                 capture_output=True,
                 text=True,
                 timeout=30,
@@ -327,10 +342,8 @@ class SimpleMCPManager:
             logger.info(f"Successfully disabled {server_name} in Docker Desktop")
             
             # Step 2: Update docker-gateway with the new server list
-            # Remove the old gateway and add an updated one
-            if self.claude.server_exists("docker-gateway"):
-                self.claude.remove_server("docker-gateway")
-            sync_success = await self._import_docker_gateway_to_claude_code()
+            # Force refresh the gateway with updated server list
+            sync_success = await self._refresh_docker_gateway()
             
             if sync_success:
                 logger.info(f"Successfully removed {server_name} from Claude Code")

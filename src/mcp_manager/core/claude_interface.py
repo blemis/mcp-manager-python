@@ -7,6 +7,7 @@ via the claude mcp CLI commands.
 
 import json
 import os
+import shutil
 import subprocess
 from typing import Dict, List, Optional, Tuple
 from pathlib import Path
@@ -23,13 +24,59 @@ class ClaudeInterface:
     
     def __init__(self):
         """Initialize Claude interface."""
+        self.claude_path = self._discover_claude_path()
+        self.docker_path = self._discover_docker_path()
         self._check_claude_availability()
+    
+    def _discover_claude_path(self) -> str:
+        """Discover the path to claude executable."""
+        # Try common locations and use 'which' command
+        claude_path = shutil.which("claude")
+        if claude_path:
+            logger.debug(f"Found claude at: {claude_path}")
+            return claude_path
+        
+        # Fallback to common homebrew locations
+        common_paths = [
+            "/opt/homebrew/bin/claude",
+            "/usr/local/bin/claude",
+            "/usr/bin/claude",
+        ]
+        
+        for path in common_paths:
+            if os.path.isfile(path) and os.access(path, os.X_OK):
+                logger.debug(f"Found claude at fallback location: {path}")
+                return path
+        
+        raise ClaudeError("Claude CLI not found in PATH or common locations")
+    
+    def _discover_docker_path(self) -> str:
+        """Discover the path to docker executable."""
+        # Try common locations and use 'which' command
+        docker_path = shutil.which("docker")
+        if docker_path:
+            logger.debug(f"Found docker at: {docker_path}")
+            return docker_path
+        
+        # Fallback to common locations
+        common_paths = [
+            "/opt/homebrew/bin/docker",
+            "/usr/local/bin/docker",
+            "/usr/bin/docker",
+        ]
+        
+        for path in common_paths:
+            if os.path.isfile(path) and os.access(path, os.X_OK):
+                logger.debug(f"Found docker at fallback location: {path}")
+                return path
+        
+        raise ClaudeError("Docker CLI not found in PATH or common locations")
     
     def _check_claude_availability(self) -> None:
         """Check if Claude CLI is available."""
         try:
             result = subprocess.run(
-                ["/opt/homebrew/bin/claude", "--version"],
+                [self.claude_path, "--version"],
                 capture_output=True,
                 timeout=10,
                 env=self._get_env(),
@@ -62,7 +109,7 @@ class ClaudeInterface:
         """
         try:
             result = subprocess.run(
-                ["/opt/homebrew/bin/claude", "mcp", "list"],
+                [self.claude_path, "mcp", "list"],
                 capture_output=True,
                 text=True,
                 timeout=30,
@@ -128,7 +175,7 @@ class ClaudeInterface:
         try:
             # Build command args - Claude expects: claude mcp add <name> <command> [args...]
             # Use --scope user to store in user-wide configuration
-            cmd_args = ["/opt/homebrew/bin/claude", "mcp", "add", "--scope", "user", name, command]
+            cmd_args = [self.claude_path, "mcp", "add", "--scope", "user", name, command]
             if args:
                 # Check if any args start with -- (options) - if so, use -- separator
                 has_options = any(arg.startswith('--') for arg in args)
@@ -172,7 +219,7 @@ class ClaudeInterface:
         """
         try:
             result = subprocess.run(
-                ["/opt/homebrew/bin/claude", "mcp", "remove", "--scope", "user", name],
+                [self.claude_path, "mcp", "remove", "--scope", "user", name],
                 capture_output=True,
                 text=True,
                 timeout=30,
@@ -202,7 +249,7 @@ class ClaudeInterface:
         """
         try:
             result = subprocess.run(
-                ["/opt/homebrew/bin/claude", "mcp", "get", "--scope", "user", name],
+                [self.claude_path, "mcp", "get", "--scope", "user", name],
                 capture_output=True,
                 text=True,
                 timeout=30,
@@ -231,7 +278,9 @@ class ClaudeInterface:
         Returns:
             True if server exists
         """
-        return self.get_server(name) is not None
+        # Use list_servers instead of get_server as it's more reliable
+        servers = self.list_servers()
+        return any(s.name == name for s in servers)
     
     def _determine_server_type(self, command: str) -> ServerType:
         """Determine server type from command."""

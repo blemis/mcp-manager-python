@@ -38,8 +38,13 @@ async def _get_available_docker_desktop_servers(name: str):
     """Check if a server name is available in Docker Desktop catalog."""
     try:
         import subprocess
+        import shutil
+        
+        # Discover docker path
+        docker_path = shutil.which("docker") or "/opt/homebrew/bin/docker"
+        
         result = subprocess.run(
-            ["/opt/homebrew/bin/docker", "mcp", "catalog", "show", "docker-mcp"],
+            [docker_path, "mcp", "catalog", "show", "docker-mcp"],
             capture_output=True,
             text=True,
             timeout=10,
