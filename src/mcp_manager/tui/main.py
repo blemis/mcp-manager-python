@@ -22,6 +22,7 @@ from mcp_manager.core.discovery import ServerDiscovery
 from mcp_manager.core.manager import MCPManager
 from mcp_manager.core.models import Server, ServerScope, ServerType
 from mcp_manager.tui.widgets import ServerDetailWidget, SystemInfoWidget
+from mcp_manager.tui.screens import AddServerScreen, EditServerScreen, HelpScreen, ConfirmDialog
 from mcp_manager.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -243,24 +244,36 @@ class MCPManagerApp(App):
             self.selected_server = self.manager.get_server(server_name)
             
     @on(Button.Pressed, "#add-server")
-    def action_add_server(self) -> None:
+    async def action_add_server(self) -> None:
         """Add a new server."""
-        self.push_screen("add_server")
+        result = await self.push_screen_wait(AddServerScreen())
+        if result:
+            try:
+                server = self.manager.add_server(**result)
+                self.refresh_servers()
+                self.notify(f"Added server: {server.name}", severity="information")
+            except Exception as e:
+                self.notify(f"Error adding server: {e}", severity="error")
         
     @on(Button.Pressed, "#remove-server")
-    def on_remove_server(self) -> None:
+    async def on_remove_server(self) -> None:
         """Remove selected server."""
         if not self.selected_server:
             self.notify("No server selected", severity="warning")
             return
             
-        try:
-            self.manager.remove_server(self.selected_server.name)
-            self.refresh_servers()
-            self.notify(f"Removed server: {self.selected_server.name}", severity="information")
-            self.selected_server = None
-        except Exception as e:
-            self.notify(f"Error removing server: {e}", severity="error")
+        confirmed = await self.push_screen_wait(
+            ConfirmDialog(f"Remove server '{self.selected_server.name}'?", "Confirm Removal")
+        )
+        
+        if confirmed:
+            try:
+                self.manager.remove_server(self.selected_server.name)
+                self.refresh_servers()
+                self.notify(f"Removed server: {self.selected_server.name}", severity="information")
+                self.selected_server = None
+            except Exception as e:
+                self.notify(f"Error removing server: {e}", severity="error")
             
     @on(Button.Pressed, "#enable-server")
     def on_enable_server(self) -> None:
@@ -338,7 +351,7 @@ class MCPManagerApp(App):
         except Exception as e:
             self.notify(f"Search failed: {e}", severity="error")
             
-    def action_help(self) -> None:
+    async def action_help(self) -> None:
         """Show help information."""
         help_text = """
 # MCP Manager Help
@@ -370,7 +383,35 @@ class MCPManagerApp(App):
 - 🔄 **Project**: Shared via git
 - 🌐 **User**: Global configuration
         """
-        self.push_screen("help", help_text)
+        await self.push_screen_wait(HelpScreen(help_text))
+    
+    async def edit_server(self, server: Server) -> None:
+        \"\"\"Edit a server.\"\"\"
+        server_data = {
+            \"name\": server.name,
+            \"command\": server.command,
+            \"scope\": server.scope.value,
+            \"server_type\": server.server_type.value,
+            \"description\": server.description or \"\",
+            \"enabled\": server.enabled,
+        }
+        
+        result = await self.push_screen_wait(EditServerScreen(server_data))
+        if result:
+            try:
+                self.manager.remove_server(server.name)
+                self.manager.add_server(**result)
+                self.refresh_servers()
+                self.notify(f\"Updated server: {server.name}\", severity=\"information\")
+            except Exception as e:
+                self.notify(f\"Error updating server: {e}\", severity=\"error\")
+        
+    def action_edit_server(self) -> None:
+        \"\"\"Edit selected server.\"\"\"
+        if self.selected_server:
+            asyncio.create_task(self.edit_server(self.selected_server))
+        else:
+            self.notify(\"No server selected\", severity=\"warning\")
 
 
 def main():
