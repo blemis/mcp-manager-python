@@ -260,20 +260,33 @@ class SimpleMCPManager:
     
     
     async def _import_docker_gateway_to_claude_code(self) -> bool:
-        """Instruct user to import docker-gateway from Claude Desktop."""
+        """Ensure docker-gateway is set up in Claude Code."""
         try:
             # Check if docker-gateway already exists
             if self.claude.server_exists("docker-gateway"):
-                logger.info("docker-gateway already exists in Claude Code")
+                logger.info("docker-gateway already configured in Claude Code")
                 return True
             
-            # The docker-gateway uses Node.js/Ink and must be imported from Claude Desktop
-            logger.warning("Docker Desktop servers require manual sync to Claude Code")
-            logger.info("Please run: claude mcp add-from-claude-desktop docker-gateway")
-            logger.info("This will sync all enabled Docker Desktop servers to Claude Code")
+            # Docker Desktop MCP gateway requires one-time setup
+            from rich.console import Console
+            from rich.panel import Panel
             
-            # For now, return True to not block the workflow
-            # The user will need to manually run the import command
+            console = Console()
+            
+            console.print("\n[yellow]⚠ Docker Desktop Setup Required[/yellow]")
+            console.print(Panel.fit(
+                "[bold cyan]One-time setup needed:[/bold cyan]\n\n"
+                "[white]Run this command to enable Docker Desktop MCPs:[/white]\n"
+                "[green]claude mcp add-from-claude-desktop docker-gateway[/green]\n\n"
+                "[dim]This will sync all enabled Docker Desktop servers to Claude Code.\n"
+                "You only need to run this once - the MCP Manager will handle\n"
+                "enabling/disabling individual servers in Docker Desktop.[/dim]",
+                title="Docker Desktop Integration",
+                border_style="blue"
+            ))
+            
+            # Return True so the Docker Desktop server was enabled successfully
+            # The user just needs to run the one-time setup command
             return True
             
         except Exception as e:

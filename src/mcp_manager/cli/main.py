@@ -194,7 +194,7 @@ def list_cmd(scope: Optional[str], output_format: str):
 
 @cli.command()
 @click.argument("name")
-@click.argument("command")
+@click.argument("command", required=False)
 @click.option(
     "--scope",
     type=click.Choice([s.value for s in ServerScope], case_sensitive=False),

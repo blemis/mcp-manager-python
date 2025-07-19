@@ -34,10 +34,30 @@ async def _get_docker_desktop_servers():
         return []
 
 
+async def _get_available_docker_desktop_servers(name: str):
+    """Check if a server name is available in Docker Desktop catalog."""
+    try:
+        import subprocess
+        result = subprocess.run(
+            ["docker", "mcp", "catalog", "show", "docker-mcp"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        
+        if result.returncode == 0:
+            # Check if the server name appears in the catalog
+            return name.lower() in result.stdout.lower()
+        
+        return False
+    except Exception:
+        return False
+
+
 def validate_and_add_server(
     manager,
     name: str,
-    command: str,
+    command: Optional[str],
     scope: str,
     server_type: str,
     description: Optional[str],
@@ -45,6 +65,27 @@ def validate_and_add_server(
     args: List[str],
 ):
     """Add a server with validation."""
+    # Auto-detect Docker Desktop servers if no command provided
+    if command is None:
+        if server_type == "docker-desktop":
+            # For Docker Desktop servers, the command is auto-managed
+            command = "docker-desktop-auto"
+        else:
+            # Check if this might be a Docker Desktop server by checking available servers
+            docker_servers = asyncio.run(_get_available_docker_desktop_servers(name))
+            if docker_servers:
+                console.print(f"[yellow]💡[/yellow] '{name}' appears to be a Docker Desktop MCP server")
+                if Confirm.ask("Add as Docker Desktop server?"):
+                    server_type = "docker-desktop"
+                    command = "docker-desktop-auto"
+                else:
+                    console.print(f"[red]✗[/red] Missing command for {server_type} server")
+                    raise click.Abort()
+            else:
+                console.print(f"[red]✗[/red] Missing command for {server_type} server")
+                console.print(f"[yellow]💡[/yellow] Use: mcp-manager add {name} <command>")
+                raise click.Abort()
+    
     # Validate server name
     try:
         validators.validate_server_name(name)
@@ -62,12 +103,13 @@ def validate_and_add_server(
         else:
             raise click.Abort()
     
-    # Validate command
-    try:
-        validators.validate_command(command, server_type)
-    except ValidationError as e:
-        console.print(f"[red]✗[/red] {e}")
-        raise click.Abort()
+    # Validate command (skip for auto-detected Docker Desktop servers)
+    if command != "docker-desktop-auto":
+        try:
+            validators.validate_command(command, server_type)
+        except ValidationError as e:
+            console.print(f"[red]✗[/red] {e}")
+            raise click.Abort()
     
     # Check server availability
     available, error_msg = validators.validate_server_availability(server_type, name)
