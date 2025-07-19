@@ -18,7 +18,7 @@ from rich.text import Text
 from mcp_manager import __version__
 from mcp_manager.core.discovery import ServerDiscovery
 from mcp_manager.core.exceptions import MCPManagerError
-from mcp_manager.core.manager import MCPManager
+from mcp_manager.core.simple_manager import SimpleMCPManager
 from mcp_manager.core.models import ServerScope, ServerType
 from mcp_manager.utils.config import get_config
 from mcp_manager.utils.logging import setup_logging
@@ -33,13 +33,13 @@ class CLIContext:
     """CLI context for passing state between commands."""
     
     def __init__(self):
-        self.manager: Optional[MCPManager] = None
+        self.manager: Optional[SimpleMCPManager] = None
         self.discovery: Optional[ServerDiscovery] = None
         
-    def get_manager(self) -> MCPManager:
+    def get_manager(self) -> SimpleMCPManager:
         """Get MCP manager instance."""
         if self.manager is None:
-            self.manager = MCPManager()
+            self.manager = SimpleMCPManager()
         return self.manager
         
     def get_discovery(self) -> ServerDiscovery:
@@ -146,7 +146,7 @@ def list_cmd(scope: Optional[str], output_format: str):
     scope_filter = ServerScope(scope) if scope else None
     
     # Get servers
-    servers = manager.list_servers(scope_filter)
+    servers = asyncio.run(manager.list_servers())
     
     if output_format == "json":
         import json
@@ -361,11 +361,10 @@ def discover(query: Optional[str], server_type: Optional[str], limit: int):
 @cli.command()
 @handle_errors
 def sync():
-    """Sync configuration with Claude CLI."""
-    manager = cli_context.get_manager()
-    
-    manager.sync_with_claude()
-    console.print("[green]✓[/green] Synchronized with Claude CLI")
+    """No longer needed - MCP Manager works directly with Claude's internal state."""
+    console.print("[yellow]ℹ[/yellow] Sync is no longer needed!")
+    console.print("[dim]MCP Manager now works directly with Claude's internal state.[/dim]")
+    console.print("[dim]All changes are immediately reflected in Claude Code.[/dim]")
 
 
 @cli.command(name="system-info")

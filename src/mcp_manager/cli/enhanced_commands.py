@@ -92,8 +92,8 @@ def validate_and_add_server(
         
         # Provide helpful next steps
         console.print("\n[dim]Next steps:[/dim]")
-        console.print(f"  • Enable the server: [cyan]mcp-manager enable {name}[/cyan]")
-        console.print(f"  • Sync with Claude: [cyan]mcp-manager sync[/cyan]")
+        console.print(f"  • Server is now active in Claude Code!")
+        console.print(f"  • Check: [cyan]claude mcp list[/cyan]")
         
     except MCPManagerError as e:
         console.print(f"[red]✗[/red] Failed to add server: {e}")
@@ -142,9 +142,7 @@ def validate_and_remove_server(
         if removed:
             console.print(f"[green]✓[/green] Removed server: {name}")
             
-            if server.enabled:
-                console.print("\n[yellow]💡[/yellow] The server was enabled. Don't forget to:")
-                console.print(f"  • Sync with Claude: [cyan]mcp-manager sync[/cyan]")
+            console.print("\n[green]✓[/green] Server removed from Claude Code!")
         else:
             console.print(f"[red]✗[/red] Failed to remove server")
             
@@ -188,8 +186,7 @@ def validate_and_enable_server(manager, name: str):
         asyncio.run(manager.enable_server(name))
         console.print(f"[green]✓[/green] Enabled server: {name}")
         
-        console.print("\n[yellow]💡[/yellow] Don't forget to sync with Claude:")
-        console.print(f"  [cyan]mcp-manager sync[/cyan]")
+        console.print("\n[green]✓[/green] Server is now active in Claude Code!")
         
     except MCPManagerError as e:
         console.print(f"[red]✗[/red] Failed to enable server: {e}")
@@ -222,8 +219,7 @@ def validate_and_disable_server(manager, name: str):
         asyncio.run(manager.disable_server(name))
         console.print(f"[green]✓[/green] Disabled server: {name}")
         
-        console.print("\n[yellow]💡[/yellow] Don't forget to sync with Claude:")
-        console.print(f"  [cyan]mcp-manager sync[/cyan]")
+        console.print("\n[green]✓[/green] Server removed from Claude Code!")
         
     except MCPManagerError as e:
         console.print(f"[red]✗[/red] Failed to disable server: {e}")
