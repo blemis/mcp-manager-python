@@ -24,12 +24,23 @@ class SimpleMCPManager:
     
     async def list_servers(self) -> List[Server]:
         """
-        List all MCP servers.
+        List all MCP servers, expanding docker-gateway to show individual servers.
         
         Returns:
-            List of servers from Claude's internal state
+            List of servers from Claude's internal state with docker-gateway expanded
         """
-        return self.claude.list_servers()
+        servers = self.claude.list_servers()
+        result = []
+        
+        for server in servers:
+            if server.name == "docker-gateway":
+                # Expand docker-gateway to show individual Docker Desktop servers
+                docker_servers = await self._expand_docker_gateway(server)
+                result.extend(docker_servers)
+            else:
+                result.append(server)
+                
+        return result
     
     async def add_server(
         self,
@@ -376,3 +387,35 @@ class SimpleMCPManager:
             return name in enabled_servers
         except Exception:
             return False
+    
+    async def _expand_docker_gateway(self, gateway_server: Server) -> List[Server]:
+        """Expand docker-gateway into individual Docker Desktop servers."""
+        docker_servers = []
+        
+        try:
+            # Extract server names from gateway args
+            if gateway_server.args and len(gateway_server.args) >= 5:
+                # Args format: ["mcp", "gateway", "run", "--servers", "server1,server2,server3"]
+                servers_arg = gateway_server.args[4]
+                server_names = [s.strip() for s in servers_arg.split(",")]
+                
+                for server_name in server_names:
+                    # Create a Server object for each Docker Desktop server
+                    docker_server = Server(
+                        name=server_name,
+                        command="docker",
+                        args=["mcp", "server", server_name],
+                        server_type=ServerType.DOCKER_DESKTOP,
+                        scope=gateway_server.scope,
+                        enabled=True,  # If it's in the gateway, it's enabled
+                        description=f"Docker Desktop MCP server: {server_name}",
+                        env={},
+                    )
+                    docker_servers.append(docker_server)
+                    
+            return docker_servers
+            
+        except Exception as e:
+            logger.warning(f"Failed to expand docker-gateway: {e}")
+            # If expansion fails, return the gateway as-is
+            return [gateway_server]
