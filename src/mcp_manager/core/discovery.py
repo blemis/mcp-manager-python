@@ -79,14 +79,32 @@ class ServerDiscovery:
                 
         # Discover from sources
         results = []
+        tasks = []
+        
+        # Distribute limit across sources
+        source_count = 0
+        if not server_type or server_type == ServerType.NPM:
+            source_count += 1
+        if not server_type or server_type == ServerType.DOCKER:
+            source_count += 2  # Docker Hub and Docker Desktop
+        
+        per_source_limit = limit // source_count if source_count > 0 else limit
         
         if not server_type or server_type == ServerType.NPM:
-            npm_results = await self._discover_npm_servers(query, limit // 2)
-            results.extend(npm_results)
+            tasks.append(self._discover_npm_servers(query, per_source_limit))
             
         if not server_type or server_type == ServerType.DOCKER:
-            docker_results = await self._discover_docker_servers(query, limit // 2)
-            results.extend(docker_results)
+            tasks.append(self._discover_docker_hub_servers(query, per_source_limit))
+            tasks.append(self._discover_docker_desktop_servers(query, per_source_limit))
+        
+        # Run discovery tasks concurrently
+        if tasks:
+            task_results = await asyncio.gather(*tasks, return_exceptions=True)
+            for task_result in task_results:
+                if isinstance(task_result, Exception):
+                    logger.warning(f"Discovery task failed: {task_result}")
+                else:
+                    results.extend(task_result)
             
         # Sort by relevance (downloads, update time, etc.)
         results.sort(key=self._calculate_relevance_score, reverse=True)
@@ -165,13 +183,13 @@ class ServerDiscovery:
         except Exception as e:
             raise DiscoveryError(f"NPM discovery failed: {e}")
             
-    async def _discover_docker_servers(
+    async def _discover_docker_hub_servers(
         self,
         query: Optional[str] = None,
         limit: int = 25,
     ) -> List[DiscoveryResult]:
-        """Discover Docker-based MCP servers."""
-        logger.debug("Discovering Docker servers")
+        """Discover Docker Hub MCP servers."""
+        logger.debug("Discovering Docker Hub servers")
         
         # Known Docker MCP servers (Docker Hub API is complex for search)
         known_servers = [
@@ -228,6 +246,132 @@ class ServerDiscovery:
                 server_type=ServerType.DOCKER,
                 install_command=f"docker run -i --rm --pull always {server_info['package']}:latest",
                 keywords=["mcp", "docker", server_info["name"]],
+            )
+            results.append(result)
+            
+        return results[:limit]
+    
+    async def _discover_docker_desktop_servers(
+        self,
+        query: Optional[str] = None,
+        limit: int = 25,
+    ) -> List[DiscoveryResult]:
+        """Discover Docker Desktop MCP servers."""
+        logger.debug("Discovering Docker Desktop MCP servers")
+        
+        # Docker Desktop MCP catalog
+        docker_desktop_servers = [
+            {
+                "name": "aws-design",
+                "package": "docker.io/phidata/aws-mcp",
+                "description": "AWS design and architecture MCP server for Docker Desktop",
+                "version": "latest",
+            },
+            {
+                "name": "curl",
+                "package": "docker.io/phidata/curl-mcp",
+                "description": "HTTP client MCP server for making web requests",
+                "version": "latest",
+            },
+            {
+                "name": "hashicorp-terraform",
+                "package": "docker.io/phidata/terraform-mcp",
+                "description": "Hashicorp Terraform MCP server for infrastructure as code",
+                "version": "latest",
+            },
+            {
+                "name": "git",
+                "package": "docker.io/phidata/git-mcp",
+                "description": "Git version control MCP server",
+                "version": "latest",
+            },
+            {
+                "name": "python",
+                "package": "docker.io/phidata/python-mcp",
+                "description": "Python runtime and execution MCP server",
+                "version": "latest",
+            },
+            {
+                "name": "node",
+                "package": "docker.io/phidata/node-mcp",
+                "description": "Node.js runtime and execution MCP server",
+                "version": "latest",
+            },
+            {
+                "name": "postgresql",
+                "package": "docker.io/phidata/postgresql-mcp",
+                "description": "PostgreSQL database MCP server",
+                "version": "latest",
+            },
+            {
+                "name": "redis",
+                "package": "docker.io/phidata/redis-mcp",
+                "description": "Redis cache and database MCP server",
+                "version": "latest",
+            },
+            {
+                "name": "kubernetes",
+                "package": "docker.io/phidata/kubernetes-mcp",
+                "description": "Kubernetes container orchestration MCP server",
+                "version": "latest",
+            },
+            {
+                "name": "github",
+                "package": "docker.io/phidata/github-mcp",
+                "description": "GitHub API and repository management MCP server",
+                "version": "latest",
+            },
+            {
+                "name": "slack",
+                "package": "docker.io/phidata/slack-mcp",
+                "description": "Slack messaging and integration MCP server",
+                "version": "latest",
+            },
+            {
+                "name": "jira",
+                "package": "docker.io/phidata/jira-mcp",
+                "description": "Jira issue tracking MCP server",
+                "version": "latest",
+            },
+            {
+                "name": "confluence",
+                "package": "docker.io/phidata/confluence-mcp",
+                "description": "Confluence documentation MCP server",
+                "version": "latest",
+            },
+            {
+                "name": "elasticsearch",
+                "package": "docker.io/phidata/elasticsearch-mcp",
+                "description": "Elasticsearch search engine MCP server",
+                "version": "latest",
+            },
+            {
+                "name": "mongodb",
+                "package": "docker.io/phidata/mongodb-mcp",
+                "description": "MongoDB NoSQL database MCP server",
+                "version": "latest",
+            },
+        ]
+        
+        results = []
+        
+        for server_info in docker_desktop_servers:
+            # Filter by query if provided
+            if query:
+                query_lower = query.lower()
+                name_match = query_lower in server_info["name"].lower()
+                desc_match = query_lower in server_info["description"].lower()
+                if not (name_match or desc_match):
+                    continue
+                    
+            result = DiscoveryResult(
+                name=f"docker-desktop-{server_info['name']}",
+                package=server_info["package"],
+                version=server_info["version"],
+                description=server_info["description"],
+                server_type=ServerType.DOCKER,
+                install_command=f"docker run -i --rm --network bridge --pull always {server_info['package']}:latest",
+                keywords=["mcp", "docker-desktop", server_info["name"], "docker"],
             )
             results.append(result)
             
