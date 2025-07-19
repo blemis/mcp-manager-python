@@ -9,11 +9,13 @@ MCP Manager is a professional tool for managing MCP servers used by Claude Code.
 ## Features
 
 ### 🎯 Core Functionality
-- **Server Management**: Add, remove, enable, disable MCP servers
+- **One-Command Installation**: `mcp-manager install-package dd-SQLite` for instant setup
+- **Smart Discovery**: Find MCP servers from NPM, Docker Hub, and Docker Desktop catalogs
+- **Unique Server IDs**: No more confusion with servers having the same name
+- **Duplicate Detection**: Automatic warnings when installing similar functionality
+- **Docker Desktop Integration**: Seamless integration with Docker Desktop MCP servers
+- **Configuration Cleanup**: Fix broken MCP configurations with backup safety
 - **Scope Support**: Local (private), Project (shared), User (global) configurations
-- **Discovery**: Find and install new MCP servers from NPM and Docker registries
-- **Bulk Operations**: Manage multiple servers simultaneously
-- **Real-time Status**: Monitor server health and performance
 
 ### 🖥️ User Interfaces
 - **Modern TUI**: Beautiful terminal interface built with Textual
@@ -29,45 +31,65 @@ MCP Manager is a professional tool for managing MCP servers used by Claude Code.
 - **Comprehensive Testing**: Unit and integration test coverage
 - **Type Safety**: Full type hints and mypy validation
 
-## Key Insights
+## 🎯 How It Works
 
-- How CLAUDE works.
+### Easy Installation Process
 
-  1. Global Level
+1. **Discovery**: `mcp-manager discover --query filesystem`
+   - Finds MCP servers from NPM registry, Docker Hub, and Docker Desktop
+   - Shows unique Install IDs to distinguish servers with same names
+   - Displays exact install commands
 
-  File: ~/.config/claude-code/mcp-servers.json
-  - User-wide servers available across all projects
-  - Format: Standard MCP JSON schema
-  - Managed by: External tools, manual editing
+2. **Installation**: `mcp-manager install-package dd-SQLite`
+   - Automatically handles Docker Desktop, NPM, and Docker servers
+   - Configures proper command arguments and paths
+   - Provides duplicate detection warnings
+   - Servers become immediately active in Claude Code
 
-  2. Project Level
+3. **Management**: `mcp-manager list` shows all installed servers
+   - Clean unified view across all server types
+   - Easy removal with `mcp-manager remove server-name`
 
-  File: ./.mcp.json (in project directory)
-  - Project-specific servers
-  - Format: Standard MCP JSON schema
-  - Managed by: External tools, manual editing
+### Architecture Insights
 
-  3. Internal (Claude Code's State)
+**Claude Code Configuration Hierarchy:**
+1. **Internal State**: `~/.claude.json` (source of truth managed by `claude mcp` commands)
+2. **User Config**: `~/.config/claude-code/mcp-servers.json`
+3. **Project Config**: `./.mcp.json`
 
-  File: ~/.claude.json
-  - Location: .projectConfigs["/path/to/project"].mcpServers
-  - Contains the actual active configuration Claude Code uses
-  - Managed by: claude mcp CLI commands only
+**Docker Desktop Integration:**
+- MCP Manager uses `docker mcp server enable/disable` for Docker Desktop servers
+- Creates unified `docker-gateway` that aggregates all enabled Docker Desktop MCPs
+- Automatic synchronization with Claude Code's internal state
 
-  The Key Insight
-  Claude Code primarily uses its internal state (.claude.json)
-  Claude Code's internal state is the source of truth for what actually runs!
+## ✨ What's New
 
-The key insight is that the claude mcp add-from-claude-desktop docker-gateway command automatically imports ALL active Docker Desktop MCPs at once. So the MCP Manager
-  should:
+### Major User Experience Improvements
 
-  1. Discovery: Use docker mcp catalog to find available Docker Desktop MCPs
-  2. Management: Use docker mcp server enable/disable to control which ones are active in Docker Desktop
-  3. Integration: Use claude mcp add-from-claude-desktop docker-gateway to sync all active DD MCPs into Claude Code
+**🚀 One-Command Installation**
+- `mcp-manager install-package dd-SQLite` - No more complex manual commands!
+- Unique Install IDs solve the "multiple servers with same name" problem
+- Discovery output shows exact install commands for copy/paste convenience
 
-  The user just sees simple commands like mcp-manager add aws-diagram and behind the scenes it:
-  - Enables aws-diagram in Docker Desktop
-  - Re-imports the gateway to Claude Code (which now includes aws-diagram)
+**🧠 Smart Duplicate Detection**
+- Automatically warns when installing servers with similar functionality
+- Prevents conflicts between filesystem, database, or browser automation servers
+- Cross-source detection (NPM vs Docker vs Docker Desktop)
+
+**🧹 Configuration Cleanup**
+- `mcp-manager cleanup` fixes broken MCP configurations automatically
+- Creates safety backups before making changes
+- Removes problematic Docker commands that cause ENOENT errors
+
+**🔍 Enhanced Discovery**
+- Real-time discovery from NPM registry, Docker Hub, and Docker Desktop catalogs
+- Improved search with multiple strategies and quality scoring
+- `--update-catalog` option to refresh Docker Desktop catalog
+
+**📱 Cleaner Output**
+- Moved verbose logs to debug mode for cleaner user experience
+- Clear visual distinction between different server types
+- Helpful inline guidance and examples
 
 ## Quick Start
 
@@ -97,22 +119,38 @@ mcp-manager tui
 ```
 
 #### Command Line Interface (CLI)
+
+**🚀 NEW: Easy Installation with install-package**
 ```bash
-# List all servers
+# Discover available servers with unique Install IDs
+mcp-manager discover --query filesystem
+
+# Install servers using their unique ID (no complex commands needed!)
+mcp-manager install-package modelcontextprotocol-filesystem  # Official NPX filesystem
+mcp-manager install-package dd-SQLite                       # Docker Desktop SQLite
+mcp-manager install-package mcp-filesystem                  # Docker Hub filesystem
+
+# The discovery output shows the exact install command for each server:
+# ┃ Install ID                ┃ Type ┃ Install Command                           ┃
+# ┃ modelcontextprotocol-...  ┃ npm  ┃ mcp-manager install-package model...     ┃
+# ┃ dd-SQLite                 ┃ dd   ┃ mcp-manager install-package dd-SQLite    ┃
+```
+
+**Traditional Commands (still supported)**
+```bash
+# List all servers  
 mcp-manager list
 
-# Add a new server
+# Discover with advanced options
+mcp-manager discover --query filesystem --type npm
+
+# Clean up broken configurations
+mcp-manager cleanup --dry-run  # Preview changes
+mcp-manager cleanup           # Fix with automatic backup
+
+# Manual server management
 mcp-manager add filesystem "npx @modelcontextprotocol/server-filesystem" --scope user
-
-# Discover available servers
-mcp-manager discover
-
-# Enable/disable servers
-mcp-manager enable filesystem
-mcp-manager disable filesystem
-
-# Bulk operations
-mcp-manager bulk-enable filesystem sequential-thinking fetch
+mcp-manager remove filesystem
 
 # Get help
 mcp-manager --help
