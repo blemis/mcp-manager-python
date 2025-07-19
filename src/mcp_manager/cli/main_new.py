@@ -84,12 +84,12 @@ def list_servers(scope: Optional[str], output_format: str):
     
     if output_format == "json":
         import json
-        data = [server.dict() for server in servers]
+        data = [server.model_dump() for server in servers]
         console.print(json.dumps(data, indent=2, default=str))
         return
     elif output_format == "yaml":
         import yaml
-        data = [server.dict() for server in servers]
+        data = [server.model_dump() for server in servers]
         console.print(yaml.dump(data, default_flow_style=False))
         return
         

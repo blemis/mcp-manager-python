@@ -323,7 +323,7 @@ class MCPManager:
         
         data = {
             "servers": [
-                server.dict(exclude={"scope"})
+                server.model_dump(exclude={"scope"})
                 for server in servers
             ]
         }

@@ -386,14 +386,14 @@ class MCPManagerApp(App):
         await self.push_screen_wait(HelpScreen(help_text))
     
     async def edit_server(self, server: Server) -> None:
-        \"\"\"Edit a server.\"\"\"
+        """Edit a server."""
         server_data = {
-            \"name\": server.name,
-            \"command\": server.command,
-            \"scope\": server.scope.value,
-            \"server_type\": server.server_type.value,
-            \"description\": server.description or \"\",
-            \"enabled\": server.enabled,
+            "name": server.name,
+            "command": server.command,
+            "scope": server.scope.value,
+            "server_type": server.server_type.value,
+            "description": server.description or "",
+            "enabled": server.enabled,
         }
         
         result = await self.push_screen_wait(EditServerScreen(server_data))
@@ -402,16 +402,16 @@ class MCPManagerApp(App):
                 self.manager.remove_server(server.name)
                 self.manager.add_server(**result)
                 self.refresh_servers()
-                self.notify(f\"Updated server: {server.name}\", severity=\"information\")
+                self.notify(f"Updated server: {server.name}", severity="information")
             except Exception as e:
-                self.notify(f\"Error updating server: {e}\", severity=\"error\")
+                self.notify(f"Error updating server: {e}", severity="error")
         
     def action_edit_server(self) -> None:
-        \"\"\"Edit selected server.\"\"\"
+        """Edit selected server."""
         if self.selected_server:
             asyncio.create_task(self.edit_server(self.selected_server))
         else:
-            self.notify(\"No server selected\", severity=\"warning\")
+            self.notify("No server selected", severity="warning")
 
 
 def main():
