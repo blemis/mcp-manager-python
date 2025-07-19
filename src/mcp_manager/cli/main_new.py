@@ -1,8 +1,5 @@
 """
-Main CLI interface for MCP Manager.
-
-Provides comprehensive command-line interface using Click with
-rich help formatting and professional command structure.
+New CLI implementation for MCP Manager - rebuilt from scratch.
 """
 
 import asyncio
@@ -13,7 +10,6 @@ from typing import List, Optional
 import click
 from rich.console import Console
 from rich.table import Table
-from rich.text import Text
 
 from mcp_manager import __version__
 from mcp_manager.core.discovery import ServerDiscovery
@@ -21,42 +17,14 @@ from mcp_manager.core.exceptions import MCPManagerError
 from mcp_manager.core.manager import MCPManager
 from mcp_manager.core.models import ServerScope, ServerType
 from mcp_manager.utils.config import get_config
-from mcp_manager.utils.logging import setup_logging
-from mcp_manager.utils.logging import get_logger
+from mcp_manager.utils.logging import get_logger, setup_logging
 
 console = Console()
 logger = get_logger(__name__)
 
 
-class CLIContext:
-    """CLI context for passing state between commands."""
-    
-    def __init__(self):
-        self.manager: Optional[MCPManager] = None
-        self.discovery: Optional[ServerDiscovery] = None
-        
-    def get_manager(self) -> MCPManager:
-        """Get MCP manager instance."""
-        if self.manager is None:
-            self.manager = MCPManager()
-        return self.manager
-        
-    def get_discovery(self) -> ServerDiscovery:
-        """Get discovery service instance."""
-        if self.discovery is None:
-            self.discovery = ServerDiscovery()
-        return self.discovery
-
-
-# Global CLI context
-cli_context = CLIContext()
-
-
 def handle_errors(func):
     """Decorator to handle common CLI errors."""
-    import functools
-    
-    @functools.wraps(func)
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
@@ -64,7 +32,7 @@ def handle_errors(func):
             console.print(f"[red]Error:[/red] {e}")
             sys.exit(1)
         except KeyboardInterrupt:
-            console.print("\n[yellow]Operation cancelled by user[/yellow]")
+            console.print("\n[yellow]Operation cancelled[/yellow]")
             sys.exit(130)
         except Exception as e:
             console.print(f"[red]Unexpected error:[/red] {e}")
@@ -76,34 +44,16 @@ def handle_errors(func):
 
 @click.group(name="mcp-manager")
 @click.version_option(__version__)
-@click.option(
-    "--debug",
-    is_flag=True,
-    help="Enable debug logging"
-)
-@click.option(
-    "--verbose", "-v",
-    is_flag=True,
-    help="Enable verbose output"
-)
-@click.option(
-    "--config-dir",
-    type=click.Path(path_type=Path),
-    help="Configuration directory"
-)
+@click.option("--debug", is_flag=True, help="Enable debug logging")
+@click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
+@click.option("--config-dir", type=click.Path(path_type=Path), help="Configuration directory")
 @click.pass_context
 def cli(ctx: click.Context, debug: bool, verbose: bool, config_dir: Optional[Path]):
-    """
-    Enterprise-grade MCP server management tool.
-    
-    Manage MCP (Model Context Protocol) servers with professional CLI and TUI interfaces.
-    """
-    # Ensure context object exists
+    """Enterprise-grade MCP server management tool."""
     ctx.ensure_object(dict)
     
     # Setup logging
     config = get_config()
-    
     if debug:
         config.logging.level = "DEBUG"
     elif verbose:
@@ -116,35 +66,20 @@ def cli(ctx: click.Context, debug: bool, verbose: bool, config_dir: Optional[Pat
         enable_rich=config.logging.enable_rich,
     )
     
-    # Override config directory if provided
     if config_dir:
         config.config_dir = str(config_dir)
         
     logger.debug("CLI initialized")
 
 
-@cli.command("list")
-@click.option(
-    "--scope",
-    type=click.Choice([s.value for s in ServerScope], case_sensitive=False),
-    help="Filter by scope"
-)
-@click.option(
-    "--format",
-    "output_format", 
-    type=click.Choice(["table", "json", "yaml"], case_sensitive=False),
-    default="table",
-    help="Output format"
-)
+@cli.command()
+@click.option("--scope", type=click.Choice([s.value for s in ServerScope], case_sensitive=False), help="Filter by scope")
+@click.option("--format", "output_format", type=click.Choice(["table", "json", "yaml"], case_sensitive=False), default="table", help="Output format")
 @handle_errors
-def list_cmd(scope: Optional[str], output_format: str):
+def list_servers(scope: Optional[str], output_format: str):
     """List configured MCP servers."""
-    manager = cli_context.get_manager()
-    
-    # Parse scope
+    manager = MCPManager()
     scope_filter = ServerScope(scope) if scope else None
-    
-    # Get servers
     servers = manager.list_servers(scope_filter)
     
     if output_format == "json":
@@ -194,46 +129,15 @@ def list_cmd(scope: Optional[str], output_format: str):
 @cli.command()
 @click.argument("name")
 @click.argument("command")
-@click.option(
-    "--scope",
-    type=click.Choice([s.value for s in ServerScope], case_sensitive=False),
-    default=ServerScope.USER.value,
-    help="Configuration scope"
-)
-@click.option(
-    "--type",
-    "server_type",
-    type=click.Choice([t.value for t in ServerType], case_sensitive=False),
-    default=ServerType.CUSTOM.value,
-    help="Server type"
-)
-@click.option(
-    "--description",
-    help="Server description"
-)
-@click.option(
-    "--env",
-    multiple=True,
-    help="Environment variables (KEY=VALUE)"
-)
-@click.option(
-    "--arg",
-    "args",
-    multiple=True,
-    help="Command arguments"
-)
+@click.option("--scope", type=click.Choice([s.value for s in ServerScope], case_sensitive=False), default=ServerScope.USER.value, help="Configuration scope")
+@click.option("--type", "server_type", type=click.Choice([t.value for t in ServerType], case_sensitive=False), default=ServerType.CUSTOM.value, help="Server type")
+@click.option("--description", help="Server description")
+@click.option("--env", multiple=True, help="Environment variables (KEY=VALUE)")
+@click.option("--arg", "args", multiple=True, help="Command arguments")
 @handle_errors
-def add(
-    name: str,
-    command: str, 
-    scope: str,
-    server_type: str,
-    description: Optional[str],
-    env: List[str],
-    args: List[str],
-):
+def add(name: str, command: str, scope: str, server_type: str, description: Optional[str], env: List[str], args: List[str]):
     """Add a new MCP server."""
-    manager = cli_context.get_manager()
+    manager = MCPManager()
     
     # Parse environment variables
     env_dict = {}
@@ -259,16 +163,11 @@ def add(
 
 @cli.command()
 @click.argument("name")
-@click.option(
-    "--scope",
-    type=click.Choice([s.value for s in ServerScope], case_sensitive=False),
-    help="Configuration scope"
-)
+@click.option("--scope", type=click.Choice([s.value for s in ServerScope], case_sensitive=False), help="Configuration scope")
 @handle_errors
 def remove(name: str, scope: Optional[str]):
     """Remove an MCP server."""
-    manager = cli_context.get_manager()
-    
+    manager = MCPManager()
     scope_filter = ServerScope(scope) if scope else None
     
     if manager.remove_server(name, scope_filter):
@@ -280,8 +179,7 @@ def remove(name: str, scope: Optional[str]):
 @handle_errors
 def enable(name: str):
     """Enable an MCP server."""
-    manager = cli_context.get_manager()
-    
+    manager = MCPManager()
     server = manager.enable_server(name)
     console.print(f"[green]✓[/green] Enabled server: {server.name}")
 
@@ -291,34 +189,19 @@ def enable(name: str):
 @handle_errors  
 def disable(name: str):
     """Disable an MCP server."""
-    manager = cli_context.get_manager()
-    
+    manager = MCPManager()
     server = manager.disable_server(name)
     console.print(f"[yellow]⚠[/yellow] Disabled server: {server.name}")
 
 
 @cli.command()
-@click.option(
-    "--query", "-q",
-    help="Search query"
-)
-@click.option(
-    "--type",
-    "server_type",
-    type=click.Choice([t.value for t in ServerType], case_sensitive=False),
-    help="Server type filter"
-)
-@click.option(
-    "--limit", "-l",
-    type=int,
-    default=20,
-    help="Maximum results"
-)
+@click.option("--query", "-q", help="Search query")
+@click.option("--type", "server_type", type=click.Choice([t.value for t in ServerType], case_sensitive=False), help="Server type filter")
+@click.option("--limit", "-l", type=int, default=20, help="Maximum results")
 @handle_errors
 def discover(query: Optional[str], server_type: Optional[str], limit: int):
     """Discover available MCP servers."""
-    discovery = cli_context.get_discovery()
-    
+    discovery = ServerDiscovery()
     type_filter = ServerType(server_type) if server_type else None
     
     # Run async discovery
@@ -356,8 +239,7 @@ def discover(query: Optional[str], server_type: Optional[str], limit: int):
 @handle_errors
 def sync():
     """Sync configuration with Claude CLI."""
-    manager = cli_context.get_manager()
-    
+    manager = MCPManager()
     manager.sync_with_claude()
     console.print("[green]✓[/green] Synchronized with Claude CLI")
 
@@ -366,8 +248,7 @@ def sync():
 @handle_errors
 def system_info():
     """Show system information and dependencies."""
-    manager = cli_context.get_manager()
-    
+    manager = MCPManager()
     info = manager.get_system_info()
     
     table = Table(title="System Information", show_header=True, header_style="bold cyan")
