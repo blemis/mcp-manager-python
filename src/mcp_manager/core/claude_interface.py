@@ -126,13 +126,17 @@ class ClaudeInterface:
             True if successful
         """
         try:
-            # Build command - Claude expects the full command as one string
-            if args:
-                full_command = f"{command} {' '.join(args)}"
+            # Build command - handle Docker Desktop differently
+            if command == "docker" and args and args[0] == "mcp":
+                # This is a Docker Desktop gateway - use separate command and args
+                cmd_args = ["claude", "mcp", "add", name, command] + args
             else:
-                full_command = command
-                
-            cmd_args = ["claude", "mcp", "add", name, full_command]
+                # Regular servers - use full command string
+                if args:
+                    full_command = f"{command} {' '.join(args)}"
+                else:
+                    full_command = command
+                cmd_args = ["claude", "mcp", "add", name, full_command]
             
             # Set up environment
             cmd_env = self._get_env()

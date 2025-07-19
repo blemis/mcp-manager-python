@@ -35,6 +35,7 @@ class ServerType(str, Enum):
     
     NPM = "npm"
     DOCKER = "docker"
+    DOCKER_DESKTOP = "docker-desktop"
     CUSTOM = "custom"
 
 

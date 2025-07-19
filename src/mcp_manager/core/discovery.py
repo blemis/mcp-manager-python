@@ -244,7 +244,8 @@ class ServerDiscovery:
                 version=server_info["version"],
                 description=server_info["description"],
                 server_type=ServerType.DOCKER,
-                install_command=f"docker run -i --rm --pull always {server_info['package']}:latest",
+                install_command="docker",
+                install_args=["run", "-i", "--rm", "--pull", "always", f"{server_info['package']}:latest"],
                 keywords=["mcp", "docker", server_info["name"]],
             )
             results.append(result)
@@ -256,130 +257,118 @@ class ServerDiscovery:
         query: Optional[str] = None,
         limit: int = 25,
     ) -> List[DiscoveryResult]:
-        """Discover Docker Desktop MCP servers."""
+        """Discover Docker Desktop MCP servers dynamically."""
         logger.debug("Discovering Docker Desktop MCP servers")
         
-        # Docker Desktop MCP catalog
-        docker_desktop_servers = [
-            {
-                "name": "aws-design",
-                "package": "docker.io/phidata/aws-mcp",
-                "description": "AWS design and architecture MCP server for Docker Desktop",
-                "version": "latest",
-            },
-            {
-                "name": "curl",
-                "package": "docker.io/phidata/curl-mcp",
-                "description": "HTTP client MCP server for making web requests",
-                "version": "latest",
-            },
-            {
-                "name": "hashicorp-terraform",
-                "package": "docker.io/phidata/terraform-mcp",
-                "description": "Hashicorp Terraform MCP server for infrastructure as code",
-                "version": "latest",
-            },
-            {
-                "name": "git",
-                "package": "docker.io/phidata/git-mcp",
-                "description": "Git version control MCP server",
-                "version": "latest",
-            },
-            {
-                "name": "python",
-                "package": "docker.io/phidata/python-mcp",
-                "description": "Python runtime and execution MCP server",
-                "version": "latest",
-            },
-            {
-                "name": "node",
-                "package": "docker.io/phidata/node-mcp",
-                "description": "Node.js runtime and execution MCP server",
-                "version": "latest",
-            },
-            {
-                "name": "postgresql",
-                "package": "docker.io/phidata/postgresql-mcp",
-                "description": "PostgreSQL database MCP server",
-                "version": "latest",
-            },
-            {
-                "name": "redis",
-                "package": "docker.io/phidata/redis-mcp",
-                "description": "Redis cache and database MCP server",
-                "version": "latest",
-            },
-            {
-                "name": "kubernetes",
-                "package": "docker.io/phidata/kubernetes-mcp",
-                "description": "Kubernetes container orchestration MCP server",
-                "version": "latest",
-            },
-            {
-                "name": "github",
-                "package": "docker.io/phidata/github-mcp",
-                "description": "GitHub API and repository management MCP server",
-                "version": "latest",
-            },
-            {
-                "name": "slack",
-                "package": "docker.io/phidata/slack-mcp",
-                "description": "Slack messaging and integration MCP server",
-                "version": "latest",
-            },
-            {
-                "name": "jira",
-                "package": "docker.io/phidata/jira-mcp",
-                "description": "Jira issue tracking MCP server",
-                "version": "latest",
-            },
-            {
-                "name": "confluence",
-                "package": "docker.io/phidata/confluence-mcp",
-                "description": "Confluence documentation MCP server",
-                "version": "latest",
-            },
-            {
-                "name": "elasticsearch",
-                "package": "docker.io/phidata/elasticsearch-mcp",
-                "description": "Elasticsearch search engine MCP server",
-                "version": "latest",
-            },
-            {
-                "name": "mongodb",
-                "package": "docker.io/phidata/mongodb-mcp",
-                "description": "MongoDB NoSQL database MCP server",
-                "version": "latest",
-            },
-        ]
-        
-        results = []
-        
-        for server_info in docker_desktop_servers:
-            # Filter by query if provided
-            if query:
-                query_lower = query.lower()
-                name_match = query_lower in server_info["name"].lower()
-                desc_match = query_lower in server_info["description"].lower()
-                if not (name_match or desc_match):
-                    continue
-                    
-            # Build full Docker command for Claude
-            full_docker_command = f"docker run -i --rm --network bridge --pull always {server_info['package']}:latest"
+        try:
+            # Get available servers from Docker MCP catalog
+            available_servers = await self._get_docker_mcp_catalog()
             
-            result = DiscoveryResult(
-                name=f"docker-desktop-{server_info['name']}",
-                package=server_info["package"],
-                version=server_info["version"],
-                description=server_info["description"],
-                server_type=ServerType.DOCKER,
-                install_command=full_docker_command,
-                install_args=[],  # Not needed since command is full
-                keywords=["mcp", "docker-desktop", server_info["name"], "docker"],
+            # Get currently enabled servers from registry
+            enabled_servers = await self._get_docker_mcp_enabled_servers()
+            
+            results = []
+            
+            # Add individual servers from catalog
+            for server_name, server_info in available_servers.items():
+                # Filter by query if provided
+                if query:
+                    query_lower = query.lower()
+                    name_match = query_lower in server_name.lower()
+                    desc_match = query_lower in server_info.get("description", "").lower()
+                    if not (name_match or desc_match):
+                        continue
+                
+                result = DiscoveryResult(
+                    name=f"docker-desktop-{server_name}",
+                    package=server_info.get("package", server_name),
+                    version=server_info.get("version", "latest"),
+                    description=server_info.get("description", f"Docker Desktop MCP server: {server_name}"),
+                    server_type=ServerType.DOCKER_DESKTOP,
+                    install_command="docker",
+                    install_args=["mcp", "server", "enable", server_name],
+                    keywords=["mcp", "docker-desktop", server_name],
+                )
+                results.append(result)
+            
+            # Add gateway option if enabled servers exist
+            if enabled_servers:
+                if not query or "gateway" in query.lower():
+                    gateway_result = DiscoveryResult(
+                        name="docker-gateway",
+                        package="docker-gateway",
+                        version="latest",
+                        description=f"Docker Desktop MCP Gateway - currently provides: {', '.join(enabled_servers)}",
+                        server_type=ServerType.DOCKER_DESKTOP,
+                        install_command="docker",
+                        install_args=["mcp", "gateway", "run", "--servers", ",".join(enabled_servers)],
+                        keywords=["mcp", "docker-desktop", "gateway"] + enabled_servers,
+                    )
+                    results.append(gateway_result)
+            
+            return results[:limit]
+            
+        except Exception as e:
+            logger.warning(f"Failed to discover Docker Desktop servers: {e}")
+            return []
+    
+    async def _get_docker_mcp_catalog(self) -> dict:
+        """Get available servers from Docker MCP catalog."""
+        try:
+            import subprocess
+            result = subprocess.run(
+                ["docker", "mcp", "catalog", "show", "docker-mcp"],
+                capture_output=True,
+                text=True,
+                timeout=30,
             )
-            results.append(result)
             
-        return results[:limit]
+            if result.returncode != 0:
+                logger.warning("Failed to get Docker MCP catalog")
+                return {}
+            
+            # Parse the catalog output
+            catalog = {}
+            current_server = None
+            
+            for line in result.stdout.strip().split('\n'):
+                if line and ':' in line and not line.startswith(' '):
+                    # New server entry
+                    server_name, description = line.split(':', 1)
+                    current_server = server_name.strip()
+                    catalog[current_server] = {
+                        "description": description.strip(),
+                        "package": current_server,
+                        "version": "latest"
+                    }
+            
+            logger.debug(f"Found {len(catalog)} servers in Docker MCP catalog")
+            return catalog
+            
+        except Exception as e:
+            logger.warning(f"Failed to get Docker MCP catalog: {e}")
+            return {}
+    
+    async def _get_docker_mcp_enabled_servers(self) -> list:
+        """Get currently enabled servers from Docker MCP registry."""
+        try:
+            import yaml
+            from pathlib import Path
+            
+            registry_path = Path.home() / ".docker" / "mcp" / "registry.yaml"
+            if not registry_path.exists():
+                return []
+            
+            with open(registry_path) as f:
+                registry_data = yaml.safe_load(f)
+            
+            enabled_servers = list(registry_data.get("registry", {}).keys())
+            logger.debug(f"Found {len(enabled_servers)} enabled Docker MCP servers")
+            return enabled_servers
+            
+        except Exception as e:
+            logger.warning(f"Failed to get enabled Docker MCP servers: {e}")
+            return []
         
     def _is_mcp_package(
         self,
