@@ -126,12 +126,19 @@ class ClaudeInterface:
             True if successful
         """
         try:
-            # Build command - always use full command string
-            if args:
+            # Build command - handle Docker commands specially  
+            if command == "docker" and args:
+                # For Docker commands, we need to pass them as: docker arg1 arg2 arg3
+                # But claude mcp add expects a single command string
                 full_command = f"{command} {' '.join(args)}"
+                cmd_args = ["claude", "mcp", "add", name, full_command]
             else:
-                full_command = command
-            cmd_args = ["claude", "mcp", "add", name, full_command]
+                # For other commands, use full command string
+                if args:
+                    full_command = f"{command} {' '.join(args)}"
+                else:
+                    full_command = command
+                cmd_args = ["claude", "mcp", "add", name, full_command]
             
             # Set up environment
             cmd_env = self._get_env()

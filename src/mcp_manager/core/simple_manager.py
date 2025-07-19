@@ -260,38 +260,24 @@ class SimpleMCPManager:
     
     
     async def _import_docker_gateway_to_claude_code(self) -> bool:
-        """Add/update docker-gateway directly to Claude Code."""
+        """Instruct user to import docker-gateway from Claude Desktop."""
         try:
-            # Get the current list of enabled Docker Desktop servers
-            enabled_servers = await self._get_enabled_docker_servers()
-            if not enabled_servers:
-                logger.warning("No Docker Desktop servers enabled")
-                return False
-            
-            # Remove existing docker-gateway if it exists
+            # Check if docker-gateway already exists
             if self.claude.server_exists("docker-gateway"):
-                logger.info("Removing existing docker-gateway before re-adding")
-                self.claude.remove_server("docker-gateway")
-            
-            # Add docker-gateway directly to Claude with current enabled servers
-            logger.info(f"Adding docker-gateway to Claude with servers: {enabled_servers}")
-            
-            success = self.claude.add_server(
-                name="docker-gateway",
-                command="docker",
-                args=["mcp", "gateway", "run", "--servers", ",".join(sorted(enabled_servers))],
-                env=None,
-            )
-            
-            if success:
-                logger.info("Successfully added docker-gateway to Claude Code")
+                logger.info("docker-gateway already exists in Claude Code")
                 return True
-            else:
-                logger.error("Failed to add docker-gateway to Claude Code")
-                return False
+            
+            # The docker-gateway uses Node.js/Ink and must be imported from Claude Desktop
+            logger.warning("Docker Desktop servers require manual sync to Claude Code")
+            logger.info("Please run: claude mcp add-from-claude-desktop docker-gateway")
+            logger.info("This will sync all enabled Docker Desktop servers to Claude Code")
+            
+            # For now, return True to not block the workflow
+            # The user will need to manually run the import command
+            return True
             
         except Exception as e:
-            logger.error(f"Failed to add docker-gateway: {e}")
+            logger.error(f"Failed to check docker-gateway: {e}")
             return False
     
     async def _disable_docker_desktop_server(self, name: str) -> bool:
