@@ -16,6 +16,24 @@ console = Console()
 logger = get_logger(__name__)
 
 
+async def _get_docker_desktop_servers():
+    """Get list of enabled Docker Desktop servers."""
+    try:
+        import yaml
+        from pathlib import Path
+        
+        registry_path = Path.home() / ".docker" / "mcp" / "registry.yaml"
+        if not registry_path.exists():
+            return []
+        
+        with open(registry_path) as f:
+            registry_data = yaml.safe_load(f)
+        
+        return list(registry_data.get("registry", {}).keys())
+    except Exception:
+        return []
+
+
 def validate_and_add_server(
     manager,
     name: str,
@@ -107,6 +125,27 @@ def validate_and_remove_server(
     force: bool = False,
 ):
     """Remove a server with validation and confirmation."""
+    # Check if this might be a Docker Desktop server
+    docker_desktop_servers = asyncio.run(_get_docker_desktop_servers())
+    if name in docker_desktop_servers:
+        # Handle Docker Desktop server removal
+        if not force and not Confirm.ask(f"Remove Docker Desktop server '{name}'?"):
+            raise click.Abort()
+        
+        try:
+            # This will disable in Docker Desktop and re-sync gateway
+            success = asyncio.run(manager.remove_server(f"docker-desktop-{name}"))
+            if success:
+                console.print(f"[green]✓[/green] Removed Docker Desktop server: {name}")
+                console.print("[dim]Docker gateway updated in Claude Code[/dim]")
+                return
+            else:
+                console.print(f"[red]✗[/red] Failed to remove Docker Desktop server: {name}")
+                raise click.Abort()
+        except Exception as e:
+            console.print(f"[red]✗[/red] Failed to remove server: {e}")
+            raise click.Abort()
+    
     # Check if server exists
     servers = asyncio.run(manager.list_servers())
     server = next((s for s in servers if s.name == name), None)
