@@ -144,7 +144,7 @@ class MCPManager:
         Raises:
             ServerError: If server already exists or validation fails
         """
-        logger.info(f"Adding server: {name} ({scope.value})")
+        logger.debug(f"Adding server: {name} ({scope.value})")
         
         # Check if server already exists
         existing = self.servers.get_by_name(name)
@@ -182,7 +182,7 @@ class MCPManager:
         Raises:
             ServerError: If server not found
         """
-        logger.info(f"Removing server: {name} (scope: {scope})")
+        logger.debug(f"Removing server: {name} (scope: {scope})")
         
         if not self.servers.remove_server(name, scope):
             raise ServerError(f"Server '{name}' not found")

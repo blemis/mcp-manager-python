@@ -320,8 +320,13 @@ def disable(name: str):
     default=20,
     help="Maximum results"
 )
+@click.option(
+    "--update-catalog", 
+    is_flag=True,
+    help="Update Docker MCP catalog before discovery"
+)
 @handle_errors
-def discover(query: Optional[str], server_type: Optional[str], limit: int):
+def discover(query: Optional[str], server_type: Optional[str], limit: int, update_catalog: bool):
     """Discover available MCP servers."""
     discovery = cli_context.get_discovery()
     
@@ -329,6 +334,15 @@ def discover(query: Optional[str], server_type: Optional[str], limit: int):
     
     # Run async discovery
     async def run_discovery():
+        # Update catalog if requested
+        if update_catalog:
+            console.print("[blue]Updating Docker MCP catalog...[/blue]")
+            success = await discovery.update_docker_catalog()
+            if success:
+                console.print("[green]✅ Docker MCP catalog updated[/green]")
+            else:
+                console.print("[yellow]⚠️ Failed to update Docker MCP catalog[/yellow]")
+        
         return await discovery.discover_servers(
             query=query,
             server_type=type_filter,
@@ -342,20 +356,104 @@ def discover(query: Optional[str], server_type: Optional[str], limit: int):
         return
         
     table = Table(title="Available MCP Servers", show_header=True, header_style="bold blue")
-    table.add_column("Name", style="cyan")
-    table.add_column("Type", justify="center")
-    table.add_column("Description", style="dim")
-    table.add_column("Package", style="green")
+    table.add_column("Install ID", style="cyan", width=20)
+    table.add_column("Type", justify="center", width=15)
+    table.add_column("Description", style="dim", width=30)
+    table.add_column("Package", style="green", width=25)
+    table.add_column("Install Command", style="yellow", width=30)
     
     for result in results:
+        # Create unique install ID based on package name
+        if result.server_type == ServerType.NPM:
+            install_id = result.package.replace("@", "").replace("/", "-").replace("server-", "")
+        elif result.server_type == ServerType.DOCKER:
+            install_id = result.package.replace("/", "-")
+        elif result.server_type == ServerType.DOCKER_DESKTOP:
+            install_id = f"dd-{result.name.replace('docker-desktop-', '')}"
+        else:
+            install_id = result.name
+        
+        # Create simple install command
+        install_cmd = f"mcp-manager install-package {install_id}"
+        
         table.add_row(
-            result.name,
+            install_id,
             result.server_type.value,
-            result.description[:60] + "..." if result.description and len(result.description) > 60 else result.description or "",
-            result.package,
+            result.description[:30] + "..." if result.description and len(result.description) > 30 else (result.description or ""),
+            result.package or "",
+            install_cmd
         )
         
     console.print(table)
+    
+    if results:
+        console.print("\n[dim]💡 To install a server, copy the command from the 'Install Command' column[/dim]")
+        console.print("[dim]   Example: [cyan]mcp-manager install-package modelcontextprotocol-filesystem[/cyan][/dim]")
+
+
+@cli.command("install-package")
+@click.argument("install_id")
+@handle_errors
+def install_package(install_id: str):
+    """Install a server using its unique install ID from discovery."""
+    discovery = cli_context.get_discovery()
+    manager = cli_context.get_manager()
+    
+    # Resolve install ID back to package info
+    async def find_and_install():
+        # Search for servers to find the one with matching install_id
+        results = await discovery.discover_servers(limit=100)
+        
+        target_result = None
+        for result in results:
+            # Recreate install_id logic to match
+            if result.server_type == ServerType.NPM:
+                result_id = result.package.replace("@", "").replace("/", "-").replace("server-", "")
+            elif result.server_type == ServerType.DOCKER:
+                result_id = result.package.replace("/", "-")
+            elif result.server_type == ServerType.DOCKER_DESKTOP:
+                result_id = f"dd-{result.name.replace('docker-desktop-', '')}"
+            else:
+                result_id = result.name
+            
+            if result_id == install_id:
+                target_result = result
+                break
+        
+        if not target_result:
+            console.print(f"[red]✗[/red] Install ID '{install_id}' not found")
+            console.print("[yellow]💡[/yellow] Run [cyan]mcp-manager discover[/cyan] to see available install IDs")
+            return
+        
+        # Create unique server name to avoid conflicts
+        if target_result.server_type == ServerType.NPM:
+            server_name = install_id.replace("modelcontextprotocol-", "official-")
+        elif target_result.server_type == ServerType.DOCKER:
+            server_name = install_id.replace("-", "_")
+        elif target_result.server_type == ServerType.DOCKER_DESKTOP:
+            # For Docker Desktop, use the actual server name (remove dd- prefix)
+            server_name = install_id.replace("dd-", "")
+        else:
+            server_name = install_id
+        
+        console.print(f"[blue]Installing[/blue] {target_result.package} as [cyan]{server_name}[/cyan]")
+        
+        # Install the server
+        try:
+            server = await manager.add_server(
+                name=server_name,
+                server_type=target_result.server_type,
+                command=target_result.install_command,
+                description=target_result.description,
+                args=target_result.install_args,
+            )
+            console.print(f"[green]✓[/green] Installed server: {server.name}")
+            console.print("[dim]Server is now active in Claude Code![/dim]")
+            
+        except Exception as e:
+            console.print(f"[red]✗[/red] Failed to install: {e}")
+    
+    asyncio.run(find_and_install())
 
 
 @cli.command()
@@ -455,6 +553,123 @@ def tui():
         console.print("[red]TUI dependencies not available[/red]")
         console.print("Install with: pip install mcp-manager[tui]")
         sys.exit(1)
+
+
+@cli.command()
+@click.option(
+    "--dry-run", 
+    is_flag=True, 
+    help="Show what would be cleaned up without making changes"
+)
+@click.option(
+    "--no-backup", 
+    is_flag=True, 
+    help="Skip creating backup (not recommended)"
+)
+@handle_errors
+def cleanup(dry_run: bool, no_backup: bool):
+    """Clean up problematic MCP server configurations.
+    
+    This command removes old or broken MCP server configurations that can
+    cause connection errors, such as:
+    - Old Docker commands with incorrect image names
+    - Servers with invalid command formats
+    - Configurations causing ENOENT errors
+    """
+    asyncio.run(_cleanup_impl(dry_run, no_backup))
+
+
+async def _cleanup_impl(dry_run: bool, no_backup: bool):
+    """Implementation of cleanup command."""
+    import json
+    import shutil
+    from datetime import datetime
+    from pathlib import Path
+    
+    console.print("[bold blue]🧹 MCP Configuration Cleanup[/bold blue]")
+    
+    # Check Claude configuration file
+    claude_config = Path.home() / ".claude.json"
+    if not claude_config.exists():
+        console.print("[yellow]No Claude configuration found[/yellow]")
+        return
+    
+    # Create backup unless disabled
+    backup_path = None
+    if not no_backup and not dry_run:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_path = claude_config.with_suffix(f".backup_{timestamp}")
+        shutil.copy2(claude_config, backup_path)
+        console.print(f"✅ Created backup: {backup_path}")
+    
+    # Load and analyze configuration
+    try:
+        with open(claude_config) as f:
+            config = json.load(f)
+    except json.JSONDecodeError as e:
+        console.print(f"[red]Error reading Claude configuration: {e}[/red]")
+        return
+    
+    # Find problematic configurations
+    problems_found = []
+    projects_to_clean = {}
+    
+    if "projectConfigs" in config:
+        for project_path, project_config in config["projectConfigs"].items():
+            if "mcpServers" in project_config and project_config["mcpServers"]:
+                servers_to_remove = []
+                
+                for server_name, server_config in project_config["mcpServers"].items():
+                    # Check for problematic Docker commands
+                    command = server_config.get("command", "")
+                    
+                    # Pattern 1: Old incorrect Docker MCP commands
+                    if command.startswith("docker run -i --rm --pull always mcp/"):
+                        problems_found.append(f"❌ {project_path}:{server_name} - Invalid Docker command")
+                        servers_to_remove.append(server_name)
+                    
+                    # Pattern 2: Commands that cause ENOENT
+                    elif "mcp/" in command and "docker run" in command:
+                        problems_found.append(f"⚠️  {project_path}:{server_name} - Likely ENOENT error")
+                        servers_to_remove.append(server_name)
+                
+                if servers_to_remove:
+                    projects_to_clean[project_path] = servers_to_remove
+    
+    # Report findings
+    if not problems_found:
+        console.print("[green]✅ No problematic MCP configurations found[/green]")
+        return
+    
+    console.print(f"\n[yellow]Found {len(problems_found)} problematic configurations:[/yellow]")
+    for problem in problems_found:
+        console.print(f"  {problem}")
+    
+    if dry_run:
+        console.print("\n[blue]🔍 Dry run mode - no changes made[/blue]")
+        return
+    
+    # Apply fixes
+    if projects_to_clean:
+        console.print(f"\n[blue]🔧 Cleaning up configurations...[/blue]")
+        
+        for project_path, servers_to_remove in projects_to_clean.items():
+            for server_name in servers_to_remove:
+                del config["projectConfigs"][project_path]["mcpServers"][server_name]
+                console.print(f"  ✅ Removed {project_path}:{server_name}")
+        
+        # Save updated configuration
+        try:
+            with open(claude_config, 'w') as f:
+                json.dump(config, f, indent=2)
+            console.print(f"\n[green]✅ Configuration cleaned successfully[/green]")
+            if backup_path:
+                console.print(f"[green]📁 Backup saved to: {backup_path}[/green]")
+        except Exception as e:
+            console.print(f"[red]Error saving configuration: {e}[/red]")
+            if backup_path:
+                console.print(f"[yellow]Restoring from backup...[/yellow]")
+                shutil.copy2(backup_path, claude_config)
 
 
 def main():

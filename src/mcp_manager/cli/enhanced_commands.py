@@ -59,6 +59,107 @@ async def _get_available_docker_desktop_servers(name: str):
         return False
 
 
+def _find_similar_servers(name: str, server_type: str, existing_servers: List) -> List:
+    """Find existing servers that might provide similar functionality."""
+    similar_servers = []
+    
+    # Normalize the name for comparison
+    normalized_name = _normalize_server_name(name)
+    
+    for server in existing_servers:
+        # Skip exact matches (already handled above)
+        if server.name == name:
+            continue
+            
+        # Normalize existing server name
+        existing_normalized = _normalize_server_name(server.name)
+        
+        # Check for similar base functionality
+        if _are_servers_similar(normalized_name, existing_normalized, server_type, server.server_type.value):
+            similar_servers.append(server)
+    
+    return similar_servers
+
+
+def _normalize_server_name(name: str) -> str:
+    """Normalize server name for comparison by removing common prefixes/suffixes."""
+    # Convert to lowercase
+    normalized = name.lower()
+    
+    # Remove common prefixes
+    prefixes_to_remove = [
+        "docker-desktop-",
+        "@playwright/",
+        "@modelcontextprotocol/server-",
+        "mcp-server-",
+        "server-",
+        "mcp-",
+        "@",
+    ]
+    
+    for prefix in prefixes_to_remove:
+        if normalized.startswith(prefix):
+            normalized = normalized[len(prefix):]
+            break
+    
+    # Remove common suffixes
+    suffixes_to_remove = [
+        "-mcp",
+        "-server",
+        "/mcp",
+    ]
+    
+    for suffix in suffixes_to_remove:
+        if normalized.endswith(suffix):
+            normalized = normalized[:-len(suffix)]
+            break
+    
+    return normalized
+
+
+def _are_servers_similar(name1: str, name2: str, type1: str, type2: str) -> bool:
+    """Check if two servers provide similar functionality."""
+    # Exact name match after normalization
+    if name1 == name2:
+        return True
+    
+    # Check for common functionality patterns
+    functionality_groups = [
+        # Browser automation
+        ["playwright", "puppeteer", "selenium", "browser"],
+        # Filesystem operations
+        ["filesystem", "fs", "file", "files"],
+        # Database operations  
+        ["database", "db", "sqlite", "postgres", "mysql", "mongo"],
+        # Web scraping/fetching
+        ["fetch", "scrape", "web", "http", "curl"],
+        # Git operations
+        ["git", "github", "gitlab", "repo", "repository"],
+        # Search functionality
+        ["search", "query", "find", "brave"],
+        # Cloud services
+        ["aws", "azure", "gcp", "cloud"],
+        # Kubernetes
+        ["k8s", "kubernetes", "kubectl"],
+        # Terraform
+        ["terraform", "tf", "infrastructure"],
+    ]
+    
+    for group in functionality_groups:
+        name1_in_group = any(keyword in name1 for keyword in group)
+        name2_in_group = any(keyword in name2 for keyword in group)
+        
+        if name1_in_group and name2_in_group:
+            return True
+    
+    # Check for substring matches (e.g., "playwright" in "playwright-test")
+    if len(name1) >= 3 and len(name2) >= 3:
+        if name1 in name2 or name2 in name1:
+            return True
+    
+    return False
+
+
 def validate_and_add_server(
     manager,
     name: str,
@@ -127,6 +228,16 @@ def validate_and_add_server(
     if any(s.name == name for s in existing_servers):
         console.print(f"[yellow]⚠[/yellow] Server '{name}' already exists")
         if not Confirm.ask("Replace existing server?"):
+            raise click.Abort()
+    
+    # Check for similar servers that might provide the same functionality
+    similar_servers = _find_similar_servers(name, server_type, existing_servers)
+    if similar_servers:
+        console.print(f"[yellow]⚠[/yellow] Found similar servers that might provide the same functionality:")
+        for similar in similar_servers:
+            console.print(f"  • {similar.name} ({similar.server_type.value}) - {similar.description or 'No description'}")
+        console.print(f"\n[yellow]Installing multiple servers for the same functionality may cause conflicts.[/yellow]")
+        if not Confirm.ask("Continue anyway?"):
             raise click.Abort()
     
     # Parse and validate environment variables

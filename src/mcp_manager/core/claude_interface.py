@@ -177,8 +177,8 @@ class ClaudeInterface:
             # Use --scope user to store in user-wide configuration
             cmd_args = [self.claude_path, "mcp", "add", "--scope", "user", name, command]
             if args:
-                # Check if any args start with -- (options) - if so, use -- separator
-                has_options = any(arg.startswith('--') for arg in args)
+                # Check if any args start with - (options) - if so, use -- separator
+                has_options = any(arg.startswith('-') for arg in args)
                 if has_options:
                     cmd_args.append('--')
                 cmd_args.extend(args)
@@ -197,7 +197,7 @@ class ClaudeInterface:
             )
             
             if result.returncode == 0:
-                logger.info(f"Added server '{name}' to Claude")
+                logger.debug(f"Added server '{name}' to Claude")
                 return True
             else:
                 logger.error(f"Failed to add server '{name}': {result.stderr}")
@@ -227,7 +227,7 @@ class ClaudeInterface:
             )
             
             if result.returncode == 0:
-                logger.info(f"Removed server '{name}' from Claude")
+                logger.debug(f"Removed server '{name}' from Claude")
                 return True
             else:
                 logger.error(f"Failed to remove server '{name}': {result.stderr}")

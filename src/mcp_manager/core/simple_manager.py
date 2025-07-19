@@ -67,7 +67,7 @@ class SimpleMCPManager:
         Returns:
             The created server
         """
-        logger.info(f"Adding server '{name}' to Claude")
+        logger.debug(f"Adding server '{name}' to Claude")
         
         # Handle Docker Desktop servers specially
         if server_type == ServerType.DOCKER_DESKTOP:
@@ -114,7 +114,7 @@ class SimpleMCPManager:
         Returns:
             True if removed successfully
         """
-        logger.info(f"Removing server '{name}' from Claude")
+        logger.debug(f"Removing server '{name}' from Claude")
         
         # Check if this is a Docker Desktop server
         if name.startswith("docker-desktop-") or await self._is_docker_desktop_server(name):
