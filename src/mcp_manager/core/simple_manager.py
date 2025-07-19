@@ -267,30 +267,36 @@ class SimpleMCPManager:
                 logger.info("docker-gateway already configured in Claude Code")
                 return True
             
-            # Docker Desktop MCP gateway requires one-time setup
-            from rich.console import Console
-            from rich.panel import Panel
+            # Try to automatically add docker-gateway
+            logger.info("Setting up docker-gateway for Docker Desktop integration")
             
-            console = Console()
+            # Get the list of enabled Docker servers from registry
+            enabled_servers = await self._get_enabled_docker_servers()
+            if not enabled_servers:
+                logger.warning("No Docker Desktop servers enabled")
+                return True  # Not an error, just nothing to sync
             
-            console.print("\n[yellow]⚠ Docker Desktop Setup Required[/yellow]")
-            console.print(Panel.fit(
-                "[bold cyan]One-time setup needed:[/bold cyan]\n\n"
-                "[white]Run this command to enable Docker Desktop MCPs:[/white]\n"
-                "[green]claude mcp add-from-claude-desktop docker-gateway[/green]\n\n"
-                "[dim]This will sync all enabled Docker Desktop servers to Claude Code.\n"
-                "You only need to run this once - the MCP Manager will handle\n"
-                "enabling/disabling individual servers in Docker Desktop.[/dim]",
-                title="Docker Desktop Integration",
-                border_style="blue"
-            ))
+            # Build the docker-gateway command
+            # The gateway runs and manages connections to enabled Docker Desktop servers
+            servers_list = ",".join(enabled_servers)
             
-            # Return True so the Docker Desktop server was enabled successfully
-            # The user just needs to run the one-time setup command
-            return True
+            # Add docker-gateway to Claude Code with the current enabled servers
+            success = self.claude.add_server(
+                name="docker-gateway",
+                command="/opt/homebrew/bin/docker",
+                args=["mcp", "gateway", "run", "--servers", servers_list],
+                env=None,
+            )
+            
+            if success:
+                logger.info(f"Successfully set up docker-gateway with servers: {servers_list}")
+                return True
+            else:
+                logger.error("Failed to add docker-gateway to Claude Code")
+                return False
             
         except Exception as e:
-            logger.error(f"Failed to check docker-gateway: {e}")
+            logger.error(f"Failed to set up docker-gateway: {e}")
             return False
     
     async def _disable_docker_desktop_server(self, name: str) -> bool:
@@ -320,8 +326,10 @@ class SimpleMCPManager:
             
             logger.info(f"Successfully disabled {server_name} in Docker Desktop")
             
-            # Step 2: Re-sync Docker Desktop servers to Claude Code
-            # This uses claude mcp add-from-claude-desktop to sync the updated list
+            # Step 2: Update docker-gateway with the new server list
+            # Remove the old gateway and add an updated one
+            if self.claude.server_exists("docker-gateway"):
+                self.claude.remove_server("docker-gateway")
             sync_success = await self._import_docker_gateway_to_claude_code()
             
             if sync_success:
