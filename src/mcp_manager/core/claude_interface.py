@@ -126,18 +126,15 @@ class ClaudeInterface:
             True if successful
         """
         try:
-            # Build command - handle Docker commands specially  
-            if command == "docker" and args:
-                # For Docker commands, use full path to docker to avoid ENOENT
-                full_command = f"/opt/homebrew/bin/docker {' '.join(args)}"
-                cmd_args = ["/opt/homebrew/bin/claude", "mcp", "add", name, full_command]
-            else:
-                # For other commands, use full command string
-                if args:
-                    full_command = f"{command} {' '.join(args)}"
-                else:
-                    full_command = command
-                cmd_args = ["/opt/homebrew/bin/claude", "mcp", "add", name, full_command]
+            # Build command args - Claude expects: claude mcp add <name> <command> [args...]
+            # Use --scope user to store in user-wide configuration
+            cmd_args = ["/opt/homebrew/bin/claude", "mcp", "add", "--scope", "user", name, command]
+            if args:
+                # Check if any args start with -- (options) - if so, use -- separator
+                has_options = any(arg.startswith('--') for arg in args)
+                if has_options:
+                    cmd_args.append('--')
+                cmd_args.extend(args)
             
             # Set up environment
             cmd_env = self._get_env()
@@ -175,7 +172,7 @@ class ClaudeInterface:
         """
         try:
             result = subprocess.run(
-                ["/opt/homebrew/bin/claude", "mcp", "remove", name],
+                ["/opt/homebrew/bin/claude", "mcp", "remove", "--scope", "user", name],
                 capture_output=True,
                 text=True,
                 timeout=30,
@@ -205,7 +202,7 @@ class ClaudeInterface:
         """
         try:
             result = subprocess.run(
-                ["/opt/homebrew/bin/claude", "mcp", "get", name],
+                ["/opt/homebrew/bin/claude", "mcp", "get", "--scope", "user", name],
                 capture_output=True,
                 text=True,
                 timeout=30,
