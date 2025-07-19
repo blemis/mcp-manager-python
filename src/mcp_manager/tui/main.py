@@ -150,10 +150,10 @@ class MCPManagerApp(App):
             
             with TabbedContent(initial="servers"):
                 with TabPane("Servers", id="servers"):
-                    yield self._create_servers_tab()
+                    yield from self._create_servers_tab()
                     
                 with TabPane("Discovery", id="discovery"):
-                    yield self._create_discovery_tab()
+                    yield from self._create_discovery_tab()
                     
                 with TabPane("System", id="system"):
                     yield SystemInfoWidget(self.manager)

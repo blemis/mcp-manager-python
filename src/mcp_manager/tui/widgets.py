@@ -10,9 +10,10 @@ from typing import Any, Dict, List, Optional
 from rich.text import Text
 from textual import on
 from textual.containers import Horizontal, Vertical
+from textual.widget import Widget
 from textual.widgets import (
     Button, DataTable, Input, Label, Select, Static, 
-    Switch, TextArea, Widget
+    Switch, TextArea
 )
 
 from mcp_manager.core.manager import MCPManager

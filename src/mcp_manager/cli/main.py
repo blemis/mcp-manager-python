@@ -20,7 +20,7 @@ from mcp_manager.core.discovery import ServerDiscovery
 from mcp_manager.core.exceptions import MCPManagerError
 from mcp_manager.core.manager import MCPManager
 from mcp_manager.core.models import ServerScope, ServerType
-from mcp_manager.utils.config import get_config, setup_logging
+from mcp_manager.utils.config import get_config
 from mcp_manager.utils.logging import get_logger
 
 console = Console()
