@@ -159,8 +159,33 @@ class ClaudeConfigParser:
             servers = {}
             
             if scope == 'internal':
-                # Internal config has different structure: { "mcpServers": { ... } }
-                mcp_servers = config_data.get('mcpServers', {})
+                # Internal config has different structure: { "projectConfigs": { "path": { "mcpServers": {...} } } }
+                mcp_servers = {}
+                project_configs = config_data.get('projectConfigs', {})
+                
+                # Get the current working directory to find the right project config
+                current_path = str(Path.cwd())
+                
+                # Look through all project configs and collect all mcpServers
+                for project_path, project_config in project_configs.items():
+                    if isinstance(project_config, dict) and 'mcpServers' in project_config:
+                        project_mcp_servers = project_config.get('mcpServers', {})
+                        # Add servers with project path context
+                        for server_name, server_config in project_mcp_servers.items():
+                            # Use project path as prefix if there are conflicts
+                            unique_name = server_name
+                            if unique_name in mcp_servers:
+                                # Add project path suffix to make it unique
+                                path_suffix = Path(project_path).name or "root"
+                                unique_name = f"{server_name}_{path_suffix}"
+                            mcp_servers[unique_name] = server_config
+                
+                # Also check for top-level mcpServers (fallback)
+                top_level_servers = config_data.get('mcpServers', {})
+                for server_name, server_config in top_level_servers.items():
+                    if server_name not in mcp_servers:
+                        mcp_servers[server_name] = server_config
+                        
             else:
                 # User and project configs: { "mcpServers": { ... } }
                 mcp_servers = config_data.get('mcpServers', {})

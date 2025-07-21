@@ -101,6 +101,28 @@ class UIConfig(BaseModel):
         return v
 
 
+class ChangeDetectionConfig(BaseModel):
+    """Configuration for external change detection and monitoring."""
+    
+    enabled: bool = Field(default=True, description="Enable change detection")
+    check_interval: int = Field(default=60, description="Check interval in seconds")
+    auto_sync: bool = Field(default=False, description="Automatically sync detected changes")
+    notifications_enabled: bool = Field(default=True, description="Enable change notifications")
+    max_history: int = Field(default=1000, description="Maximum change history to keep")
+    watch_docker_config: bool = Field(default=True, description="Watch Docker MCP configuration")
+    watch_claude_configs: bool = Field(default=True, description="Watch Claude configurations")
+    ignored_servers: List[str] = Field(default_factory=list, description="Servers to ignore during detection")
+    sync_on_startup: bool = Field(default=False, description="Sync changes on startup")
+    
+    @field_validator("check_interval")
+    @classmethod
+    def validate_check_interval(cls, v: int) -> int:
+        """Validate check interval."""
+        if v < 10:
+            raise ValueError("Check interval must be at least 10 seconds")
+        return v
+
+
 class Config(BaseSettings):
     """Main configuration class."""
     
@@ -117,6 +139,7 @@ class Config(BaseSettings):
     claude: ClaudeConfig = Field(default_factory=ClaudeConfig)
     discovery: DiscoveryConfig = Field(default_factory=DiscoveryConfig)
     ui: UIConfig = Field(default_factory=UIConfig)
+    change_detection: ChangeDetectionConfig = Field(default_factory=ChangeDetectionConfig)
     
     model_config = {
         "env_prefix": "MCP_MANAGER_",
