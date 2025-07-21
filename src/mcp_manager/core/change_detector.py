@@ -124,29 +124,24 @@ class ChangeDetector:
         self._detection_history: List[DetectedChange] = []
     
     async def detect_changes(self) -> List[DetectedChange]:
-        """Detect all changes since last detection."""
+        """Detect all changes since last detection using simple command-based approach."""
+        # Check if sync is safe (no recent mcp-manager operations)
+        from mcp_manager.core.simple_manager import SimpleMCPManager
+        if not SimpleMCPManager.is_sync_safe():
+            logger.debug("Skipping change detection due to recent mcp-manager operations")
+            return []
+        
         changes = []
         
         try:
-            # Get current external state
-            current_state = await self._get_current_external_state()
+            # Get external servers using simple commands
+            external_servers = await self._get_external_servers_simple()
             
-            # Get catalog state
+            # Get catalog servers
             catalog_servers = await self._get_catalog_servers()
             
-            # Compare with last state and catalog
-            if self._last_external_state:
-                external_changes = self._compare_external_states(
-                    current_state, self._last_external_state
-                )
-                changes.extend(external_changes)
-            
-            # Compare external state with catalog
-            catalog_sync_changes = self._compare_with_catalog(current_state, catalog_servers)
-            changes.extend(catalog_sync_changes)
-            
-            # Update last state
-            self._last_external_state = current_state
+            # Compare and find changes
+            changes = self._compare_simple(external_servers, catalog_servers)
             
             # Store in history
             self._detection_history.extend(changes)
@@ -360,6 +355,126 @@ class ChangeDetector:
                         'external_enabled': external_enabled
                     }
                 ))
+        
+        return changes
+    
+    async def _get_external_servers_simple(self) -> Dict[str, Dict[str, Any]]:
+        """Get external servers using simple command-based approach."""
+        import subprocess
+        external_servers = {}
+        
+        # Get Claude servers via claude mcp list
+        try:
+            result = subprocess.run(['claude', 'mcp', 'list'], 
+                                  capture_output=True, text=True, timeout=10)
+            if result.returncode == 0:
+                for line in result.stdout.strip().split('\n'):
+                    if ':' in line and line.strip():
+                        name, command_part = line.split(':', 1)
+                        name = name.strip()
+                        command_part = command_part.strip()
+                        
+                        # Parse command and args
+                        parts = command_part.split()
+                        if parts:
+                            command = parts[0]
+                            args = parts[1:] if len(parts) > 1 else []
+                            
+                            # Special handling for docker-gateway - parse the --servers argument
+                            if name == 'docker-gateway' and 'mcp' in args and 'gateway' in args:
+                                # Find --servers argument and parse the server list
+                                try:
+                                    servers_idx = args.index('--servers')
+                                    if servers_idx + 1 < len(args):
+                                        servers_str = args[servers_idx + 1]
+                                        gateway_servers = [s.strip() for s in servers_str.split(',')]
+                                        # Add each gateway server as a separate entry
+                                        for server_name in gateway_servers:
+                                            if server_name:
+                                                external_servers[server_name] = {
+                                                    'command': 'docker',
+                                                    'args': ['mcp', 'server', server_name],
+                                                    'source': 'claude-gateway',
+                                                    'enabled': True
+                                                }
+                                except (ValueError, IndexError):
+                                    pass
+                            else:
+                                external_servers[name] = {
+                                    'command': command,
+                                    'args': args,
+                                    'source': 'claude',
+                                    'enabled': True
+                                }
+            else:
+                logger.warning(f"claude mcp list failed: {result.stderr}")
+        except Exception as e:
+            logger.warning(f"Error getting Claude servers: {e}")
+        
+        # Get Docker Desktop servers via docker mcp server list
+        try:
+            result = subprocess.run(['docker', 'mcp', 'server', 'list'], 
+                                  capture_output=True, text=True, timeout=10)
+            
+            if result.returncode == 0 and result.stdout.strip():
+                server_names = [s.strip() for s in result.stdout.strip().split(',')]
+                for name in server_names:
+                    if name and name != "No server is enabled" and name not in external_servers:
+                        external_servers[name] = {
+                            'command': 'docker',
+                            'args': ['mcp', 'server', name],
+                            'source': 'docker-desktop',
+                            'enabled': True
+                        }
+        except Exception as e:
+            logger.warning(f"Error getting Docker Desktop servers: {e}")
+        
+        return external_servers
+    
+    def _compare_simple(self, external_servers: Dict[str, Dict[str, Any]], 
+                       catalog_servers: Dict[str, Any]) -> List[DetectedChange]:
+        """Compare external servers with catalog using simple logic."""
+        changes = []
+        
+        external_names = set(external_servers.keys())
+        catalog_names = set(catalog_servers.keys())
+        
+        # Find servers to add (exist externally but not in catalog)
+        for server_name in external_names - catalog_names:
+            server_info = external_servers[server_name]
+            source = ChangeSource.CLAUDE_INTERNAL if server_info['source'] == 'claude' else ChangeSource.DOCKER
+            
+            changes.append(DetectedChange(
+                change_type=ChangeType.SERVER_ADDED,
+                source=source,
+                server_name=server_name,
+                details={
+                    'command': server_info['command'],
+                    'args': server_info['args'],
+                    'server_info': server_info,
+                    'reason': 'external_server_not_in_catalog'
+                }
+            ))
+        
+        # Find servers to remove (exist in catalog but not externally)
+        for server_name in catalog_names - external_names:
+            catalog_info = catalog_servers[server_name]
+            server_type = catalog_info.get('type', 'unknown')
+            source = ChangeSource.DOCKER if server_type == 'docker-desktop' else ChangeSource.UNKNOWN
+            
+            changes.append(DetectedChange(
+                change_type=ChangeType.SERVER_REMOVED,
+                source=source,
+                server_name=server_name,
+                details={
+                    'reason': 'catalog_server_not_external',
+                    'catalog_info': catalog_info
+                }
+            ))
+        
+        # Check for state changes in common servers (future enhancement)
+        # common_servers = external_names & catalog_names
+        # For now, we assume common servers are in sync
         
         return changes
     

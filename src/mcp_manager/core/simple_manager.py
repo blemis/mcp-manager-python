@@ -11,6 +11,8 @@ import sys
 from datetime import datetime
 from typing import List, Optional, Tuple, Dict, Any
 from pydantic import BaseModel
+import threading
+import time
 
 from mcp_manager.core.claude_interface import ClaudeInterface
 from mcp_manager.core.exceptions import MCPManagerError
@@ -40,9 +42,31 @@ class SyncCheckResult(BaseModel):
 class SimpleMCPManager:
     """Simplified MCP Manager that uses Claude Code's native state."""
     
+    # Class-level sync protection (shared across all instances)
+    _sync_lock = threading.Lock()
+    _last_operation_time = 0
+    _operation_cooldown = 2.0  # seconds to wait after operations before allowing sync
+    
     def __init__(self):
         """Initialize the manager."""
         self.claude = ClaudeInterface()
+    
+    @classmethod
+    def _mark_operation_start(cls):
+        """Mark the start of an MCP operation to prevent sync loops."""
+        with cls._sync_lock:
+            cls._last_operation_time = time.time()
+            logger.debug(f"Marked operation start at {cls._last_operation_time}")
+    
+    @classmethod
+    def is_sync_safe(cls) -> bool:
+        """Check if it's safe to perform sync operations (no recent mcp-manager activity)."""
+        with cls._sync_lock:
+            time_since_operation = time.time() - cls._last_operation_time
+            is_safe = time_since_operation > cls._operation_cooldown
+            if not is_safe:
+                logger.debug(f"Sync blocked: only {time_since_operation:.1f}s since last operation (need {cls._operation_cooldown}s)")
+            return is_safe
     
     async def list_servers(self) -> List[Server]:
         """
@@ -153,6 +177,8 @@ class SimpleMCPManager:
         Returns:
             The created server
         """
+        # Mark operation start to prevent sync loops
+        self._mark_operation_start()
         logger.debug(f"Adding server '{name}' to Claude")
         
         # Handle Docker Desktop servers specially
@@ -211,6 +237,8 @@ class SimpleMCPManager:
         Returns:
             True if removed successfully
         """
+        # Mark operation start to prevent sync loops
+        self._mark_operation_start()
         logger.debug(f"Removing server '{name}' from Claude")
         
         # Get server details from Claude's list to find Docker images
@@ -271,6 +299,9 @@ class SimpleMCPManager:
         Returns:
             The server object
         """
+        # Mark operation start to prevent sync loops
+        self._mark_operation_start()
+        
         # Check if server already exists in Claude
         server = self.claude.get_server(name)
         if server:
@@ -330,6 +361,9 @@ class SimpleMCPManager:
         Returns:
             The server object before removal
         """
+        # Mark operation start to prevent sync loops
+        self._mark_operation_start()
+        
         # Check if this is a Docker Desktop server first
         if await self._is_docker_desktop_server(name):
             logger.debug(f"Disabling Docker Desktop server: {name}")
@@ -3099,3 +3133,7 @@ class SimpleMCPManager:
                 "failed_servers": [],
                 "total_tools": 0
             }
+
+    async def _update_server_status(self, server_name: str, enabled: bool):
+        """Update the enabled status of a server in the catalog."""
+        await self._update_server_in_catalog(server_name, enabled=enabled)

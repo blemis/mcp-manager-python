@@ -20,6 +20,8 @@ from mcp_manager.core.discovery import ServerDiscovery
 from mcp_manager.core.exceptions import MCPManagerError
 from mcp_manager.core.simple_manager import SimpleMCPManager
 from mcp_manager.core.models import ServerScope, ServerType
+from mcp_manager.core.change_detector import detect_external_changes, ChangeDetector
+from mcp_manager.core.background_monitor import BackgroundMonitor
 from mcp_manager.utils.config import get_config
 from mcp_manager.utils.logging import setup_logging
 from mcp_manager.utils.logging import get_logger
@@ -1600,6 +1602,421 @@ async def _configure_impl(name: str, interactive: bool, show: bool):
             
         console.print(f"[yellow]💡[/yellow] This server uses command-line arguments")
         console.print(f"[yellow]💡[/yellow] Use 'mcp-manager remove {name}' and 'mcp-manager add {name} <new-command>' to reconfigure")
+
+
+@cli.command("sync")
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    help="Show what would be synchronized without making changes"
+)
+@click.option(
+    "--auto-apply",
+    is_flag=True,
+    help="Automatically apply detected changes without prompts"
+)
+@handle_errors
+def sync_external(dry_run: bool, auto_apply: bool):
+    """Synchronize with external MCP configuration changes.
+    
+    Detects changes made by external tools (docker mcp, claude mcp) and
+    synchronizes the local MCP Manager catalog to match.
+    
+    Examples:
+      mcp-manager sync              # Interactive sync with prompts
+      mcp-manager sync --dry-run    # Show changes without applying
+      mcp-manager sync --auto-apply # Apply all changes automatically
+    """
+    asyncio.run(_sync_external_impl(dry_run, auto_apply))
+
+
+async def _sync_external_impl(dry_run: bool, auto_apply: bool):
+    """Implementation of sync command."""
+    from rich.prompt import Confirm
+    from rich.panel import Panel
+    from rich import box
+    
+    manager = cli_context.get_manager()
+    console.print("[bold blue]🔄 External Configuration Sync[/bold blue]")
+    console.print()
+    
+    # Detect changes
+    console.print("[blue]🔍 Detecting external changes...[/blue]")
+    changes = await detect_external_changes(manager)
+    
+    if not changes:
+        console.print("[green]✅ No external changes detected - configurations are in sync[/green]")
+        return
+    
+    console.print(f"[yellow]📋 Detected {len(changes)} configuration changes:[/yellow]")
+    console.print()
+    
+    # Group changes by source
+    changes_by_source = {}
+    for change in changes:
+        source = change.source.value
+        if source not in changes_by_source:
+            changes_by_source[source] = []
+        changes_by_source[source].append(change)
+    
+    # Display changes by source
+    for source, source_changes in changes_by_source.items():
+        source_name = {
+            'docker': 'Docker Desktop MCP',
+            'claude_user': 'Claude User Config',
+            'claude_project': 'Claude Project Config',
+            'claude_internal': 'Claude Internal Config'
+        }.get(source, source)
+        
+        console.print(Panel(
+            f"[bold cyan]{len(source_changes)} changes[/bold cyan]",
+            title=f"📦 {source_name}",
+            style="cyan",
+            box=box.ROUNDED
+        ))
+        
+        # Create changes table
+        changes_table = Table(
+            box=box.SIMPLE,
+            show_header=True,
+            header_style="bold cyan"
+        )
+        changes_table.add_column("Change", style="yellow", width=15)
+        changes_table.add_column("Server", style="green", width=20)
+        changes_table.add_column("Details", style="white")
+        
+        for change in source_changes:
+            change_desc = {
+                'server_added': '➕ Added',
+                'server_removed': '➖ Removed',
+                'server_modified': '🔄 Modified',
+                'server_enabled': '✅ Enabled',
+                'server_disabled': '❌ Disabled'
+            }.get(change.change_type.value, change.change_type.value)
+            
+            # Format details
+            details_parts = []
+            if 'command' in change.details:
+                details_parts.append(f"cmd: {change.details['command']}")
+            if 'reason' in change.details:
+                details_parts.append(f"({change.details['reason']})")
+            
+            details = ', '.join(details_parts) if details_parts else 'No details'
+            
+            changes_table.add_row(change_desc, change.server_name, details)
+        
+        console.print(changes_table)
+        console.print()
+    
+    if dry_run:
+        console.print("[blue]🔍 Dry run mode - no changes applied[/blue]")
+        return
+    
+    # Apply changes
+    if not auto_apply:
+        if not Confirm.ask("Apply these changes to synchronize configurations?"):
+            console.print("[yellow]⏸️ Synchronization cancelled by user[/yellow]")
+            return
+    
+    console.print("[blue]🔄 Applying synchronization changes...[/blue]")
+    
+    success_count = 0
+    error_count = 0
+    
+    for change in changes:
+        try:
+            change_desc = f"{change.change_type.value} {change.server_name}"
+            
+            if change.change_type.value == 'server_added':
+                # Add server to catalog based on external configuration
+                server_info = change.details.get('server_info', {})
+                command = server_info.get('command', '')
+                args = server_info.get('args', [])
+                env = server_info.get('env', {})
+                
+                # Simple server type detection - don't overthink it
+                if command == 'npx':
+                    server_type = ServerType.NPM
+                elif command.endswith('/docker') or command == 'docker':
+                    server_type = ServerType.CUSTOM  # Let Claude handle Docker servers
+                else:
+                    server_type = ServerType.CUSTOM
+                
+                try:
+                    await manager.add_server(
+                        name=change.server_name,
+                        server_type=server_type,
+                        command=command,
+                        args=args,
+                        env=env,
+                        scope=ServerScope.USER
+                    )
+                    console.print(f"  ✅ Added server: {change.server_name}")
+                except Exception as e:
+                    # If server already exists in Claude, just add to catalog
+                    if "already exists" in str(e).lower():
+                        catalog = await manager._get_server_catalog()
+                        servers = catalog.setdefault('servers', {})
+                        servers[change.server_name] = {
+                            'name': change.server_name,
+                            'type': server_type.value,
+                            'command': command,
+                            'args': args,
+                            'env': env,
+                            'enabled': True,
+                            'scope': 'user'
+                        }
+                        await manager._save_server_catalog(catalog)
+                        console.print(f"  ✅ Synced server to catalog: {change.server_name}")
+                    else:
+                        raise
+                
+            elif change.change_type.value == 'server_removed':
+                # For servers that don't exist externally, remove from catalog directly
+                # This handles cases where servers were removed externally and we need to sync our catalog
+                try:
+                    # First try regular removal (works if server exists in Claude)
+                    await manager.remove_server(change.server_name)
+                    console.print(f"  ➖ Removed server: {change.server_name}")
+                except Exception as e:
+                    # If regular removal fails, remove from catalog directly
+                    logger.debug(f"Regular removal failed: {e}, removing from catalog directly")
+                    catalog = await manager._get_server_catalog()
+                    servers = catalog.get('servers', {})
+                    if change.server_name in servers:
+                        del servers[change.server_name]
+                        await manager._save_server_catalog(catalog)
+                        console.print(f"  ➖ Removed server from catalog: {change.server_name}")
+                    else:
+                        raise
+                
+            elif change.change_type.value in ['server_enabled', 'server_disabled']:
+                enabled = change.change_type.value == 'server_enabled'
+                # Update server status in catalog
+                await manager._update_server_status(change.server_name, enabled)
+                status = "enabled" if enabled else "disabled"
+                console.print(f"  🔄 {change.server_name}: {status}")
+                
+            success_count += 1
+            
+        except Exception as e:
+            console.print(f"  ❌ Failed to apply change for {change.server_name}: {e}")
+            error_count += 1
+    
+    # Summary
+    console.print()
+    if success_count > 0:
+        console.print(f"[green]✅ Successfully applied {success_count} changes[/green]")
+    if error_count > 0:
+        console.print(f"[red]❌ Failed to apply {error_count} changes[/red]")
+    
+    console.print("[blue]🎉 Synchronization complete[/blue]")
+
+
+@cli.command("detect-changes")
+@click.option(
+    "--watch",
+    is_flag=True,
+    help="Continuously monitor for changes (press Ctrl+C to stop)"
+)
+@click.option(
+    "--interval",
+    type=int,
+    default=5,
+    help="Watch interval in seconds (default: 5)"
+)
+@handle_errors
+def detect_changes(watch: bool, interval: int):
+    """Detect external MCP configuration changes.
+    
+    Monitor changes made by external tools like 'docker mcp' and 'claude mcp'
+    commands without applying them.
+    
+    Examples:
+      mcp-manager detect-changes           # One-time change detection
+      mcp-manager detect-changes --watch   # Continuous monitoring
+    """
+    asyncio.run(_detect_changes_impl(watch, interval))
+
+
+async def _detect_changes_impl(watch: bool, interval: int):
+    """Implementation of detect-changes command."""
+    import time
+    from rich.live import Live
+    from rich.panel import Panel
+    from rich import box
+    
+    manager = cli_context.get_manager()
+    detector = ChangeDetector(manager)
+    
+    if not watch:
+        # Single detection
+        console.print("[blue]🔍 Detecting external configuration changes...[/blue]")
+        changes = await detector.detect_changes()
+        
+        if not changes:
+            console.print("[green]✅ No external changes detected[/green]")
+            return
+        
+        console.print(f"[yellow]📋 Detected {len(changes)} changes:[/yellow]")
+        for change in changes:
+            console.print(f"  • {change}")
+        
+        console.print("\n[dim]💡 Use 'mcp-manager sync' to apply these changes[/dim]")
+        return
+    
+    # Watch mode
+    console.print(f"[blue]👀 Monitoring external changes (interval: {interval}s, press Ctrl+C to stop)...[/blue]")
+    console.print()
+    
+    try:
+        last_changes = []
+        
+        while True:
+            changes = await detector.detect_changes()
+            
+            # Only show new changes
+            new_changes = [c for c in changes if c not in last_changes]
+            
+            if new_changes:
+                timestamp = time.strftime("%H:%M:%S")
+                console.print(Panel(
+                    f"[yellow]{len(new_changes)} new changes detected at {timestamp}[/yellow]",
+                    style="yellow",
+                    box=box.ROUNDED
+                ))
+                
+                for change in new_changes:
+                    console.print(f"  • {change}")
+                
+                console.print()
+            
+            last_changes = changes
+            await asyncio.sleep(interval)
+            
+    except KeyboardInterrupt:
+        console.print("\n[blue]📊 Change detection stopped[/blue]")
+        
+        # Show final summary
+        history = detector.get_detection_history()
+        if history:
+            console.print(f"[cyan]Total changes detected in this session: {len(history)}[/cyan]")
+
+
+@cli.command("monitor")
+@click.option(
+    "--start",
+    is_flag=True,
+    help="Start the background monitor service"
+)
+@click.option(
+    "--stop", 
+    is_flag=True,
+    help="Stop the background monitor service"
+)
+@click.option(
+    "--status",
+    is_flag=True,
+    help="Show monitor service status"
+)
+@click.option(
+    "--interval",
+    type=int,
+    default=60,
+    help="Check interval in seconds (default: 60)"
+)
+@click.option(
+    "--auto-sync",
+    is_flag=True,
+    help="Enable automatic synchronization of changes"
+)
+@handle_errors
+def monitor_service(start: bool, stop: bool, status: bool, interval: int, auto_sync: bool):
+    """Manage the background monitoring service.
+    
+    The monitor service continuously watches for external MCP configuration
+    changes and can automatically sync them or notify when changes are detected.
+    
+    Examples:
+      mcp-manager monitor --start --auto-sync    # Start with auto-sync
+      mcp-manager monitor --status               # Check service status
+      mcp-manager monitor --stop                 # Stop the service
+    """
+    asyncio.run(_monitor_service_impl(start, stop, status, interval, auto_sync))
+
+
+async def _monitor_service_impl(start: bool, stop: bool, status: bool, interval: int, auto_sync: bool):
+    """Implementation of monitor service command."""
+    from rich.panel import Panel
+    from rich import box
+    
+    if not any([start, stop, status]):
+        # Default to showing status
+        status = True
+    
+    if status:
+        console.print("[blue]🔍 Background Monitor Service Status[/blue]")
+        console.print()
+        
+        # Check if service is running (this is a simplified check)
+        # In a real implementation, you'd check if a daemon process is running
+        console.print(Panel(
+            "[dim]Service status checking not implemented yet[/dim]\n\n"
+            "[yellow]To start monitoring:[/yellow] mcp-manager monitor --start\n"
+            "[yellow]For real-time monitoring:[/yellow] mcp-manager detect-changes --watch",
+            title="Monitor Status",
+            style="blue",
+            box=box.ROUNDED
+        ))
+        return
+    
+    if start:
+        console.print("[blue]🚀 Starting background monitor service...[/blue]")
+        console.print()
+        
+        manager = cli_context.get_manager()
+        
+        def notification_callback(changes):
+            """Handle change notifications."""
+            from datetime import datetime
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            logger.info(f"[{timestamp}] Detected {len(changes)} configuration changes")
+            for change in changes:
+                logger.info(f"  • {change}")
+        
+        monitor = BackgroundMonitor(
+            manager=manager,
+            check_interval=interval,
+            auto_sync=auto_sync,
+            notification_callback=notification_callback
+        )
+        
+        console.print(f"[green]Monitor configuration:[/green]")
+        console.print(f"  • Check interval: {interval} seconds")
+        console.print(f"  • Auto-sync: {'enabled' if auto_sync else 'disabled'}")
+        console.print()
+        console.print("[dim]Press Ctrl+C to stop monitoring[/dim]")
+        console.print()
+        
+        try:
+            await monitor.start()
+        except KeyboardInterrupt:
+            console.print("\n[yellow]Stopping monitor...[/yellow]")
+            await monitor.stop()
+            console.print("[blue]Monitor stopped[/blue]")
+    
+    if stop:
+        console.print("[yellow]⏸️ Stop command not implemented yet[/yellow]")
+        console.print("[dim]Use Ctrl+C to stop a running monitor session[/dim]")
+
+
+@cli.command("monitor-status")
+@handle_errors
+def monitor_status_quick():
+    """Quick status check for background monitor service."""
+    console.print("[blue]🔍 Quick Monitor Status[/blue]")
+    console.print()
+    console.print("[dim]Full status available with: mcp-manager monitor --status[/dim]")
 
 
 def launch_interactive_menu():

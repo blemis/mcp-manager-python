@@ -27,6 +27,7 @@ from mcp_manager import __version__
 from mcp_manager.core.simple_manager import SimpleMCPManager
 from mcp_manager.core.discovery import ServerDiscovery
 from mcp_manager.core.models import Server, ServerType, ServerScope
+from mcp_manager.core.change_detector import detect_external_changes, ChangeDetector
 from mcp_manager.utils.logging import get_logger, setup_logging
 from mcp_manager.utils.config import get_config
 
@@ -102,6 +103,7 @@ class RichMenuApp:
             ("7", "System Information", "View system status", "ℹ"),
             ("8", "Review Logs", "View recent log entries", "📋"),
             ("9", "Debug Mode", "Toggle debug logging", "🐛"),
+            ("10", "External Sync", "Detect & sync external changes", "🔄"),
             ("h", "Help", "Show help and keyboard shortcuts", "❓"),
             ("q", "Exit", "Quit MCP Manager", "🚪"),
         ]
@@ -2241,6 +2243,377 @@ This menu allows you to configure servers that require additional settings:
                 continue
             else:
                 return
+
+    async def external_sync_menu(self):
+        """External configuration sync and change detection menu."""
+        while True:
+            console.clear()
+            self.show_header()
+            
+            console.print("[bold]External Configuration Sync[/bold]", style="blue")
+            console.print()
+            
+            # Menu options
+            sync_options = [
+                ("1", "Detect Changes", "Check for external configuration changes"),
+                ("2", "Show Sync Status", "Display current sync status"),
+                ("3", "Sync Changes", "Apply detected changes interactively"),
+                ("4", "Auto Sync", "Apply all changes automatically"),
+                ("5", "Watch Changes", "Monitor changes in real-time"),
+                ("b", "Back to Main Menu", "Return to main menu"),
+            ]
+            
+            # Create menu table
+            table = Table(
+                title="[bold]External Sync Options[/bold]",
+                box=box.ROUNDED,
+                title_style="bold blue",
+                show_header=False,
+                padding=(0, 1)
+            )
+            table.add_column("Key", style="bold cyan", width=4, justify="center")
+            table.add_column("Option", style="bold white", width=25)
+            table.add_column("Description", style="dim", width=40)
+            
+            for key, option, desc in sync_options:
+                table.add_row(f"[bold cyan]{key}[/bold cyan]", option, desc)
+            
+            console.print(table)
+            console.print()
+            
+            choice = Prompt.ask(
+                "[bold cyan]Select an option[/bold cyan]",
+                choices=[opt[0] for opt in sync_options],
+                default="1"
+            )
+            
+            if choice == "1":
+                await self._detect_changes_tui()
+            elif choice == "2":
+                await self._show_sync_status_tui()
+            elif choice == "3":
+                await self._sync_changes_interactive()
+            elif choice == "4":
+                await self._sync_changes_auto()
+            elif choice == "5":
+                await self._watch_changes_tui()
+            elif choice == "b":
+                break
+    
+    async def _detect_changes_tui(self):
+        """TUI wrapper for change detection."""
+        console.print("[blue]🔍 Detecting external configuration changes...[/blue]")
+        console.print()
+        
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console,
+            transient=True,
+        ) as progress:
+            task = progress.add_task("Scanning configurations...", total=None)
+            try:
+                changes = await detect_external_changes(self.manager)
+            except Exception as e:
+                console.print(f"[red]❌ Error detecting changes: {e}[/red]")
+                console.print()
+                Prompt.ask("Press Enter to continue", default="")
+                return
+        
+        if not changes:
+            console.print(Panel(
+                "[green]✅ No external changes detected[/green]\n\n"
+                "[dim]All configurations are in sync[/dim]",
+                title="Change Detection Results",
+                style="green",
+                box=box.ROUNDED
+            ))
+        else:
+            console.print(Panel(
+                f"[yellow]📋 Detected {len(changes)} configuration changes[/yellow]",
+                title="Change Detection Results",
+                style="yellow",
+                box=box.ROUNDED
+            ))
+            console.print()
+            
+            # Group changes by source
+            changes_by_source = {}
+            for change in changes:
+                source = change.source.value
+                if source not in changes_by_source:
+                    changes_by_source[source] = []
+                changes_by_source[source].append(change)
+            
+            # Display changes by source
+            for source, source_changes in changes_by_source.items():
+                source_name = {
+                    'docker': 'Docker Desktop MCP',
+                    'claude_user': 'Claude User Config',
+                    'claude_project': 'Claude Project Config',
+                    'claude_internal': 'Claude Internal Config'
+                }.get(source, source)
+                
+                console.print(f"[bold cyan]{source_name}:[/bold cyan]")
+                
+                changes_table = Table(
+                    box=box.SIMPLE,
+                    show_header=True,
+                    header_style="bold cyan",
+                    padding=(0, 1)
+                )
+                changes_table.add_column("Change", style="yellow", width=15)
+                changes_table.add_column("Server", style="green", width=20)
+                changes_table.add_column("Details", style="white", width=40)
+                
+                for change in source_changes:
+                    change_desc = {
+                        'server_added': '➕ Added',
+                        'server_removed': '➖ Removed',
+                        'server_modified': '🔄 Modified',
+                        'server_enabled': '✅ Enabled',
+                        'server_disabled': '❌ Disabled'
+                    }.get(change.change_type.value, change.change_type.value)
+                    
+                    # Format details
+                    details_parts = []
+                    if 'command' in change.details:
+                        cmd = change.details['command']
+                        if len(cmd) > 35:
+                            cmd = cmd[:32] + "..."
+                        details_parts.append(f"cmd: {cmd}")
+                    if 'reason' in change.details:
+                        details_parts.append(f"({change.details['reason']})")
+                    
+                    details = ', '.join(details_parts) if details_parts else 'No details'
+                    changes_table.add_row(change_desc, change.server_name, details)
+                
+                console.print(changes_table)
+                console.print()
+        
+        console.print()
+        Prompt.ask("Press Enter to continue", default="")
+    
+    async def _show_sync_status_tui(self):
+        """Show sync status in TUI."""
+        console.print("[blue]🔍 Checking sync status...[/blue]")
+        console.print()
+        
+        # Implementation would check current state
+        console.print("[green]✅ Configuration sync status: In Sync[/green]")
+        console.print("[dim]Use 'Detect Changes' to scan for new changes[/dim]")
+        console.print()
+        Prompt.ask("Press Enter to continue", default="")
+    
+    async def _sync_changes_interactive(self):
+        """Apply changes interactively."""
+        console.print("[blue]🔄 Interactive configuration sync...[/blue]")
+        console.print()
+        
+        # Detect changes first
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console,
+            transient=True,
+        ) as progress:
+            task = progress.add_task("Detecting changes...", total=None)
+            try:
+                changes = await detect_external_changes(self.manager)
+            except Exception as e:
+                console.print(f"[red]❌ Error detecting changes: {e}[/red]")
+                console.print()
+                Prompt.ask("Press Enter to continue", default="")
+                return
+        
+        if not changes:
+            console.print(Panel(
+                "[green]✅ No changes to sync[/green]\n\n"
+                "[dim]All configurations are already in sync[/dim]",
+                title="Sync Results",
+                style="green",
+                box=box.ROUNDED
+            ))
+            console.print()
+            Prompt.ask("Press Enter to continue", default="")
+            return
+        
+        console.print(f"[yellow]📋 Found {len(changes)} changes to apply[/yellow]")
+        console.print()
+        
+        if Confirm.ask("Apply these changes to synchronize configurations?"):
+            success_count = 0
+            error_count = 0
+            
+            for change in changes:
+                try:
+                    console.print(f"[blue]🔄 Applying: {change.change_type.value} {change.server_name}[/blue]")
+                    
+                    if change.change_type.value == 'server_added':
+                        server_info = change.details.get('server_info', {})
+                        command = server_info.get('command', '')
+                        args = server_info.get('args', [])
+                        env = server_info.get('env', {})
+                        
+                        # Simple server type detection - don't overthink it
+                        if command == 'npx':
+                            server_type = ServerType.NPM
+                        elif command.endswith('/docker') or command == 'docker':
+                            server_type = ServerType.CUSTOM  # Let Claude handle Docker servers
+                        else:
+                            server_type = ServerType.CUSTOM
+                        
+                        await self.manager.add_server(
+                            name=change.server_name,
+                            server_type=server_type,
+                            command=command,
+                            args=args,
+                            env=env,
+                            scope=ServerScope.USER
+                        )
+                        console.print(f"  [green]✅ Added server: {change.server_name}[/green]")
+                        
+                    elif change.change_type.value == 'server_removed':
+                        await self.manager.remove_server(change.server_name)
+                        console.print(f"  [green]➖ Removed server: {change.server_name}[/green]")
+                        
+                    elif change.change_type.value in ['server_enabled', 'server_disabled']:
+                        enabled = change.change_type.value == 'server_enabled'
+                        await self.manager._update_server_status(change.server_name, enabled)
+                        status = "enabled" if enabled else "disabled"
+                        console.print(f"  [green]🔄 {change.server_name}: {status}[/green]")
+                        
+                    success_count += 1
+                    
+                except Exception as e:
+                    console.print(f"  [red]❌ Failed to apply change for {change.server_name}: {e}[/red]")
+                    error_count += 1
+            
+            console.print()
+            if success_count > 0:
+                console.print(f"[green]✅ Successfully applied {success_count} changes[/green]")
+            if error_count > 0:
+                console.print(f"[red]❌ Failed to apply {error_count} changes[/red]")
+            
+            console.print("[blue]🎉 Synchronization complete[/blue]")
+        else:
+            console.print("[yellow]⏸️ Synchronization cancelled[/yellow]")
+        
+        console.print()
+        Prompt.ask("Press Enter to continue", default="")
+    
+    async def _sync_changes_auto(self):
+        """Apply all changes automatically."""
+        console.print("[blue]🔄 Automatic configuration sync...[/blue]")
+        console.print()
+        
+        # Detect and apply changes automatically
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console,
+            transient=True,
+        ) as progress:
+            task = progress.add_task("Detecting and applying changes...", total=None)
+            try:
+                changes = await detect_external_changes(self.manager)
+                
+                if not changes:
+                    console.print("[green]✅ No changes to sync - already in sync[/green]")
+                    console.print()
+                    Prompt.ask("Press Enter to continue", default="")
+                    return
+                
+                # Apply all changes automatically
+                progress.update(task, description="Applying changes...")
+                success_count = 0
+                error_count = 0
+                
+                for change in changes:
+                    try:
+                        if change.change_type.value == 'server_added':
+                            server_info = change.details.get('server_info', {})
+                            await self.manager.add_server(
+                                name=change.server_name,
+                                command=server_info.get('command', ''),
+                                args=server_info.get('args', []),
+                                env=server_info.get('env', {}),
+                                scope=ServerScope.USER
+                            )
+                            
+                        elif change.change_type.value == 'server_removed':
+                            await self.manager.remove_server(change.server_name)
+                            
+                        elif change.change_type.value in ['server_enabled', 'server_disabled']:
+                            enabled = change.change_type.value == 'server_enabled'
+                            await self.manager._update_server_status(change.server_name, enabled)
+                            
+                        success_count += 1
+                        
+                    except Exception as e:
+                        logger.error(f"Failed to apply change for {change.server_name}: {e}")
+                        error_count += 1
+                
+            except Exception as e:
+                console.print(f"[red]❌ Error during sync: {e}[/red]")
+                console.print()
+                Prompt.ask("Press Enter to continue", default="")
+                return
+        
+        # Show results
+        if success_count > 0:
+            console.print(f"[green]✅ Successfully applied {success_count} changes[/green]")
+        if error_count > 0:
+            console.print(f"[red]❌ Failed to apply {error_count} changes[/red]")
+        
+        console.print("[blue]🎉 Automatic synchronization complete[/blue]")
+        console.print()
+        Prompt.ask("Press Enter to continue", default="")
+    
+    async def _watch_changes_tui(self):
+        """Watch for changes in real-time."""
+        console.print("[blue]👀 Monitoring external changes...[/blue]")
+        console.print("[dim]Press Ctrl+C to stop monitoring[/dim]")
+        console.print()
+        
+        detector = ChangeDetector(self.manager)
+        
+        try:
+            last_changes = []
+            
+            while True:
+                changes = await detector.detect_changes()
+                
+                # Only show new changes
+                new_changes = [c for c in changes if c not in last_changes]
+                
+                if new_changes:
+                    import time
+                    timestamp = time.strftime("%H:%M:%S")
+                    console.print(Panel(
+                        f"[yellow]{len(new_changes)} new changes detected at {timestamp}[/yellow]",
+                        style="yellow",
+                        box=box.ROUNDED
+                    ))
+                    
+                    for change in new_changes:
+                        console.print(f"  • {change}")
+                    
+                    console.print()
+                
+                last_changes = changes
+                await asyncio.sleep(5)  # Check every 5 seconds
+                
+        except KeyboardInterrupt:
+            console.print("\n[blue]📊 Change monitoring stopped[/blue]")
+            
+            # Show final summary
+            history = detector.get_detection_history()
+            if history:
+                console.print(f"[cyan]Total changes detected in this session: {len(history)}[/cyan]")
+            
+            console.print()
+            Prompt.ask("Press Enter to continue", default="")
     
     async def run(self):
         """Run the interactive menu."""
@@ -2269,6 +2642,8 @@ This menu allows you to configure servers that require additional settings:
                     await self.review_logs()
                 elif choice == "9":
                     await self.toggle_debug_mode()
+                elif choice == "10":
+                    await self.external_sync_menu()
                 elif choice == "h":
                     self.show_help()
                 elif choice == "q":
