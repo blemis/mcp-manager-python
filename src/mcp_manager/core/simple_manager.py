@@ -694,12 +694,20 @@ class SimpleMCPManager:
         try:
             logger.debug(f"Removing Docker image: {image}")
             
+            # First, try to find all matching images using docker images command
+            # This handles both :latest tagged and digest-tagged images
+            matching_images = await self._find_matching_docker_images(image)
+            
+            if not matching_images:
+                logger.debug(f"No matching Docker images found for: {image}")
+                return True  # Consider this success since the goal is achieved
+            
             # Try multiple image variations (with/without tags)
             image_variations = [
                 image,
                 f"{image}:latest",
                 image.replace(":latest", ""),  # Remove :latest if present
-            ]
+            ] + matching_images  # Add images found by docker images command
             
             # Remove duplicates while preserving order
             image_variations = list(dict.fromkeys(image_variations))
@@ -1727,6 +1735,10 @@ class SimpleMCPManager:
             sync_success = await self._refresh_docker_gateway()
             
             if sync_success:
+                # Clean up Docker Desktop MCP image if sync was successful
+                docker_image = f"mcp/{server_name}:latest"
+                await self._remove_docker_image(docker_image)
+                
                 logger.debug(f"Successfully removed {server_name} from Claude Code")
                 return True
             else:
@@ -1785,4 +1797,61 @@ class SimpleMCPManager:
             
         except Exception as e:
             logger.debug(f"Failed to get available Docker servers: {e}")
+            return []
+    
+    async def _find_matching_docker_images(self, image_pattern: str) -> List[str]:
+        """
+        Find Docker images that match the given pattern.
+        
+        Args:
+            image_pattern: Image name pattern to match (e.g., "mcp/sqlite")
+            
+        Returns:
+            List of matching image names with full tags/digests
+        """
+        try:
+            # Get all docker images and filter for matches
+            result = subprocess.run(
+                ["docker", "images", "--format", "{{.Repository}}:{{.Tag}}"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            
+            if result.returncode != 0:
+                logger.debug(f"Failed to list Docker images: {result.stderr}")
+                return []
+            
+            matching_images = []
+            base_name = image_pattern.split(":")[0]  # Remove any existing tag/digest
+            
+            for line in result.stdout.strip().split('\n'):
+                if line and base_name in line:
+                    matching_images.append(line.strip())
+            
+            # Also try to get digest-tagged images using a different format
+            digest_result = subprocess.run(
+                ["docker", "images", "--digests", "--format", "table {{.Repository}}\t{{.Tag}}\t{{.Digest}}"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            
+            if digest_result.returncode == 0:
+                lines = digest_result.stdout.strip().split('\n')
+                # Skip the header line
+                for line in lines[1:] if len(lines) > 1 else []:
+                    if line and base_name in line:
+                        parts = line.split('\t')
+                        if len(parts) >= 3:
+                            repo, tag, digest = parts[0].strip(), parts[1].strip(), parts[2].strip()
+                            if digest and digest.startswith("sha256:"):
+                                digest_image = f"{repo}@{digest}"
+                                matching_images.append(digest_image)
+            
+            logger.debug(f"Found matching images for {image_pattern}: {matching_images}")
+            return matching_images
+            
+        except Exception as e:
+            logger.debug(f"Failed to find matching Docker images for {image_pattern}: {e}")
             return []
