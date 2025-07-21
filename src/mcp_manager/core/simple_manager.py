@@ -458,8 +458,8 @@ class SimpleMCPManager:
             
             # Step 3: Clean up Docker Desktop MCP image if removal was successful
             if sync_success:
-                # Docker Desktop MCP servers use the format: mcp/server-name:latest
-                docker_image = f"mcp/{server_name}:latest"
+                # Docker Desktop MCP servers use the format: mcp/server-name:latest (lowercase)
+                docker_image = f"mcp/{server_name.lower()}:latest"
                 await self._remove_docker_image(docker_image)
                 
                 logger.debug(f"Successfully removed {server_name} from Claude Code")
@@ -1736,7 +1736,8 @@ class SimpleMCPManager:
             
             if sync_success:
                 # Clean up Docker Desktop MCP image if sync was successful
-                docker_image = f"mcp/{server_name}:latest"
+                # Docker image names are typically lowercase
+                docker_image = f"mcp/{server_name.lower()}:latest"
                 await self._remove_docker_image(docker_image)
                 
                 logger.debug(f"Successfully removed {server_name} from Claude Code")
