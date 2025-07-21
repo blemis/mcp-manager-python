@@ -60,6 +60,22 @@ Found that Claude Code has three configuration levels:
 
 ## Next Steps
 
+### Highest Priority (CURRENT)
+
+**task-014**: ✅ **COMPLETED** - Implement disabled server status tracking
+- ✅ Created local server catalog system (`~/.config/mcp-manager/server_catalog.json`)
+- ✅ Track servers that have been installed/configured vs never-installed
+- ✅ Show disabled servers with red "disabled" status when previously installed
+- ✅ Auto-populate catalog for existing servers from Claude/Docker state
+- ✅ Proper state management for add/disable/enable/remove operations
+
+**task-015**: 🚧 **IN PROGRESS** - External Change Detection & Synchronization
+- Implement detection of servers added via `docker mcp` or `claude mcp` commands
+- Handle multi-scope configuration synchronization (user/project/local)
+- Real-time monitoring and automatic catalog updates
+- Seamless user experience across all MCP management tools
+- **See detailed plan in [External Change Detection Plan](#external-change-detection-plan) below**
+
 ### High Priority
 
 **task-001**: ✅ **COMPLETED** - Create comprehensive integration tests
@@ -82,7 +98,7 @@ Found that Claude Code has three configuration levels:
 - ✅ Comprehensive duplicate detection and user warnings
 - ✅ Improved error messages with actionable suggestions
 
-**NEW task-013**: Enhance install-package for servers requiring configuration
+**task-013**: Enhance install-package for servers requiring configuration
 - Add automatic detection of servers that need configuration (filesystem, database)
 - Prompt users for required parameters (directories, connection strings)
 - Provide sensible defaults (home directory for filesystem servers)
@@ -155,6 +171,93 @@ Found that Claude Code has three configuration levels:
 - Comprehensive testing is required for all new functionality
 - Follow the git workflow: branch → develop → test → commit → merge
 
+## External Change Detection Plan
+
+### Overview
+Implement comprehensive detection and synchronization of MCP servers that are added/modified/removed through external commands (`docker mcp` or `claude mcp`) rather than through mcp-manager itself.
+
+### Phase 1: Configuration Monitoring Infrastructure (task-015-1)
+- [ ] **File System Watchers** (`src/mcp_manager/core/watchers.py`)
+  - Monitor `~/.docker/mcp/registry.yaml` for Docker Desktop changes
+  - Monitor `~/.config/claude-code/mcp-servers.json` for user-level Claude changes
+  - Monitor `./.mcp.json` in current and parent directories for project changes
+  - Monitor `~/.claude.json` for internal Claude state changes
+  - Use `watchdog` library for cross-platform file monitoring
+
+- [ ] **Configuration Parsers** (`src/mcp_manager/core/parsers/`)
+  - Docker Registry Parser for `registry.yaml` changes
+  - Claude Config Parser for JSON configs across all scopes
+  - Handle malformed files gracefully with proper error recovery
+
+- [ ] **Change Detection Engine** (`src/mcp_manager/core/change_detector.py`)
+  - Compare current external state vs. internal catalog
+  - Identify added/removed/modified servers by source
+  - Generate reconciliation actions with conflict detection
+
+### Phase 2: Catalog Synchronization (task-015-2)
+- [ ] **Auto-Reconciliation Service** (`src/mcp_manager/core/reconciler.py`)
+  - Reconcile external changes with internal catalog automatically
+  - Handle conflicts with user-defined resolution strategies
+  - Maintain change history and audit trail for debugging
+
+- [ ] **Multi-Scope Support** (enhance existing `simple_manager.py`)
+  - Track servers by scope (local/project/user) with proper precedence
+  - Merge configurations from multiple scopes correctly
+  - Support scope-specific enable/disable operations
+
+- [ ] **External Server Handler** (`src/mcp_manager/core/external_handler.py`)
+  - Auto-catalog externally added servers with metadata preservation
+  - Support "adopt" vs "ignore" policies for unknown servers
+  - Handle servers with unknown origins gracefully
+
+### Phase 3: Real-Time Synchronization (task-015-3)
+- [ ] **Background Sync Service** (`src/mcp_manager/core/sync_service.py`)
+  - Run file watchers in background thread with proper lifecycle
+  - Debounce rapid changes during batch operations
+  - Support manual sync triggers and health monitoring
+
+- [ ] **Event System** (`src/mcp_manager/core/events.py`)
+  - Define change event types with rich metadata
+  - Publish events when external changes detected
+  - Subscribe catalog and UI components to events with filtering
+
+- [ ] **Conflict Resolver** (`src/mcp_manager/core/conflicts.py`)
+  - Detect conflicting states between sources
+  - Implement resolution strategies (last-write-wins, user-prompt, etc.)
+  - Support manual conflict resolution with user guidance
+
+### Phase 4: User Interface Integration (task-015-4)
+- [ ] **Enhanced CLI Integration** (update `cli/main.py`)
+  - Show server origin and sync status in list command
+  - Add `--sync`, `--external-only` flags for control
+  - New commands: `sync status`, `sync run`, `sync resolve`
+
+- [ ] **Real-Time TUI Updates** (update `tui/main.py`)
+  - Live update server list when external changes detected
+  - Visual indicators for external changes and conflicts
+  - Manual refresh triggers and sync status display
+
+### Phase 5: Testing & Validation (task-015-5)
+- [ ] **External Change Test Suite** (`tests/integration/test_external_sync.py`)
+  - Test Docker MCP and Claude MCP command detection
+  - Test manual config file changes and conflict scenarios
+  - Test performance with large catalogs and many files
+
+### Success Criteria
+- ✅ All external Docker MCP changes automatically detected and synced
+- ✅ All external Claude MCP changes automatically detected and synced  
+- ✅ Multi-scope configuration handling works correctly
+- ✅ No user-visible inconsistencies between tools
+- ✅ Real-time updates in both CLI and TUI
+- ✅ Performance impact minimal (< 1% CPU, < 10MB memory)
+- ✅ Reliable across all supported platforms
+
+### Configuration File Locations by Scope
+- **User Scope**: `~/.config/claude-code/mcp-servers.json`, `~/.docker/mcp/registry.yaml`
+- **Project Scope**: `./.mcp.json`, `./.mcp-manager.toml`  
+- **Internal Scope**: `~/.claude.json`
+- **MCP Manager Catalog**: `~/.config/mcp-manager/server_catalog.json`
+
 ## Dependencies
 
 - Python 3.8+
@@ -163,3 +266,5 @@ Found that Claude Code has three configuration levels:
 - Pydantic for data validation
 - aiohttp for async HTTP requests
 - pytest for testing framework
+- **NEW**: watchdog for file system monitoring
+- **NEW**: pyyaml for Docker registry parsing

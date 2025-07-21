@@ -8,6 +8,7 @@ import asyncio
 import os
 import subprocess
 import sys
+from datetime import datetime
 from typing import List, Optional, Tuple, Dict, Any
 from pydantic import BaseModel
 
@@ -33,6 +34,7 @@ class SyncCheckResult(BaseModel):
     issues: List[str]
     warnings: List[str]
     docker_gateway_test: Optional[Dict[str, Any]] = None
+    all_servers_test: Optional[Dict[str, Any]] = None
 
 
 class SimpleMCPManager:
@@ -45,20 +47,84 @@ class SimpleMCPManager:
     async def list_servers(self) -> List[Server]:
         """
         List all MCP servers, expanding docker-gateway to show individual servers.
+        Includes disabled servers that were previously installed.
         
         Returns:
-            List of servers from Claude's internal state with docker-gateway expanded
+            List of servers from Claude's internal state with docker-gateway expanded,
+            plus any disabled Docker Desktop servers
         """
         servers = self.claude.list_servers()
         result = []
+        enabled_docker_servers = set()
         
         for server in servers:
             if server.name == "docker-gateway":
                 # Expand docker-gateway to show individual Docker Desktop servers
                 docker_servers = await self._expand_docker_gateway(server)
                 result.extend(docker_servers)
+                # Keep track of enabled Docker Desktop servers
+                enabled_docker_servers.update(s.name for s in docker_servers)
+                
+                # Auto-populate catalog for servers that aren't tracked yet
+                catalog = await self._get_server_catalog()
+                for docker_server in docker_servers:
+                    if docker_server.name not in catalog["servers"]:
+                        await self._add_server_to_catalog(
+                            name=docker_server.name,
+                            server_type=docker_server.server_type.value,
+                            enabled=True,
+                            command=docker_server.command,
+                            args=docker_server.args,
+                            env=docker_server.env,
+                            description=docker_server.description,
+                        )
             else:
                 result.append(server)
+                
+                # Auto-populate catalog for non-docker-gateway servers too
+                catalog = await self._get_server_catalog()
+                if server.name not in catalog["servers"]:
+                    await self._add_server_to_catalog(
+                        name=server.name,
+                        server_type=server.server_type.value,
+                        enabled=True,
+                        command=server.command,
+                        args=server.args,
+                        env=server.env,
+                        description=server.description or f"{server.server_type.value} server: {server.name}",
+                    )
+        
+        # Add disabled servers from our catalog that were previously installed
+        catalog = await self._get_server_catalog()
+        for server_name, server_info in catalog["servers"].items():
+            # Only include if disabled and not already in enabled list
+            if not server_info.get("enabled", True) and server_name not in enabled_docker_servers:
+                # Create a disabled server entry based on catalog info
+                server_type_str = server_info.get("type", "docker-desktop")
+                server_type = ServerType(server_type_str)
+                
+                # Set appropriate command based on server type
+                if server_type == ServerType.DOCKER_DESKTOP:
+                    command = "docker"
+                    args = ["mcp", "server", server_name]
+                elif server_type == ServerType.NPM:
+                    command = server_info.get("command", "npx")
+                    args = server_info.get("args", [])
+                else:
+                    command = server_info.get("command", "unknown")
+                    args = server_info.get("args", [])
+                
+                disabled_server = Server(
+                    name=server_name,
+                    command=command,
+                    args=args,
+                    server_type=server_type,
+                    scope=ServerScope.USER,
+                    enabled=False,  # Mark as disabled
+                    description=server_info.get("description", f"{server_type_str} server: {server_name} (disabled)"),
+                    env=server_info.get("env", {}),
+                )
+                result.append(disabled_server)
                 
         return result
     
@@ -104,6 +170,17 @@ class SimpleMCPManager:
         
         if not success:
             raise MCPManagerError(f"Failed to add server '{name}'")
+        
+        # Add to our catalog as enabled
+        await self._add_server_to_catalog(
+            name=name,
+            server_type=server_type.value,
+            enabled=True,
+            command=command,
+            args=args or [],
+            env=env or {},
+            description=description,
+        )
         
         # Return the server object
         server = Server(
@@ -174,6 +251,10 @@ class SimpleMCPManager:
             else:
                 logger.warning(f"Docker image cleanup failed for: {docker_image}")
         
+        # Remove from our catalog if removal was successful
+        if success:
+            await self._remove_server_from_catalog(name)
+        
         return success
     
     async def enable_server(self, name: str) -> Server:
@@ -201,6 +282,21 @@ class SimpleMCPManager:
             logger.debug(f"Enabling Docker Desktop server: {name}")
             success = await self._enable_docker_desktop_server_simple(name)
             if success:
+                # Mark as enabled in catalog or add if not exists
+                catalog = await self._get_server_catalog()
+                if name in catalog["servers"]:
+                    await self._update_server_in_catalog(name, enabled=True)
+                else:
+                    # Add to catalog if not tracked yet
+                    await self._add_server_to_catalog(
+                        name=name,
+                        server_type=ServerType.DOCKER_DESKTOP.value,
+                        enabled=True,
+                        command="docker",
+                        args=["mcp", "server", name],
+                        env={},
+                        description=f"Docker Desktop MCP server: {name}",
+                    )
                 # Return a mock server object for Docker Desktop servers
                 from .models import Server, ServerScope, ServerType
                 return Server(
@@ -239,6 +335,8 @@ class SimpleMCPManager:
             logger.debug(f"Disabling Docker Desktop server: {name}")
             success = await self._disable_docker_desktop_server_simple(name)
             if success:
+                # Mark as disabled in catalog
+                await self._update_server_in_catalog(name, enabled=False)
                 # Return a mock server object for Docker Desktop servers
                 from .models import Server, ServerScope, ServerType
                 return Server(
@@ -881,7 +979,10 @@ class SimpleMCPManager:
             # Additional checks
             await self._perform_additional_sync_checks(issues, warnings)
             
-            # Test Docker gateway if present
+            # Test all servers (Docker, NPX, Docker Desktop)
+            all_servers_test = await self._test_all_servers()
+            
+            # Keep Docker gateway test for backward compatibility
             docker_gateway_test = await self._test_docker_gateway()
             
             # Determine if in sync
@@ -897,7 +998,8 @@ class SimpleMCPManager:
                 missing_in_manager=missing_in_manager,
                 issues=issues,
                 warnings=warnings,
-                docker_gateway_test=docker_gateway_test
+                docker_gateway_test=docker_gateway_test,
+                all_servers_test=all_servers_test
             )
             
         except Exception as e:
@@ -914,7 +1016,8 @@ class SimpleMCPManager:
                 missing_in_manager=missing_in_manager,
                 issues=issues,
                 warnings=warnings,
-                docker_gateway_test=None
+                docker_gateway_test=None,
+                all_servers_test=None
             )
     
     async def _perform_additional_sync_checks(self, issues: List[str], warnings: List[str]) -> None:
@@ -1590,6 +1693,18 @@ class SimpleMCPManager:
     def _discover_mcp_tools_via_stdio(self, server: 'Server') -> List[Dict[str, Any]]:
         """Attempt to discover MCP tools by communicating with the server via stdio."""
         try:
+            # For Docker-based servers, try the help-based approach first
+            if server.command == "docker":
+                docker_tools = self._discover_docker_tools_via_help(server)
+                if docker_tools:
+                    return docker_tools
+            
+            # For NPX servers, try to discover tools using package information
+            if server.command == "npx":
+                npx_tools = self._discover_npx_tools(server)
+                if npx_tools:
+                    return npx_tools
+                
             # Build the command to run the MCP server
             if server.command == "npx":
                 cmd = ["npx"] + (server.args or [])
@@ -1598,7 +1713,7 @@ class SimpleMCPManager:
             else:
                 cmd = [server.command] + (server.args or [])
             
-            logger.debug(f"Attempting MCP tool discovery for {server.name} with command: {' '.join(cmd)}")
+            logger.debug(f"Attempting MCP protocol discovery for {server.name} with command: {' '.join(cmd)}")
             
             # Try to communicate with the MCP server using a simple protocol request
             # This is a basic implementation - in practice, you'd want more robust MCP protocol handling
@@ -1796,11 +1911,37 @@ class SimpleMCPManager:
                 
                 if result.returncode == 0:
                     output = result.stdout.strip()
-                    if output:
+                    if output and not output.startswith("No server"):
+                        # Only parse if it's not an error message like "No server is enabled"
                         servers = [s.strip() for s in output.split(",") if s.strip()]
                         available_servers.update(servers)
             except Exception as e:
                 logger.debug(f"Failed to list Docker servers: {e}")
+            
+            # If we still don't have any servers, try to get them from the catalog
+            if not available_servers:
+                try:
+                    result = subprocess.run(
+                        [self.claude.docker_path, "mcp", "catalog", "show"],
+                        capture_output=True,
+                        text=True,
+                        timeout=10,
+                    )
+                    
+                    if result.returncode == 0:
+                        catalog_output = result.stdout.strip()
+                        if catalog_output:
+                            # Parse catalog output to extract server names
+                            import re
+                            # Look for lines that start with a server name followed by a colon
+                            server_pattern = r'^([a-zA-Z][a-zA-Z0-9_-]*): '
+                            for line in catalog_output.split('\n'):
+                                match = re.match(server_pattern, line)
+                                if match:
+                                    server_name = match.group(1)
+                                    available_servers.add(server_name)
+                except Exception as e:
+                    logger.debug(f"Failed to get catalog: {e}")
             
             final_list = list(available_servers)
             logger.debug(f"Available Docker servers: {final_list}")
@@ -1809,6 +1950,79 @@ class SimpleMCPManager:
         except Exception as e:
             logger.debug(f"Failed to get available Docker servers: {e}")
             return []
+    
+    async def _get_server_catalog(self) -> Dict[str, Any]:
+        """Get the local server catalog that tracks installed servers."""
+        try:
+            from pathlib import Path
+            import json
+            
+            config_dir = Path.home() / ".config" / "mcp-manager"
+            config_dir.mkdir(parents=True, exist_ok=True)
+            catalog_file = config_dir / "server_catalog.json"
+            
+            if catalog_file.exists():
+                with open(catalog_file) as f:
+                    return json.load(f)
+            return {"servers": {}}
+            
+        except Exception as e:
+            logger.debug(f"Failed to get server catalog: {e}")
+            return {"servers": {}}
+    
+    async def _save_server_catalog(self, catalog: Dict[str, Any]):
+        """Save the server catalog to disk."""
+        try:
+            from pathlib import Path
+            import json
+            
+            config_dir = Path.home() / ".config" / "mcp-manager"
+            config_dir.mkdir(parents=True, exist_ok=True)
+            catalog_file = config_dir / "server_catalog.json"
+            
+            with open(catalog_file, "w") as f:
+                json.dump(catalog, f, indent=2)
+                
+        except Exception as e:
+            logger.debug(f"Failed to save server catalog: {e}")
+    
+    async def _add_server_to_catalog(self, name: str, server_type: str, enabled: bool = True, **metadata):
+        """Add a server to the local catalog."""
+        catalog = await self._get_server_catalog()
+        catalog["servers"][name] = {
+            "type": server_type,
+            "enabled": enabled,
+            "installed_at": datetime.now().isoformat(),
+            **metadata
+        }
+        await self._save_server_catalog(catalog)
+        logger.debug(f"Added server {name} to catalog with enabled={enabled}")
+    
+    async def _update_server_in_catalog(self, name: str, **updates):
+        """Update server status in the catalog."""
+        catalog = await self._get_server_catalog()
+        if name in catalog["servers"]:
+            catalog["servers"][name].update(updates)
+            catalog["servers"][name]["updated_at"] = datetime.now().isoformat()
+            await self._save_server_catalog(catalog)
+            logger.debug(f"Updated server {name} in catalog: {updates}")
+    
+    async def _remove_server_from_catalog(self, name: str):
+        """Remove a server from the catalog completely."""
+        catalog = await self._get_server_catalog()
+        if name in catalog["servers"]:
+            del catalog["servers"][name]
+            await self._save_server_catalog(catalog)
+            logger.debug(f"Removed server {name} from catalog")
+    
+    async def _get_disabled_servers(self) -> List[str]:
+        """Get list of servers that are in catalog but disabled."""
+        catalog = await self._get_server_catalog()
+        disabled_servers = []
+        for name, info in catalog["servers"].items():
+            if not info.get("enabled", True):
+                disabled_servers.append(name)
+        return disabled_servers
     
     async def _find_matching_docker_images(self, image_pattern: str) -> List[str]:
         """
@@ -1918,3 +2132,970 @@ class SimpleMCPManager:
             info["suggestions"].append("Check the server configuration for correct Docker image")
         
         return info
+    
+    def _discover_docker_tools_via_help(self, server: 'Server') -> List[Dict[str, Any]]:
+        """
+        Discover MCP tools from Docker containers using the --help approach.
+        
+        This method runs `mcp --help` inside the Docker container to extract
+        available commands/tools, which is more reliable than MCP protocol communication.
+        
+        Args:
+            server: Server configuration for Docker-based MCP server
+            
+        Returns:
+            List of tool dictionaries with name and description
+        """
+        import subprocess
+        import re
+        
+        try:
+            # Extract Docker image from server args
+            docker_image = self._extract_docker_image_from_args(server.args or [])
+            if not docker_image:
+                logger.debug(f"Could not extract Docker image from server {server.name} args")
+                return []
+            
+            logger.debug(f"Attempting Docker help-based tool discovery for {server.name} using image: {docker_image}")
+            
+            # Try multiple help command approaches
+            help_commands = [
+                ["mcp", "--help"],
+                ["--help"],
+                ["/app/mcp", "--help"],
+                ["node", "index.js", "--help"],
+                ["node", "/app/dist/index.js", "--help"]
+            ]
+
+            for help_cmd in help_commands:
+                try:
+                    result = subprocess.run(
+                        ["docker", "run", "--rm", docker_image] + help_cmd,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        text=True,
+                        timeout=20
+                    )
+
+                    if result.returncode == 0 and result.stdout.strip():
+                        tools = []
+                        capture = False
+                        
+                        for line in result.stdout.splitlines():
+                            if re.match(r"Commands:", line):
+                                capture = True
+                                continue
+                            if capture:
+                                if line.strip() == "":
+                                    break  # stop when empty line after commands block
+                                parts = line.strip().split(None, 1)
+                                if len(parts) >= 1:
+                                    cmd = parts[0]
+                                    desc = parts[1] if len(parts) > 1 else f"Tool from {server.name}"
+                                    tools.append({
+                                        "name": cmd,
+                                        "description": desc,
+                                        "source": "docker_help"
+                                    })
+
+                        if tools:
+                            logger.debug(f"Successfully discovered {len(tools)} tools from Docker container using: {' '.join(help_cmd)}")
+                            return tools
+
+                except subprocess.TimeoutExpired:
+                    logger.debug(f"Timeout running help command: {' '.join(help_cmd)}")
+                    continue
+                except Exception as e:
+                    logger.debug(f"Failed help command {' '.join(help_cmd)}: {e}")
+                    continue
+            
+            # If help commands failed, try exploring the container filesystem
+            logger.debug(f"Help commands failed, trying filesystem exploration for {server.name}")
+            return self._discover_tools_via_filesystem_exploration(docker_image, server.name)
+
+        except Exception as e:
+            logger.debug(f"Failed Docker help-based discovery for {server.name}: {e}")
+            return []
+    
+    def _discover_tools_via_filesystem_exploration(self, docker_image: str, server_name: str) -> List[Dict[str, Any]]:
+        """
+        Discover tools by inspecting Docker container configuration.
+        
+        This method inspects the container's entrypoint, cmd, and environment
+        to understand the actual MCP server structure and available tools.
+        """
+        import subprocess
+        import json
+        
+        try:
+            tools = []
+            
+            # First, inspect the Docker image configuration
+            logger.debug(f"Inspecting Docker image configuration for {server_name}")
+            
+            # Get entrypoint, cmd, and environment
+            inspect_commands = {
+                "entrypoint": "--format='{{.Config.Entrypoint}}'",
+                "cmd": "--format='{{.Config.Cmd}}'", 
+                "env": "--format='{{.Config.Env}}'"
+            }
+            
+            container_info = {}
+            
+            for info_type, format_arg in inspect_commands.items():
+                try:
+                    result = subprocess.run(
+                        ["docker", "inspect", docker_image, format_arg],
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        text=True,
+                        timeout=10
+                    )
+                    
+                    if result.returncode == 0:
+                        output = result.stdout.strip().strip("'\"")
+                        container_info[info_type] = output
+                        logger.debug(f"{info_type}: {output}")
+                
+                except Exception as e:
+                    logger.debug(f"Error getting {info_type}: {e}")
+                    continue
+            
+            # Parse the configuration to understand MCP tools
+            if container_info:
+                # Look at entrypoint and cmd to understand the server structure
+                entrypoint = container_info.get("entrypoint", "")
+                cmd = container_info.get("cmd", "")
+                env = container_info.get("env", "")
+                
+                # Extract information about the MCP server
+                if "node" in entrypoint or "node" in cmd:
+                    # This is a Node.js-based MCP server
+                    tools.append({
+                        "name": "filesystem_server", 
+                        "description": "Node.js MCP filesystem server",
+                        "source": "docker_inspect",
+                        "details": f"Entrypoint: {entrypoint}, Cmd: {cmd}"
+                    })
+                
+                elif "python" in entrypoint or "python" in cmd:
+                    # This is a Python-based MCP server
+                    tools.append({
+                        "name": "mcp_server",
+                        "description": "Python MCP server",
+                        "source": "docker_inspect", 
+                        "details": f"Entrypoint: {entrypoint}, Cmd: {cmd}"
+                    })
+                
+                # Look for specific MCP patterns in the configuration
+                config_text = f"{entrypoint} {cmd} {env}".lower()
+                if "mcp" in config_text:
+                    if "filesystem" in config_text:
+                        tools.append({
+                            "name": "read_file",
+                            "description": "Read file contents",
+                            "source": "docker_config_analysis"
+                        })
+                        tools.append({
+                            "name": "write_file", 
+                            "description": "Write file contents",
+                            "source": "docker_config_analysis"
+                        })
+                        tools.append({
+                            "name": "list_directory",
+                            "description": "List directory contents", 
+                            "source": "docker_config_analysis"
+                        })
+            
+            # Try to get tools from container documentation
+            if not tools:
+                doc_tools = self._discover_tools_from_container_docs(docker_image, server_name)
+                if doc_tools:
+                    tools.extend(doc_tools)
+            
+            # Fallback: try to explore /app directory structure
+            if not tools:
+                try:
+                    result = subprocess.run(
+                        ["docker", "run", "--rm", docker_image, "ls", "-la", "/app"],
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        text=True,
+                        timeout=10
+                    )
+                    
+                    if result.returncode == 0:
+                        logger.debug(f"/app directory contents: {result.stdout}")
+                        # Look for package.json or other indicators
+                        if "package.json" in result.stdout or "index.js" in result.stdout:
+                            tools.append({
+                                "name": "mcp_server",
+                                "description": "MCP server executable",
+                                "source": "app_directory_analysis"
+                            })
+                
+                except Exception as e:
+                    logger.debug(f"Error exploring /app: {e}")
+            
+            if tools:
+                logger.debug(f"Discovered {len(tools)} tools via Docker inspection")
+                return tools
+            
+            logger.debug(f"No tools discovered via Docker inspection for {server_name}")
+            return []
+            
+        except Exception as e:
+            logger.debug(f"Failed Docker inspection: {e}")
+            return []
+    
+    def _discover_tools_from_container_docs(self, docker_image: str, server_name: str) -> List[Dict[str, Any]]:
+        """
+        Discover tools from Docker container documentation and labels.
+        
+        This method extracts information from Docker Hub API, container labels,
+        and any embedded documentation to understand available MCP tools.
+        """
+        import subprocess
+        import re
+        import json
+        
+        try:
+            tools = []
+            
+            # First, check container labels which might contain tool information
+            try:
+                result = subprocess.run(
+                    ["docker", "inspect", docker_image, "--format='{{.Config.Labels}}'"],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    timeout=10
+                )
+                
+                if result.returncode == 0:
+                    labels_output = result.stdout.strip().strip("'\"")
+                    logger.debug(f"Container labels: {labels_output}")
+                    
+                    # Parse labels for tool information
+                    if labels_output and labels_output != "map[]" and labels_output != "<no value>":
+                        # Look for MCP-specific labels or descriptions
+                        labels_text = labels_output.lower()
+                        if "mcp" in labels_text and "tools" in labels_text:
+                            # Try to extract tool names from labels
+                            tool_matches = re.findall(r'tools?["\']?:\s*["\']?([^"\'}\]]+)', labels_text)
+                            for match in tool_matches:
+                                tool_names = [t.strip() for t in match.split(',')]
+                                for tool_name in tool_names:
+                                    if tool_name and len(tool_name) > 2:
+                                        tools.append({
+                                            "name": tool_name,
+                                            "description": f"Tool from container labels",
+                                            "source": "docker_labels"
+                                        })
+            
+            except Exception as e:
+                logger.debug(f"Error checking container labels: {e}")
+            
+            # Try to get documentation from Docker Hub API
+            if not tools:
+                try:
+                    # Parse image name for Docker Hub API call
+                    if "/" in docker_image:
+                        namespace, repo_tag = docker_image.split("/", 1)
+                        if ":" in repo_tag:
+                            repo, tag = repo_tag.split(":", 1)
+                        else:
+                            repo = repo_tag
+                            tag = "latest"
+                    else:
+                        namespace = "library"
+                        if ":" in docker_image:
+                            repo, tag = docker_image.split(":", 1)
+                        else:
+                            repo = docker_image
+                            tag = "latest"
+                    
+                    # Use httpx to get Docker Hub repository information
+                    import httpx
+                    
+                    # Get repository description from Docker Hub API
+                    hub_url = f"https://hub.docker.com/v2/repositories/{namespace}/{repo}/"
+                    
+                    async def fetch_docker_hub_info():
+                        async with httpx.AsyncClient(timeout=5.0) as client:
+                            response = await client.get(hub_url)
+                            if response.status_code == 200:
+                                data = response.json()
+                                description = data.get("description", "")
+                                full_description = data.get("full_description", "")
+                                
+                                # Parse description for MCP tools
+                                combined_text = f"{description} {full_description}".lower()
+                                logger.debug(f"Docker Hub description: {description}")
+                                
+                                # Look for tool patterns in description
+                                tool_patterns = [
+                                    r'tools?:\s*([^.]+)',
+                                    r'provides?\s+([^.]+)\s+tools?',
+                                    r'supports?\s+([^.]+)\s+operations?',
+                                    r'includes?\s+([^.]+)\s+functionality'
+                                ]
+                                
+                                found_tools = []
+                                for pattern in tool_patterns:
+                                    matches = re.findall(pattern, combined_text)
+                                    for match in matches:
+                                        # Extract individual tool names
+                                        tool_names = re.split(r'[,&\sand\s]+', match.strip())
+                                        for tool_name in tool_names:
+                                            tool_name = tool_name.strip()
+                                            if tool_name and len(tool_name) > 2:
+                                                found_tools.append({
+                                                    "name": tool_name,
+                                                    "description": f"Tool from Docker Hub description",
+                                                    "source": "docker_hub_api"
+                                                })
+                                
+                                return found_tools
+                            return []
+                    
+                    # Use sync httpx to get Docker Hub repository information
+                    with httpx.Client(timeout=5.0) as client:
+                        try:
+                            response = client.get(hub_url)
+                            if response.status_code == 200:
+                                data = response.json()
+                                description = data.get("description", "")
+                                full_description = data.get("full_description", "")
+                                
+                                logger.debug(f"Docker Hub description for {namespace}/{repo}: {description}")
+                                
+                                # Parse description for MCP tools
+                                combined_text = f"{description} {full_description}".lower()
+                                
+                                # Look for tool patterns in Docker Hub documentation
+                                # First, try to find the structured tools table
+                                tools_table_match = re.search(r'tools provided by this server.*?\n(.+?)(?:\n---|\n##|\n\n|\Z)', combined_text, re.DOTALL | re.IGNORECASE)
+                                
+                                if tools_table_match:
+                                    # Extract tools from the structured table
+                                    table_content = tools_table_match.group(1)
+                                    # Look for `tool_name`|description patterns
+                                    tool_matches = re.findall(r'`([a-zA-Z_][a-zA-Z0-9_]*)`\s*\|\s*([^|]+)', table_content)
+                                    for tool_name, description in tool_matches:
+                                        tools.append({
+                                            "name": tool_name,
+                                            "description": description.strip(),
+                                            "source": "docker_hub_documentation"
+                                        })
+                                
+                                # Also look for individual tool headings like "#### Tool: **`tool_name`**"
+                                tool_header_matches = re.findall(r'tool:\s*\*\*`([a-zA-Z_][a-zA-Z0-9_]*)`\*\*', combined_text, re.IGNORECASE)
+                                for tool_name in tool_header_matches:
+                                    # Only add if we haven't already found it in the table
+                                    if not any(t["name"] == tool_name for t in tools):
+                                        tools.append({
+                                            "name": tool_name,
+                                            "description": f"MCP tool from {docker_image}",
+                                            "source": "docker_hub_documentation"
+                                        })
+                                
+                                # Fallback: look for any `tool_name` patterns in backticks
+                                if not tools:
+                                    tool_patterns = [
+                                        r'`([a-zA-Z_][a-zA-Z0-9_]*)`',  # `tool_name`
+                                        r'\*\*`([a-zA-Z_][a-zA-Z0-9_]*)`\*\*',  # **`tool_name`**
+                                    ]
+                                    
+                                    for pattern in tool_patterns:
+                                        matches = re.findall(pattern, combined_text)
+                                        for tool_name in matches:
+                                            # Filter out common non-tool words
+                                            if tool_name not in ["string", "array", "boolean", "object", "number", "file", "dir"]:
+                                                tools.append({
+                                                    "name": tool_name,
+                                                    "description": f"Tool from Docker Hub documentation",
+                                                    "source": "docker_hub_api"
+                                                })
+                                
+                                # If it's a filesystem server, add standard filesystem tools
+                                if "filesystem" in combined_text and not tools:
+                                    tools.extend([
+                                        {"name": "read_file", "description": "Read file contents", "source": "docker_hub_analysis"},
+                                        {"name": "write_file", "description": "Write file contents", "source": "docker_hub_analysis"},
+                                        {"name": "list_directory", "description": "List directory contents", "source": "docker_hub_analysis"},
+                                        {"name": "create_directory", "description": "Create directories", "source": "docker_hub_analysis"}
+                                    ])
+                                
+                                # For custom Docker containers not on Docker Hub, try pattern matching
+                                elif not tools:
+                                    custom_tools = self._predict_docker_tools_from_image_name(docker_image)
+                                    if custom_tools:
+                                        tools.extend(custom_tools)
+                        
+                        except httpx.RequestError as e:
+                            logger.debug(f"Network error accessing Docker Hub: {e}")
+                        except Exception as e:
+                            logger.debug(f"Error parsing Docker Hub response: {e}")
+                    
+                except Exception as e:
+                    logger.debug(f"Error fetching Docker Hub info: {e}")
+            
+            # Try to find README or documentation files in the container
+            if not tools:
+                doc_files = ["README.md", "README.txt", "README", "DOCS.md", "docs/README.md"]
+                for doc_file in doc_files:
+                    try:
+                        result = subprocess.run(
+                            ["docker", "run", "--rm", docker_image, "cat", f"/{doc_file}"],
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                            text=True,
+                            timeout=5
+                        )
+                        
+                        if result.returncode == 0 and result.stdout:
+                            doc_content = result.stdout.lower()
+                            logger.debug(f"Found documentation file: {doc_file}")
+                            
+                            # Look for MCP tool patterns in documentation
+                            if "mcp" in doc_content and any(word in doc_content for word in ["tools", "commands", "functions"]):
+                                # Extract tool information from documentation
+                                tool_patterns = [
+                                    r'- `(\w+)`[:\s]+([^\n]+)',  # - `tool_name`: description
+                                    r'\*\*(\w+)\*\*[:\s]+([^\n]+)',  # **tool_name**: description
+                                    r'### (\w+)\n([^\n]+)',  # ### tool_name\ndescription
+                                ]
+                                
+                                for pattern in tool_patterns:
+                                    matches = re.findall(pattern, doc_content)
+                                    for name, desc in matches:
+                                        if any(keyword in name.lower() for keyword in ["read", "write", "list", "create", "delete", "search"]):
+                                            tools.append({
+                                                "name": name,
+                                                "description": desc.strip(),
+                                                "source": f"container_docs_{doc_file}"
+                                            })
+                                
+                                if tools:
+                                    break
+                    
+                    except Exception as e:
+                        logger.debug(f"Error checking {doc_file}: {e}")
+                        continue
+            
+            if tools:
+                logger.debug(f"Discovered {len(tools)} tools from container documentation")
+                return tools[:10]  # Limit to first 10 tools to avoid overwhelming output
+            
+            return []
+            
+        except Exception as e:
+            logger.debug(f"Failed to discover tools from container docs: {e}")
+            return []
+    
+    def _discover_npx_tools(self, server: 'Server') -> List[Dict[str, Any]]:
+        """
+        Discover tools from NPX-based MCP servers.
+        
+        This method attempts various approaches to discover tools from NPX servers:
+        1. Try --help commands
+        2. Check package.json for tool information
+        3. Query npm registry for package documentation
+        4. Use pattern matching based on server name
+        """
+        import subprocess
+        import json
+        import re
+        
+        try:
+            tools = []
+            
+            if not server.args:
+                logger.debug(f"No args found for NPX server {server.name}")
+                return []
+            
+            # Extract package name from NPX arguments
+            package_name = None
+            for arg in server.args:
+                if not arg.startswith('-') and arg != 'npx':
+                    package_name = arg
+                    break
+            
+            if not package_name:
+                logger.debug(f"Could not extract package name from NPX server {server.name}")
+                return []
+            
+            logger.debug(f"Discovering tools for NPX package: {package_name}")
+            
+            # Method 1: Try --help command
+            try:
+                result = subprocess.run(
+                    ["npx", package_name, "--help"],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    timeout=15
+                )
+                
+                if result.returncode == 0 and result.stdout:
+                    help_tools = self._parse_npx_help_output(result.stdout, package_name)
+                    if help_tools:
+                        tools.extend(help_tools)
+                        logger.debug(f"Found {len(help_tools)} tools from --help for {package_name}")
+            
+            except subprocess.TimeoutExpired:
+                logger.debug(f"Timeout running --help for {package_name}")
+            except Exception as e:
+                logger.debug(f"Error running --help for {package_name}: {e}")
+            
+            # Method 2: Try npm info to get package documentation
+            if not tools:
+                try:
+                    result = subprocess.run(
+                        ["npm", "info", package_name, "--json"],
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        text=True,
+                        timeout=10
+                    )
+                    
+                    if result.returncode == 0 and result.stdout:
+                        npm_info = json.loads(result.stdout)
+                        npm_tools = self._parse_npm_package_info(npm_info, package_name)
+                        if npm_tools:
+                            tools.extend(npm_tools)
+                            logger.debug(f"Found {len(npm_tools)} tools from npm info for {package_name}")
+                
+                except subprocess.TimeoutExpired:
+                    logger.debug(f"Timeout running npm info for {package_name}")
+                except Exception as e:
+                    logger.debug(f"Error running npm info for {package_name}: {e}")
+            
+            # Method 3: Pattern-based tool prediction
+            if not tools:
+                pattern_tools = self._predict_tools_from_package_name(package_name)
+                if pattern_tools:
+                    tools.extend(pattern_tools)
+                    logger.debug(f"Predicted {len(pattern_tools)} tools for {package_name}")
+            
+            return tools[:15]  # Limit to avoid overwhelming output
+            
+        except Exception as e:
+            logger.debug(f"Failed NPX tool discovery for {server.name}: {e}")
+            return []
+    
+    def _parse_npx_help_output(self, help_output: str, package_name: str) -> List[Dict[str, Any]]:
+        """Parse help output from NPX packages to extract tool information."""
+        tools = []
+        
+        try:
+            lines = help_output.lower().split('\n')
+            
+            # Look for common help patterns
+            in_commands_section = False
+            for line in lines:
+                line = line.strip()
+                
+                # Detect commands/tools section
+                if any(keyword in line for keyword in ['commands:', 'tools:', 'actions:', 'available:']):
+                    in_commands_section = True
+                    continue
+                
+                if in_commands_section:
+                    # Stop if we hit options or examples section
+                    if any(keyword in line for keyword in ['options:', 'examples:', 'usage:', '--']):
+                        break
+                    
+                    # Extract command patterns like "  command_name    description"
+                    command_match = re.match(r'\s*([a-zA-Z_][a-zA-Z0-9_-]*)\s+(.+)', line)
+                    if command_match:
+                        cmd_name, description = command_match.groups()
+                        tools.append({
+                            "name": cmd_name.strip(),
+                            "description": description.strip(),
+                            "source": "npx_help"
+                        })
+            
+            # Also look for any tool-like patterns in the entire output
+            if not tools:
+                # Look for patterns like "Available tools:" or similar
+                tool_patterns = [
+                    r'tools?:\s*([^.\n]+)',
+                    r'provides?\s+([^.\n]+)\s+functionality',
+                    r'supports?\s+([^.\n]+)\s+operations?'
+                ]
+                
+                for pattern in tool_patterns:
+                    matches = re.findall(pattern, help_output.lower())
+                    for match in matches:
+                        # Extract individual tool names
+                        tool_names = re.split(r'[,&\sand\s]+', match.strip())
+                        for tool_name in tool_names:
+                            tool_name = tool_name.strip()
+                            if tool_name and len(tool_name) > 2:
+                                tools.append({
+                                    "name": tool_name.replace(" ", "_"),
+                                    "description": f"Tool from {package_name}",
+                                    "source": "npx_help_pattern"
+                                })
+            
+            return tools
+            
+        except Exception as e:
+            logger.debug(f"Error parsing NPX help output: {e}")
+            return []
+    
+    def _parse_npm_package_info(self, npm_info: dict, package_name: str) -> List[Dict[str, Any]]:
+        """Parse npm package info to extract tool information."""
+        tools = []
+        
+        try:
+            # Check description for tool hints
+            description = npm_info.get('description', '').lower()
+            readme = npm_info.get('readme', '').lower()
+            keywords = npm_info.get('keywords', [])
+            
+            combined_text = f"{description} {readme}"
+            
+            # Look for MCP-specific patterns
+            if 'mcp' in combined_text or any('mcp' in str(k).lower() for k in keywords):
+                # Extract tool names from documentation
+                tool_patterns = [
+                    r'tools?[:\s]+([^.\n]+)',
+                    r'provides?\s+([^.\n]+)\s+tools?',
+                    r'supports?\s+([^.\n]+)\s+operations?',
+                    r'functions?[:\s]+([^.\n]+)',
+                    r'commands?[:\s]+([^.\n]+)'
+                ]
+                
+                for pattern in tool_patterns:
+                    matches = re.findall(pattern, combined_text)
+                    for match in matches:
+                        # Extract individual tool names
+                        tool_names = re.split(r'[,&\sand\s]+', match.strip())
+                        for tool_name in tool_names:
+                            tool_name = tool_name.strip()
+                            if tool_name and len(tool_name) > 2 and tool_name not in ['the', 'and', 'or']:
+                                tools.append({
+                                    "name": tool_name.replace(" ", "_"),
+                                    "description": f"Tool from {package_name} package",
+                                    "source": "npm_package_info"
+                                })
+            
+            return tools
+            
+        except Exception as e:
+            logger.debug(f"Error parsing npm package info: {e}")
+            return []
+    
+    def _predict_tools_from_package_name(self, package_name: str) -> List[Dict[str, Any]]:
+        """Predict likely tools based on package name patterns."""
+        tools = []
+        
+        try:
+            package_lower = package_name.lower()
+            
+            # Common MCP server patterns and their likely tools
+            tool_predictions = {
+                'filesystem': [
+                    {"name": "read_file", "description": "Read file contents"},
+                    {"name": "write_file", "description": "Write file contents"},
+                    {"name": "list_directory", "description": "List directory contents"},
+                    {"name": "create_directory", "description": "Create directories"}
+                ],
+                'sqlite': [
+                    {"name": "query", "description": "Execute SQL queries"},
+                    {"name": "create_table", "description": "Create database tables"},
+                    {"name": "insert_data", "description": "Insert data into tables"}
+                ],
+                'web': [
+                    {"name": "fetch", "description": "Fetch web pages"},
+                    {"name": "scrape", "description": "Scrape web content"}
+                ],
+                'search': [
+                    {"name": "search", "description": "Search for information"},
+                    {"name": "query", "description": "Query search engines"}
+                ],
+                'browser': [
+                    {"name": "navigate", "description": "Navigate to web pages"},
+                    {"name": "click", "description": "Click elements"},
+                    {"name": "type", "description": "Type text into fields"}
+                ]
+            }
+            
+            # Check if package name contains any known patterns
+            for pattern, predicted_tools in tool_predictions.items():
+                if pattern in package_lower:
+                    for tool in predicted_tools:
+                        tools.append({
+                            "name": tool["name"],
+                            "description": tool["description"],
+                            "source": "pattern_prediction"
+                        })
+                    break  # Only use the first matching pattern
+            
+            return tools
+            
+        except Exception as e:
+            logger.debug(f"Error predicting tools from package name: {e}")
+            return []
+    
+    def _predict_docker_tools_from_image_name(self, docker_image: str) -> List[Dict[str, Any]]:
+        """Predict likely tools based on Docker image name patterns."""
+        tools = []
+        
+        try:
+            image_lower = docker_image.lower()
+            
+            # Common patterns in custom Docker MCP images
+            if 'filesystem' in image_lower or 'files' in image_lower:
+                tools.extend([
+                    {"name": "read_file", "description": "Read file contents", "source": "custom_docker_prediction"},
+                    {"name": "write_file", "description": "Write file contents", "source": "custom_docker_prediction"},
+                    {"name": "list_directory", "description": "List directory contents", "source": "custom_docker_prediction"}
+                ])
+            elif 'database' in image_lower or 'sql' in image_lower or 'db' in image_lower:
+                tools.extend([
+                    {"name": "query", "description": "Execute database queries", "source": "custom_docker_prediction"},
+                    {"name": "insert", "description": "Insert data into database", "source": "custom_docker_prediction"}
+                ])
+            elif 'web' in image_lower or 'http' in image_lower or 'api' in image_lower:
+                tools.extend([
+                    {"name": "fetch", "description": "Fetch web content", "source": "custom_docker_prediction"},
+                    {"name": "post", "description": "Send HTTP POST requests", "source": "custom_docker_prediction"}
+                ])
+            elif 'search' in image_lower:
+                tools.extend([
+                    {"name": "search", "description": "Search for information", "source": "custom_docker_prediction"}
+                ])
+            elif 'browser' in image_lower or 'selenium' in image_lower:
+                tools.extend([
+                    {"name": "navigate", "description": "Navigate to web pages", "source": "custom_docker_prediction"},
+                    {"name": "click", "description": "Click elements", "source": "custom_docker_prediction"},
+                    {"name": "type", "description": "Type text", "source": "custom_docker_prediction"}
+                ])
+            
+            return tools
+            
+        except Exception as e:
+            logger.debug(f"Error predicting tools from Docker image name: {e}")
+            return []
+    
+    def _is_likely_mcp_executable(self, filename: str) -> bool:
+        """
+        Determine if a filename is likely an MCP-related executable.
+        
+        Args:
+            filename: Name of the executable file
+            
+        Returns:
+            True if the file is likely MCP-related
+        """
+        # Skip common system executables
+        system_executables = {
+            'sh', 'bash', 'ls', 'cat', 'grep', 'sed', 'awk', 'find', 'chmod', 'chown',
+            'cp', 'mv', 'rm', 'mkdir', 'rmdir', 'touch', 'tar', 'gzip', 'gunzip',
+            'ps', 'top', 'kill', 'killall', 'mount', 'umount', 'df', 'du', 'free',
+            'uname', 'whoami', 'id', 'groups', 'su', 'sudo', 'passwd', 'crontab',
+            'curl', 'wget', 'ping', 'netstat', 'ss', 'iptables', 'systemctl',
+            'service', 'nginx', 'apache2', 'mysql', 'postgres', 'redis-server',
+            'docker', 'git', 'npm', 'node', 'python', 'python3', 'pip', 'pip3'
+        }
+        
+        if filename.lower() in system_executables:
+            return False
+        
+        # Look for MCP-related patterns
+        mcp_patterns = [
+            'mcp', 'server', 'tool', 'agent', 'context', 'protocol',
+            'filesystem', 'database', 'web', 'api', 'search', 'browser'
+        ]
+        
+        filename_lower = filename.lower()
+        for pattern in mcp_patterns:
+            if pattern in filename_lower:
+                return True
+        
+        # Include any custom executables that aren't obviously system tools
+        # This catches app-specific binaries that might be MCP servers
+        return len(filename) > 2 and not filename.startswith('.')
+    
+    def _parse_docker_help_output(self, help_output: str, server_name: str) -> List[Dict[str, Any]]:
+        """
+        Parse help output from Docker MCP containers to extract tools/commands.
+        
+        Args:
+            help_output: Raw help text from the container
+            server_name: Name of the server for logging
+            
+        Returns:
+            List of tool dictionaries
+        """
+        import re
+        
+        tools = []
+        
+        try:
+            lines = help_output.splitlines()
+            capture_commands = False
+            
+            for line in lines:
+                line = line.strip()
+                
+                # Look for sections that indicate commands/tools
+                if re.search(r"(commands?|tools?|available|usage):", line.lower()):
+                    capture_commands = True
+                    continue
+                    
+                if capture_commands:
+                    # Stop capturing if we hit an empty line or new section
+                    if line == "" or line.startswith("-") or line.lower().startswith("options"):
+                        if tools:  # Only stop if we found some tools
+                            break
+                        capture_commands = False
+                        continue
+                    
+                    # Extract command names - look for patterns like:
+                    # "  command_name    Description here"
+                    # "* command_name - Description"
+                    # "command_name: Description"
+                    command_patterns = [
+                        r"^\s*\*?\s*([a-zA-Z_][a-zA-Z0-9_-]*)\s*[-:]\s*(.+)$",  # command - description
+                        r"^\s*([a-zA-Z_][a-zA-Z0-9_-]*)\s{2,}(.+)$",           # command    description (2+ spaces)
+                        r"^\s*([a-zA-Z_][a-zA-Z0-9_-]*)\s*$"                   # just command name
+                    ]
+                    
+                    for pattern in command_patterns:
+                        match = re.match(pattern, line)
+                        if match:
+                            tool_name = match.group(1).strip()
+                            description = match.group(2).strip() if len(match.groups()) > 1 else f"Tool from {server_name}"
+                            
+                            # Skip generic help-related commands
+                            if tool_name.lower() in ['help', 'version', '--help', '--version', '-h', '-v']:
+                                break
+                            
+                            tools.append({
+                                "name": tool_name,
+                                "description": description,
+                                "parameters": []  # Help output usually doesn't include detailed parameter info
+                            })
+                            break
+            
+            # If no structured commands found, try to find any command-like words
+            if not tools:
+                # Look for patterns that might indicate available tools
+                all_text = help_output.lower()
+                if "filesystem" in all_text or "file" in all_text:
+                    tools.append({"name": "filesystem_operations", "description": "File system operations", "parameters": []})
+                elif "sqlite" in all_text or "database" in all_text:
+                    tools.append({"name": "database_operations", "description": "Database operations", "parameters": []})
+                elif "http" in all_text or "web" in all_text:
+                    tools.append({"name": "http_operations", "description": "HTTP operations", "parameters": []})
+            
+            logger.debug(f"Parsed {len(tools)} tools from help output for {server_name}")
+            return tools
+            
+        except Exception as e:
+            logger.debug(f"Error parsing help output for {server_name}: {e}")
+            return []
+
+    async def _test_all_servers(self) -> Optional[Dict[str, Any]]:
+        """
+        Test all MCP servers (Docker, NPX, Docker Desktop) to get comprehensive tool counts.
+        
+        Returns:
+            Dict with test results including working_servers with tool counts for each server
+        """
+        try:
+            servers = await self.list_servers()
+            if not servers:
+                return {
+                    "status": "no_servers",
+                    "servers_tested": [],
+                    "working_servers": [],
+                    "failed_servers": [],
+                    "total_tools": 0
+                }
+            
+            servers_tested = []
+            working_servers = []
+            failed_servers = []
+            total_tools = 0
+            
+            logger.debug(f"Testing {len(servers)} servers for tool discovery")
+            
+            for server in servers:
+                servers_tested.append(server.name)
+                
+                try:
+                    # Get server details which includes tool discovery
+                    details = await self.get_server_details(server.name)
+                    
+                    if details:
+                        tool_count = details.get('tool_count', 0)
+                        
+                        # Convert "Unknown" to 0 for counting
+                        if tool_count == "Unknown" or tool_count == "Error":
+                            tool_count = 0
+                        
+                        if isinstance(tool_count, int) and tool_count > 0:
+                            working_servers.append({
+                                "name": server.name,
+                                "tools": tool_count,
+                                "type": server.server_type.value,
+                                "source": details.get('source', 'unknown')
+                            })
+                            total_tools += tool_count
+                            logger.debug(f"Server {server.name}: {tool_count} tools discovered")
+                        else:
+                            failed_servers.append({
+                                "name": server.name,
+                                "error": f"No tools discovered ({details.get('source', 'unknown')})",
+                                "type": server.server_type.value
+                            })
+                            logger.debug(f"Server {server.name}: No tools discovered")
+                    else:
+                        failed_servers.append({
+                            "name": server.name,
+                            "error": "Server details not available",
+                            "type": server.server_type.value if hasattr(server, 'server_type') else 'unknown'
+                        })
+                
+                except Exception as e:
+                    logger.debug(f"Error testing server {server.name}: {e}")
+                    failed_servers.append({
+                        "name": server.name,
+                        "error": str(e),
+                        "type": server.server_type.value if hasattr(server, 'server_type') else 'unknown'
+                    })
+            
+            # Determine overall status
+            if working_servers:
+                status = "success" if not failed_servers else "partial_success"
+            else:
+                status = "failed"
+            
+            result = {
+                "status": status,
+                "servers_tested": servers_tested,
+                "working_servers": working_servers,
+                "failed_servers": failed_servers,
+                "total_tools": total_tools,
+                "summary": f"Found {total_tools} tools across {len(working_servers)} working servers"
+            }
+            
+            logger.debug(f"All servers test complete: {len(working_servers)} working, {len(failed_servers)} failed, {total_tools} total tools")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Failed to test all servers: {e}")
+            return {
+                "status": "error",
+                "error": str(e),
+                "servers_tested": [],
+                "working_servers": [],
+                "failed_servers": [],
+                "total_tools": 0
+            }

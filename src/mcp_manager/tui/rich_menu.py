@@ -993,8 +993,12 @@ class RichMenuApp:
                 console.print(f"  [yellow]⚠️[/yellow] {warning}")
             console.print()
         
-        # Docker Gateway Test Results
-        if sync_result.docker_gateway_test:
+        # All Servers Test Results (includes Docker, NPX, Docker Desktop)
+        if sync_result.all_servers_test:
+            self._display_all_servers_test(sync_result.all_servers_test)
+        
+        # Docker Gateway Test Results (backward compatibility)
+        elif sync_result.docker_gateway_test:
             self._display_docker_gateway_test(sync_result.docker_gateway_test)
         
         # Recommendations
@@ -1643,6 +1647,79 @@ class RichMenuApp:
         
         if total_tools > 0:
             console.print(f"  [cyan]Total tools available:[/cyan] {total_tools}")
+        
+        console.print()
+    
+    def _display_all_servers_test(self, test_result: Dict[str, Any]):
+        """Display comprehensive test results for all server types."""
+        console.print("[bold]Server Tool Discovery Test:[/bold]")
+        
+        status = test_result.get("status", "unknown")
+        total_tools = test_result.get("total_tools", 0)
+        servers_tested = test_result.get("servers_tested", [])
+        working_servers = test_result.get("working_servers", [])
+        failed_servers = test_result.get("failed_servers", [])
+        
+        # Status display
+        if status == "success":
+            console.print(f"  [green]✅ All Servers Test: PASSED[/green]")
+        elif status == "partial_success":
+            console.print(f"  [yellow]⚠️ All Servers Test: PARTIAL SUCCESS[/yellow]")
+        elif status == "no_servers":
+            console.print(f"  [dim]ℹ️ All Servers Test: NO SERVERS CONFIGURED[/dim]")
+        else:
+            console.print(f"  [red]❌ All Servers Test: FAILED[/red]")
+        
+        # Summary
+        if servers_tested:
+            console.print(f"  [cyan]Servers tested:[/cyan] {len(servers_tested)} ({', '.join(servers_tested)})")
+        
+        # Working servers with tool counts
+        if working_servers:
+            console.print(f"  [green]Working servers:[/green]")
+            for server in working_servers:
+                server_name = server.get("name", "Unknown")
+                tools = server.get("tools", 0)
+                server_type = server.get("type", "unknown")
+                source = server.get("source", "")
+                
+                # Add type indicator
+                type_indicator = {
+                    "docker": "🐳",
+                    "npm": "📦", 
+                    "docker-desktop": "🖥️"
+                }.get(server_type, "⚙️")
+                
+                console.print(f"    • {type_indicator} {server_name}: {tools} tools ({server_type})")
+        
+        # Failed servers
+        if failed_servers:
+            console.print(f"  [red]Failed servers:[/red]")
+            for server in failed_servers:
+                server_name = server.get("name", "Unknown")
+                error_msg = server.get("error", "Unknown error")
+                server_type = server.get("type", "unknown")
+                
+                # Truncate very long error messages
+                if len(error_msg) > 80:
+                    error_msg = error_msg[:77] + "..."
+                
+                type_indicator = {
+                    "docker": "🐳",
+                    "npm": "📦",
+                    "docker-desktop": "🖥️"
+                }.get(server_type, "⚙️")
+                
+                console.print(f"    • {type_indicator} {server_name}: {error_msg} ({server_type})")
+        
+        # Total summary
+        if total_tools > 0:
+            console.print(f"  [bold cyan]📊 Total tools available: {total_tools}[/bold cyan]")
+        
+        # Summary message
+        summary = test_result.get("summary")
+        if summary:
+            console.print(f"  [dim]{summary}[/dim]")
         
         console.print()
     
