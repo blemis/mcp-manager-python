@@ -2,7 +2,7 @@
 
 from mcp_manager.core.exceptions import MCPManagerError, ServerError, ConfigError
 from mcp_manager.core.models import Server, ServerScope, ServerStatus
-from mcp_manager.core.manager import MCPManager
+from mcp_manager.core.simple_manager import SimpleMCPManager
 
 __all__ = [
     "MCPManagerError",
@@ -11,5 +11,5 @@ __all__ = [
     "Server",
     "ServerScope",
     "ServerStatus",
-    "MCPManager",
+    "SimpleMCPManager",
 ]
