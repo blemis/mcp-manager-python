@@ -53,10 +53,12 @@ MCP Manager is a comprehensive tool for managing Model Context Protocol (MCP) se
 
 ### Installation Methods
 
-#### Method 1: PyPI Installation (Recommended)
+#### Method 1: PyPI Installation (Future Release)
+
+> **Note**: PyPI distribution will be available in a future release
 
 ```bash
-# Install latest stable version
+# Install latest stable version (coming soon)
 pip install mcp-manager
 
 # Install with all optional dependencies
@@ -66,7 +68,7 @@ pip install mcp-manager[all]
 mcp-manager --version
 ```
 
-#### Method 2: Development Installation
+#### Method 2: Development Installation (Current)
 
 ```bash
 # Clone repository
@@ -80,6 +82,17 @@ pip install -e ".[dev]"
 python -m mcp_manager.cli.main --version
 ```
 
+#### Method 3: Docker Installation (Future Release)
+
+> **Note**: Docker images will be available in a future release
+
+```bash
+# Pull and run Docker container (coming soon)
+docker run -it --rm mcpmanager/mcp-manager:latest
+
+# With volume mounting for persistence
+docker run -it --rm -v ~/.claude:/root/.claude mcpmanager/mcp-manager:latest
+```
 
 ### Post-Installation Setup
 
@@ -1557,6 +1570,40 @@ pipeline {
 }
 ```
 
+**Docker Compose Integration (Future Release)**:
+
+> **Note**: Docker Compose support will be available in a future release
+
+```yaml
+# docker-compose.yml (coming soon)
+version: '3.8'
+
+services:
+  app:
+    image: myapp:latest
+    depends_on:
+      - mcp-manager
+    environment:
+      - MCP_MANAGER_HOST=mcp-manager
+    volumes:
+      - mcp-data:/mcp
+
+  mcp-manager:
+    image: mcpmanager/mcp-manager:latest
+    ports:
+      - "8080:8080"  # API server mode
+    volumes:
+      - mcp-data:/data
+      - ./mcp-config:/config
+    environment:
+      - MCP_MANAGER_CONFIG_PATH=/config/config.toml
+      - MCP_MANAGER_DATA_PATH=/data
+      - MCP_MANAGER_LOG_LEVEL=INFO
+    command: ["mcp-manager", "monitor", "--start", "--auto-sync", "--api-mode"]
+
+volumes:
+  mcp-data:
+```
 
 ---
 
@@ -1594,6 +1641,8 @@ pip uninstall mcp-manager
 pip uninstall mcp-manager
 rm -rf /path/to/mcp-manager-python
 
+# If installed via Docker (future release)
+docker rmi mcpmanager/mcp-manager:latest
 ```
 
 **Step 4: Remove Configuration and Data**
@@ -1707,6 +1756,35 @@ mcp-manager --help                    # General help
 mcp-manager <command> --help          # Command-specific help
 mcp-manager system-info               # System diagnostics
 ```
+
+---
+
+## Roadmap & Future Releases
+
+The following features are planned for future releases:
+
+### v1.1 - PyPI Distribution
+- **PyPI Package**: Official package distribution via `pip install mcp-manager`
+- **Simplified Installation**: One-command installation without git clone
+- **Version Management**: Semantic versioning and upgrade paths
+
+### v1.2 - Container Support  
+- **Docker Images**: Official Docker images on Docker Hub
+- **Docker Compose**: Pre-configured compose files for containerized deployments
+- **API Server Mode**: REST API for programmatic access and integration
+- **Kubernetes**: Helm charts and K8s deployment manifests
+
+### v1.3 - Enterprise Features
+- **Centralized Management**: Organization-wide server policies and approval workflows
+- **Audit Logging**: Enhanced audit trails and compliance reporting
+- **Multi-Tenant**: Project isolation and team-based access controls
+- **Metrics Dashboard**: Web-based monitoring and analytics interface
+
+### v2.0 - Advanced Integration
+- **IDE Extensions**: VS Code and JetBrains plugin support
+- **CI/CD Integration**: Native GitHub Actions and Jenkins plugins
+- **Plugin Architecture**: Custom discovery sources and server types
+- **Distributed Discovery**: Organizational server registries and catalogs
 
 ---
 
