@@ -80,15 +80,6 @@ pip install -e ".[dev]"
 python -m mcp_manager.cli.main --version
 ```
 
-#### Method 3: Docker Installation
-
-```bash
-# Pull and run Docker container
-docker run -it --rm mcpmanager/mcp-manager:latest
-
-# With volume mounting for persistence
-docker run -it --rm -v ~/.claude:/root/.claude mcpmanager/mcp-manager:latest
-```
 
 ### Post-Installation Setup
 
@@ -1566,37 +1557,6 @@ pipeline {
 }
 ```
 
-**Docker Compose Integration**:
-```yaml
-# docker-compose.yml
-version: '3.8'
-
-services:
-  app:
-    image: myapp:latest
-    depends_on:
-      - mcp-manager
-    environment:
-      - MCP_MANAGER_HOST=mcp-manager
-    volumes:
-      - mcp-data:/mcp
-
-  mcp-manager:
-    image: mcpmanager/mcp-manager:latest
-    ports:
-      - "8080:8080"  # API server mode
-    volumes:
-      - mcp-data:/data
-      - ./mcp-config:/config
-    environment:
-      - MCP_MANAGER_CONFIG_PATH=/config/config.toml
-      - MCP_MANAGER_DATA_PATH=/data
-      - MCP_MANAGER_LOG_LEVEL=INFO
-    command: ["mcp-manager", "monitor", "--start", "--auto-sync", "--api-mode"]
-
-volumes:
-  mcp-data:
-```
 
 ---
 
@@ -1634,8 +1594,6 @@ pip uninstall mcp-manager
 pip uninstall mcp-manager
 rm -rf /path/to/mcp-manager-python
 
-# If installed via Docker
-docker rmi mcpmanager/mcp-manager:latest
 ```
 
 **Step 4: Remove Configuration and Data**
