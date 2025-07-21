@@ -19,7 +19,7 @@ from textual.binding import Binding
 
 from mcp_manager import __version__
 from mcp_manager.core.discovery import ServerDiscovery
-from mcp_manager.core.manager import MCPManager
+from mcp_manager.core.simple_manager import SimpleMCPManager
 from mcp_manager.core.models import Server, ServerScope, ServerType
 from mcp_manager.tui.widgets import ServerDetailWidget, SystemInfoWidget
 from mcp_manager.tui.screens import AddServerScreen, EditServerScreen, HelpScreen, ConfirmDialog
@@ -138,7 +138,7 @@ class MCPManagerApp(App):
     
     def __init__(self):
         super().__init__()
-        self.manager = MCPManager()
+        self.manager = SimpleMCPManager()
         self.discovery = ServerDiscovery()
         self.selected_server: Optional[Server] = None
         
@@ -194,13 +194,13 @@ class MCPManagerApp(App):
         """Create the servers data table."""
         table = DataTable(id="server-table", classes="server-table")
         table.add_columns("Name", "Scope", "Type", "Status", "Command")
-        self._populate_server_table(table)
+        asyncio.create_task(self._populate_server_table(table))
         return table
         
-    def _populate_server_table(self, table: DataTable) -> None:
+    async def _populate_server_table(self, table: DataTable) -> None:
         """Populate the server table with data."""
         table.clear()
-        servers = self.manager.list_servers()
+        servers = await self.manager.list_servers()
         
         for server in servers:
             scope_icon = {
@@ -224,24 +224,25 @@ class MCPManagerApp(App):
     async def on_mount(self) -> None:
         """Initialize the application."""
         logger.info("TUI application started")
-        self.refresh_servers()
+        await self.refresh_servers()
         
     def action_refresh(self) -> None:
         """Refresh server data."""
-        self.refresh_servers()
+        asyncio.create_task(self.refresh_servers())
         self.notify("Servers refreshed", severity="information")
         
-    def refresh_servers(self) -> None:
+    async def refresh_servers(self) -> None:
         """Refresh the server table."""
         table = self.query_one("#server-table", DataTable)
-        self._populate_server_table(table)
+        await self._populate_server_table(table)
         
     @on(DataTable.RowSelected, "#server-table")
-    def on_server_selected(self, event: DataTable.RowSelected) -> None:
+    async def on_server_selected(self, event: DataTable.RowSelected) -> None:
         """Handle server selection."""
         if event.row_key:
             server_name = str(event.row_key.value)
-            self.selected_server = self.manager.get_server(server_name)
+            servers = await self.manager.list_servers()
+            self.selected_server = next((s for s in servers if s.name == server_name), None)
             
     @on(Button.Pressed, "#add-server")
     async def action_add_server(self) -> None:
@@ -249,8 +250,8 @@ class MCPManagerApp(App):
         result = await self.push_screen_wait(AddServerScreen())
         if result:
             try:
-                server = self.manager.add_server(**result)
-                self.refresh_servers()
+                server = await self.manager.add_server(**result)
+                await self.refresh_servers()
                 self.notify(f"Added server: {server.name}", severity="information")
             except Exception as e:
                 self.notify(f"Error adding server: {e}", severity="error")
@@ -268,37 +269,37 @@ class MCPManagerApp(App):
         
         if confirmed:
             try:
-                self.manager.remove_server(self.selected_server.name)
-                self.refresh_servers()
+                await self.manager.remove_server(self.selected_server.name)
+                await self.refresh_servers()
                 self.notify(f"Removed server: {self.selected_server.name}", severity="information")
                 self.selected_server = None
             except Exception as e:
                 self.notify(f"Error removing server: {e}", severity="error")
             
     @on(Button.Pressed, "#enable-server")
-    def on_enable_server(self) -> None:
+    async def on_enable_server(self) -> None:
         """Enable selected server."""
         if not self.selected_server:
             self.notify("No server selected", severity="warning")
             return
             
         try:
-            self.manager.enable_server(self.selected_server.name)
-            self.refresh_servers()
+            await self.manager.enable_server(self.selected_server.name)
+            await self.refresh_servers()
             self.notify(f"Enabled server: {self.selected_server.name}", severity="information")
         except Exception as e:
             self.notify(f"Error enabling server: {e}", severity="error")
             
     @on(Button.Pressed, "#disable-server")
-    def on_disable_server(self) -> None:
+    async def on_disable_server(self) -> None:
         """Disable selected server."""
         if not self.selected_server:
             self.notify("No server selected", severity="warning")
             return
             
         try:
-            self.manager.disable_server(self.selected_server.name)
-            self.refresh_servers()
+            await self.manager.disable_server(self.selected_server.name)
+            await self.refresh_servers()
             self.notify(f"Disabled server: {self.selected_server.name}", severity="information")
         except Exception as e:
             self.notify(f"Error disabling server: {e}", severity="error")
@@ -306,11 +307,8 @@ class MCPManagerApp(App):
     @on(Button.Pressed, "#sync-claude")
     def on_sync_claude(self) -> None:
         """Sync configuration with Claude CLI."""
-        try:
-            self.manager.sync_with_claude()
-            self.notify("Synced with Claude CLI", severity="information")
-        except Exception as e:
-            self.notify(f"Error syncing with Claude: {e}", severity="error")
+        # SimpleMCPManager works directly with Claude's internal state - no sync needed
+        self.notify("MCP Manager works directly with Claude's internal state - no sync needed", severity="information")
             
     @on(Button.Pressed, "#refresh")
     def on_refresh_button(self) -> None:
@@ -399,9 +397,9 @@ class MCPManagerApp(App):
         result = await self.push_screen_wait(EditServerScreen(server_data))
         if result:
             try:
-                self.manager.remove_server(server.name)
-                self.manager.add_server(**result)
-                self.refresh_servers()
+                await self.manager.remove_server(server.name)
+                await self.manager.add_server(**result)
+                await self.refresh_servers()
                 self.notify(f"Updated server: {server.name}", severity="information")
             except Exception as e:
                 self.notify(f"Error updating server: {e}", severity="error")

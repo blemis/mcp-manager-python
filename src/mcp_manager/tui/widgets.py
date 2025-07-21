@@ -16,7 +16,7 @@ from textual.widgets import (
     Switch, TextArea
 )
 
-from mcp_manager.core.manager import MCPManager
+from mcp_manager.core.simple_manager import SimpleMCPManager
 from mcp_manager.core.models import Server, ServerScope, ServerType, SystemInfo
 from mcp_manager.utils.logging import get_logger
 
@@ -134,7 +134,7 @@ class ServerDetailWidget(Widget):
 class SystemInfoWidget(Widget):
     """Widget for displaying system information and dependencies."""
     
-    def __init__(self, manager: MCPManager, **kwargs):
+    def __init__(self, manager: SimpleMCPManager, **kwargs):
         super().__init__(**kwargs)
         self.manager = manager
         self.system_info: Optional[SystemInfo] = None
@@ -220,7 +220,7 @@ class SystemInfoWidget(Widget):
 class ServerStatsWidget(Widget):
     """Widget for displaying server statistics."""
     
-    def __init__(self, manager: MCPManager, **kwargs):
+    def __init__(self, manager: SimpleMCPManager, **kwargs):
         super().__init__(**kwargs)
         self.manager = manager
         
@@ -230,9 +230,9 @@ class ServerStatsWidget(Widget):
             yield Label("Server Statistics", classes="widget-title")
             yield self._create_stats_display()
             
-    def _create_stats_display(self) -> Static:
+    async def _create_stats_display(self) -> Static:
         """Create the statistics display."""
-        servers = self.manager.list_servers()
+        servers = await self.manager.list_servers()
         
         # Calculate statistics
         total_servers = len(servers)

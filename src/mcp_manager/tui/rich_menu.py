@@ -81,13 +81,13 @@ class RichMenuApp:
             show_header=False,
             padding=(0, 1)
         )
-        table.add_column("Key", style="bold cyan", width=4)
-        table.add_column("Icon", width=3)
+        table.add_column("Key", style="bold cyan", width=4, justify="center")
+        table.add_column("Icon", width=4, justify="center")
         table.add_column("Option", style="bold white", width=20)
         table.add_column("Description", style="dim", width=35)
         
         for key, option, desc, icon in menu_options:
-            table.add_row(f"[{key}]", icon, option, desc)
+            table.add_row(f"[bold cyan]{key}[/bold cyan]", icon, option, desc)
         
         console.print(table)
         console.print()
@@ -166,12 +166,12 @@ class RichMenuApp:
             ]
             
             action_table = Table(box=box.SIMPLE, show_header=False, padding=(0, 1))
-            action_table.add_column("Key", style="bold cyan", width=4)
-            action_table.add_column("Icon", width=3)
-            action_table.add_column("Action", style="white")
+            action_table.add_column("Key", style="bold cyan", width=4, justify="center")
+            action_table.add_column("Icon", width=4, justify="center")
+            action_table.add_column("Action", style="white", width=20)
             
             for key, action, icon in actions:
-                action_table.add_row(f"[{key}]", icon, action)
+                action_table.add_row(f"[bold cyan]{key}[/bold cyan]", icon, action)
             
             console.print(action_table)
             console.print()

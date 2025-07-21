@@ -53,6 +53,154 @@ class CLIContext:
 cli_context = CLIContext()
 
 
+def _generate_install_id(result) -> str:
+    """Generate consistent install ID for a discovery result."""
+    if result.server_type == ServerType.NPM:
+        return result.package.replace("@", "").replace("/", "-").replace("server-", "")
+    elif result.server_type == ServerType.DOCKER:
+        return result.package.replace("/", "-")
+    elif result.server_type == ServerType.DOCKER_DESKTOP:
+        return f"dd-{result.name.replace('docker-desktop-', '')}"
+    else:
+        return result.name
+
+
+def _prompt_for_server_configuration(server_name: str, server_type: ServerType, package: Optional[str]) -> Optional[dict]:
+    """Prompt user for server configuration if needed."""
+    from rich.prompt import Prompt
+    import os
+    
+    # Define servers that need configuration
+    config_requirements = {
+        # Filesystem servers
+        'filesystem': {
+            'description': 'Filesystem access requires specifying allowed directories',
+            'prompts': [
+                {
+                    'key': 'directory',
+                    'prompt': 'Enter directory path to allow access to',
+                    'default': os.path.expanduser("~"),
+                    'help': 'This directory will be accessible to the MCP server'
+                }
+            ]
+        },
+        # SQLite servers
+        'sqlite': {
+            'description': 'SQLite server requires a database file path',
+            'prompts': [
+                {
+                    'key': 'db_path',
+                    'prompt': 'Enter SQLite database file path',
+                    'default': '/tmp/claude-mcp.db',
+                    'help': 'Path to SQLite database file (will be created if it doesn\'t exist)'
+                }
+            ]
+        },
+        # PostgreSQL servers
+        'postgres': {
+            'description': 'PostgreSQL server requires database connection details',
+            'prompts': [
+                {
+                    'key': 'connection_string',
+                    'prompt': 'Enter PostgreSQL connection string',
+                    'default': 'postgresql://localhost:5432/claude',
+                    'help': 'Format: postgresql://user:password@host:port/database'
+                }
+            ]
+        }
+    }
+    
+    # Check if this server needs configuration
+    server_key = None
+    for key in config_requirements:
+        if key in server_name.lower() or (package and key in package.lower()):
+            server_key = key
+            break
+    
+    if not server_key:
+        return None
+    
+    config_req = config_requirements[server_key]
+    console.print(f"\n[blue]ℹ[/blue] {config_req['description']}")
+    
+    config = {'args': []}
+    for prompt_config in config_req['prompts']:
+        console.print(f"[dim]{prompt_config['help']}[/dim]")
+        
+        value = Prompt.ask(
+            prompt_config['prompt'],
+            default=prompt_config['default']
+        )
+        
+        if server_key == 'filesystem':
+            # Expand user path
+            value = os.path.expanduser(value)
+            if server_type == ServerType.DOCKER_DESKTOP:
+                config['directory'] = value
+            else:
+                config['args'].append(value)
+                
+        elif server_key == 'sqlite':
+            # Create database file if it doesn't exist
+            db_path = os.path.expanduser(value)
+            os.makedirs(os.path.dirname(db_path), exist_ok=True)
+            if not os.path.exists(db_path):
+                # Create empty SQLite database
+                import sqlite3
+                with sqlite3.connect(db_path):
+                    pass
+                console.print(f"[green]✓[/green] Created database file: {db_path}")
+            
+            if server_type == ServerType.DOCKER_DESKTOP:
+                config['db_path'] = db_path
+            else:
+                config['args'].extend(['--db-path', db_path])
+                
+        elif server_key == 'postgres':
+            if server_type == ServerType.DOCKER_DESKTOP:
+                config['connection_string'] = value
+            else:
+                config['args'].extend(['--connection-string', value])
+    
+    return config if config.get('args') or any(k != 'args' for k in config.keys()) else None
+
+
+def _update_docker_mcp_config(server_name: str, config: dict):
+    """Update Docker MCP configuration file with server-specific config."""
+    import yaml
+    from pathlib import Path
+    
+    config_file = Path.home() / ".docker" / "mcp" / "config.yaml"
+    config_file.parent.mkdir(parents=True, exist_ok=True)
+    
+    # Load existing config or create new
+    existing_config = {}
+    if config_file.exists():
+        try:
+            with open(config_file, 'r') as f:
+                existing_config = yaml.safe_load(f) or {}
+        except yaml.YAMLError:
+            pass
+    
+    # Update with new server config
+    server_config = {'env': {}}
+    
+    if 'directory' in config:
+        server_config['args'] = [config['directory']]
+    elif 'db_path' in config:
+        server_config['args'] = [f"--db-path={config['db_path']}"]
+    elif 'connection_string' in config:
+        server_config['args'] = [f"--connection-string={config['connection_string']}"]
+    
+    existing_config[server_name] = server_config
+    
+    # Save updated config
+    with open(config_file, 'w') as f:
+        yaml.dump(existing_config, f, default_flow_style=False)
+    
+    console.print(f"[green]✓[/green] Updated Docker MCP configuration for {server_name}")
+
+
 def handle_errors(func):
     """Decorator to handle common CLI errors."""
     import functools
@@ -374,15 +522,8 @@ def discover(query: Optional[str], server_type: Optional[str], limit: int, updat
     table.add_column("Install Command", style="yellow", width=30)
     
     for result in results:
-        # Create unique install ID based on package name
-        if result.server_type == ServerType.NPM:
-            install_id = result.package.replace("@", "").replace("/", "-").replace("server-", "")
-        elif result.server_type == ServerType.DOCKER:
-            install_id = result.package.replace("/", "-")
-        elif result.server_type == ServerType.DOCKER_DESKTOP:
-            install_id = f"dd-{result.name.replace('docker-desktop-', '')}"
-        else:
-            install_id = result.name
+        # Create unique install ID - use same logic as in install-package command
+        install_id = _generate_install_id(result)
         
         # Create simple install command
         install_cmd = f"mcp-manager install-package {install_id}"
@@ -412,23 +553,34 @@ def install_package(install_id: str):
     
     # Resolve install ID back to package info
     async def find_and_install():
-        # Search for servers to find the one with matching install_id
-        results = await discovery.discover_servers(limit=100)
-        
-        target_result = None
-        for result in results:
-            # Recreate install_id logic to match
-            if result.server_type == ServerType.NPM:
-                result_id = result.package.replace("@", "").replace("/", "-").replace("server-", "")
-            elif result.server_type == ServerType.DOCKER:
-                result_id = result.package.replace("/", "-")
-            elif result.server_type == ServerType.DOCKER_DESKTOP:
-                result_id = f"dd-{result.name.replace('docker-desktop-', '')}"
-            else:
-                result_id = result.name
+        # Try to extract search terms from install_id to improve discovery
+        search_query = None
+        if install_id.startswith("dd-"):
+            # Docker Desktop server - extract server name
+            search_query = install_id[3:]  # Remove 'dd-' prefix
+        elif "-" in install_id:
+            # Extract likely server name from install_id
+            search_query = install_id.split("-")[-1]  # Take last part
             
-            if result_id == install_id:
-                target_result = result
+        # Search with higher limits to ensure we find all servers
+        # Try with query first, then without query as fallback
+        target_result = None
+        
+        for query_attempt in [search_query, None]:
+            results = await discovery.discover_servers(
+                query=query_attempt, 
+                limit=200  # Higher limit to ensure we find all servers
+            )
+            
+            for result in results:
+                # Generate install_id using same logic as discover command
+                result_id = _generate_install_id(result)
+                
+                if result_id == install_id:
+                    target_result = result
+                    break
+            
+            if target_result:
                 break
         
         if not target_result:
@@ -471,6 +623,22 @@ def install_package(install_id: str):
                 console.print("[dim]Installation cancelled[/dim]")
                 return
         
+        # Check if server needs additional configuration
+        install_args = target_result.install_args or []
+        additional_config = _prompt_for_server_configuration(
+            server_name=server_name,
+            server_type=target_result.server_type,
+            package=target_result.package
+        )
+        
+        if additional_config:
+            # For Docker Desktop servers, update the config file
+            if target_result.server_type == ServerType.DOCKER_DESKTOP:
+                _update_docker_mcp_config(server_name, additional_config)
+            else:
+                # For other servers, add to install args
+                install_args.extend(additional_config.get('args', []))
+        
         # Install the server
         try:
             server = await manager.add_server(
@@ -478,7 +646,7 @@ def install_package(install_id: str):
                 server_type=target_result.server_type,
                 command=target_result.install_command,
                 description=target_result.description,
-                args=target_result.install_args,
+                args=install_args,
             )
             console.print(f"[green]✓[/green] Installed server: {server.name}")
             console.print("[dim]Server is now active in Claude Code![/dim]")
@@ -576,9 +744,9 @@ def system_info():
 
 
 @cli.command()
-@handle_errors
+@handle_errors 
 def tui():
-    """Launch the terminal user interface."""
+    """Launch the Rich-based terminal user interface."""
     try:
         from mcp_manager.tui.main import main as tui_main
         tui_main()
@@ -586,6 +754,37 @@ def tui():
         console.print("[red]TUI dependencies not available[/red]")
         console.print("Install with: pip install mcp-manager[tui]")
         sys.exit(1)
+    except Exception as e:
+        console.print(f"[red]TUI Error: {e}[/red]")
+        sys.exit(1)
+
+@cli.command("tui-simple")
+@handle_errors
+def tui_simple():
+    """Launch the simple menu-based terminal user interface."""
+    try:
+        from mcp_manager.tui.simple_tui import main as simple_main
+        import asyncio
+        asyncio.run(simple_main())
+    except Exception as e:
+        console.print(f"[red]Simple TUI Error: {e}[/red]")
+        sys.exit(1)
+
+@cli.command("tui-textual")
+@handle_errors
+def tui_textual():
+    """Launch the Textual-based terminal user interface (same as 'tui')."""
+    try:
+        from mcp_manager.tui.main import main as tui_main
+        tui_main()
+    except ImportError:
+        console.print("[red]Textual TUI dependencies not available[/red]")
+        console.print("Install with: pip install mcp-manager[tui]")
+        sys.exit(1)
+    except Exception as e:
+        console.print(f"[red]Textual TUI Error: {e}[/red]")
+        sys.exit(1)
+
 
 
 @cli.command()
