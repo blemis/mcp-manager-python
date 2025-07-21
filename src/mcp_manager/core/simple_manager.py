@@ -182,6 +182,7 @@ class SimpleMCPManager:
         
         Note: In Claude's model, servers are enabled when added.
         This is a no-op if server exists, or adds it if discovered.
+        For Docker Desktop servers, this enables them in Docker Desktop.
         
         Args:
             name: Server name to enable
@@ -189,11 +190,30 @@ class SimpleMCPManager:
         Returns:
             The server object
         """
-        # Check if server already exists
+        # Check if server already exists in Claude
         server = self.claude.get_server(name)
         if server:
             logger.debug(f"Server '{name}' is already enabled in Claude")
             return server
+        
+        # Check if this is a Docker Desktop server
+        if await self._is_docker_desktop_server(name):
+            logger.debug(f"Enabling Docker Desktop server: {name}")
+            success = await self._enable_docker_desktop_server_simple(name)
+            if success:
+                # Return a mock server object for Docker Desktop servers
+                from .models import Server, ServerScope, ServerType
+                return Server(
+                    name=name,
+                    command="docker",
+                    args=["mcp", "run", name],
+                    env={},
+                    enabled=True,
+                    scope=ServerScope.USER,
+                    server_type=ServerType.DOCKER_DESKTOP
+                )
+            else:
+                raise MCPManagerError(f"Failed to enable Docker Desktop server '{name}'")
         
         # If not found, we can't enable it without knowing the command
         raise MCPManagerError(
@@ -206,6 +226,7 @@ class SimpleMCPManager:
         Disable an MCP server.
         
         Note: In Claude's model, disabling means removing.
+        For Docker Desktop servers, this disables them in Docker Desktop.
         
         Args:
             name: Server name to disable
@@ -213,7 +234,26 @@ class SimpleMCPManager:
         Returns:
             The server object before removal
         """
-        # Get server before removing
+        # Check if this is a Docker Desktop server first
+        if await self._is_docker_desktop_server(name):
+            logger.debug(f"Disabling Docker Desktop server: {name}")
+            success = await self._disable_docker_desktop_server_simple(name)
+            if success:
+                # Return a mock server object for Docker Desktop servers
+                from .models import Server, ServerScope, ServerType
+                return Server(
+                    name=name,
+                    command="docker",
+                    args=["mcp", "run", name],
+                    env={},
+                    enabled=False,
+                    scope=ServerScope.USER,
+                    server_type=ServerType.DOCKER_DESKTOP
+                )
+            else:
+                raise MCPManagerError(f"Failed to disable Docker Desktop server '{name}'")
+        
+        # Get server before removing (for regular servers)
         server = self.claude.get_server(name)
         if not server:
             raise MCPManagerError(f"Server '{name}' not found")
@@ -418,8 +458,8 @@ class SimpleMCPManager:
             
             # Step 3: Clean up Docker Desktop MCP image if removal was successful
             if sync_success:
-                # Docker Desktop MCP servers use the format: mcp-docker-desktop/server-name:latest
-                docker_image = f"mcp-docker-desktop/{server_name}:latest"
+                # Docker Desktop MCP servers use the format: mcp/server-name:latest
+                docker_image = f"mcp/{server_name}:latest"
                 await self._remove_docker_image(docker_image)
                 
                 logger.debug(f"Successfully removed {server_name} from Claude Code")
@@ -435,9 +475,33 @@ class SimpleMCPManager:
     async def _is_docker_desktop_server(self, name: str) -> bool:
         """Check if a server name corresponds to a Docker Desktop MCP server."""
         try:
+            # First check if it's in the current docker-gateway configuration in Claude
+            # This is important for servers that are enabled in Claude but disabled in Docker Desktop
+            try:
+                gateway_server = self.claude.get_server("docker-gateway")
+                if gateway_server and gateway_server.args:
+                    # Parse the --servers argument to extract server names
+                    servers_arg = None
+                    for i, arg in enumerate(gateway_server.args):
+                        if arg == "--servers" and i + 1 < len(gateway_server.args):
+                            servers_arg = gateway_server.args[i + 1]
+                            break
+                    
+                    if servers_arg:
+                        server_names = [s.strip() for s in servers_arg.split(",")]
+                        if name in server_names:
+                            return True
+            except Exception:
+                pass  # If docker-gateway doesn't exist or has issues, continue with other checks
+            
             # Get the list of enabled Docker Desktop servers
             enabled_servers = await self._get_enabled_docker_servers()
-            return name in enabled_servers
+            if name in enabled_servers:
+                return True
+                
+            # Also check available Docker Desktop servers (not just enabled)
+            available_servers = await self._get_available_docker_servers()
+            return name in available_servers
         except Exception:
             return False
     
@@ -597,9 +661,9 @@ class SimpleMCPManager:
             # Try to extract from the full command if it contains common Docker image patterns
             full_command = ' '.join(args)
             import re
-            # Look for patterns like mcp-docker-desktop/name:tag or registry/name:tag
+            # Look for patterns like mcp/name:tag or registry/name:tag
             patterns = [
-                r'(mcp-docker-desktop/[^:\s]+(?::[^:\s]+)?)',
+                r'(mcp/[^:\s]+(?::[^:\s]+)?)',
                 r'([a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+(?::[a-zA-Z0-9._-]+)?)',
                 r'([a-zA-Z0-9._-]+:[a-zA-Z0-9._-]+)'
             ]
@@ -1590,3 +1654,135 @@ class SimpleMCPManager:
             })
         
         return parameters
+    
+    async def _enable_docker_desktop_server_simple(self, name: str) -> bool:
+        """Enable a Docker Desktop MCP server (simplified version for enable_server)."""
+        import subprocess
+        
+        try:
+            # Extract the actual server name (remove docker-desktop- prefix if present)
+            if name.startswith("docker-desktop-"):
+                server_name = name.replace("docker-desktop-", "")
+            else:
+                server_name = name
+            
+            logger.debug(f"Enabling Docker Desktop MCP server: {server_name}")
+            
+            # Enable the server in Docker Desktop
+            result = subprocess.run(
+                [self.claude.docker_path, "mcp", "server", "enable", server_name],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            
+            if result.returncode != 0:
+                logger.error(f"Failed to enable Docker Desktop server {server_name}: {result.stderr}")
+                return False
+            
+            logger.debug(f"Successfully enabled {server_name} in Docker Desktop")
+            
+            # Refresh the gateway to include the newly enabled server
+            sync_success = await self._refresh_docker_gateway()
+            
+            if sync_success:
+                logger.debug(f"Successfully synced {server_name} to Claude Code")
+                return True
+            else:
+                logger.error("Failed to sync Docker Desktop servers to Claude Code")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Failed to enable Docker Desktop server {name}: {e}")
+            return False
+    
+    async def _disable_docker_desktop_server_simple(self, name: str) -> bool:
+        """Disable a Docker Desktop MCP server (simplified version for disable_server)."""
+        import subprocess
+        
+        try:
+            # Extract the actual server name (remove docker-desktop- prefix if present)
+            if name.startswith("docker-desktop-"):
+                server_name = name.replace("docker-desktop-", "")
+            else:
+                server_name = name
+            
+            logger.debug(f"Disabling Docker Desktop MCP server: {server_name}")
+            
+            # Disable the server in Docker Desktop
+            result = subprocess.run(
+                [self.claude.docker_path, "mcp", "server", "disable", server_name],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            
+            if result.returncode != 0:
+                logger.error(f"Failed to disable Docker Desktop server {server_name}: {result.stderr}")
+                return False
+            
+            logger.debug(f"Successfully disabled {server_name} in Docker Desktop")
+            
+            # Refresh the gateway with the updated server list
+            sync_success = await self._refresh_docker_gateway()
+            
+            if sync_success:
+                logger.debug(f"Successfully removed {server_name} from Claude Code")
+                return True
+            else:
+                logger.error("Failed to sync Docker Desktop servers to Claude Code")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Failed to disable Docker Desktop server {name}: {e}")
+            return False
+    
+    async def _get_available_docker_servers(self) -> List[str]:
+        """Get list of all available Docker Desktop MCP servers (enabled and disabled)."""
+        try:
+            # First get enabled servers
+            enabled_servers = await self._get_enabled_docker_servers()
+            
+            # For available but not enabled servers, we need to check what Docker Desktop supports
+            # The registry.yaml file should contain all available servers
+            import yaml
+            from pathlib import Path
+            
+            registry_path = Path.home() / ".docker" / "mcp" / "registry.yaml"
+            available_servers = set(enabled_servers)  # Start with enabled servers
+            
+            if registry_path.exists():
+                try:
+                    with open(registry_path) as f:
+                        registry_data = yaml.safe_load(f)
+                        if registry_data and "registry" in registry_data:
+                            # Add all servers from registry
+                            for server_name in registry_data["registry"].keys():
+                                available_servers.add(server_name)
+                except Exception as e:
+                    logger.debug(f"Failed to read registry.yaml: {e}")
+            
+            # Also try to get available servers using docker mcp server list
+            try:
+                result = subprocess.run(
+                    [self.claude.docker_path, "mcp", "server", "list"],
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                )
+                
+                if result.returncode == 0:
+                    output = result.stdout.strip()
+                    if output:
+                        servers = [s.strip() for s in output.split(",") if s.strip()]
+                        available_servers.update(servers)
+            except Exception as e:
+                logger.debug(f"Failed to list Docker servers: {e}")
+            
+            final_list = list(available_servers)
+            logger.debug(f"Available Docker servers: {final_list}")
+            return final_list
+            
+        except Exception as e:
+            logger.debug(f"Failed to get available Docker servers: {e}")
+            return []
