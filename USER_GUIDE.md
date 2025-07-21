@@ -32,7 +32,7 @@ MCP Manager is a comprehensive tool for managing Model Context Protocol (MCP) se
 - 🔍 **Multi-Source Discovery**: Find servers from NPM, Docker Hub, Docker Desktop catalogs
 - ⚡ **One-Command Installation**: Install servers with unique install IDs  
 - 🔄 **External Change Synchronization**: Automatic detection and sync of configuration changes
-- 🖥️ **Multiple Interfaces**: CLI, TUI, and interactive menu options
+- 🖥️ **Multiple Interfaces**: Interactive menu, CLI commands, and TUI options
 - 🛡️ **Sync Loop Protection**: Prevents conflicts during background operations
 - 📊 **Comprehensive Monitoring**: Background service with configurable auto-sync
 
@@ -291,6 +291,8 @@ mcp-manager detect-changes --watch
 
 **Launch**: `mcp-manager tui`
 
+> **Note**: `mcp-manager` with no arguments launches the interactive menu, not the TUI
+
 **Example Screen Layout**:
 ```
 ┌───────────────────────── MCP Manager TUI ─────────────────────────────┐
@@ -316,15 +318,6 @@ mcp-manager detect-changes --watch
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 4. Simple TUI
-
-**Launch**: `mcp-manager tui-simple`
-
-**Features**:
-- Simplified interface for basic operations
-- Reduced visual complexity
-- Suitable for low-resolution terminals
-- Essential functionality only
 
 ---
 
