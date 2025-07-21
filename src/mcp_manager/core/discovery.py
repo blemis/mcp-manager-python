@@ -9,6 +9,7 @@ import asyncio
 import json
 import logging
 import re
+import fnmatch
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -51,6 +52,68 @@ class ServerDiscovery:
         
         # Suppress verbose HTTP logging from httpx
         logging.getLogger("httpx").setLevel(logging.WARNING)
+        
+    def _matches_pattern(self, text: str, pattern: str) -> bool:
+        """
+        Check if text matches pattern using wildcards and regex.
+        
+        Supports:
+        - Wildcards: aws* matches aws-s3, aws-dynamodb, etc.
+        - Regex: if pattern starts with 'regex:' it's treated as regex
+        - Case-insensitive matching
+        
+        Args:
+            text: Text to match against
+            pattern: Pattern to match (supports wildcards and regex)
+            
+        Returns:
+            True if text matches pattern
+        """
+        if not pattern:
+            return True
+            
+        text = text.lower()
+        pattern = pattern.lower()
+        
+        # Handle regex patterns (prefix with 'regex:')
+        if pattern.startswith('regex:'):
+            try:
+                regex_pattern = pattern[6:]  # Remove 'regex:' prefix
+                return bool(re.search(regex_pattern, text))
+            except re.error:
+                # If regex is invalid, fall back to literal matching
+                return pattern[6:] in text
+        
+        # Handle wildcard patterns (*, ?, [])
+        if any(char in pattern for char in ['*', '?', '[']):
+            return fnmatch.fnmatch(text, pattern)
+        
+        # Default: substring matching
+        return pattern in text
+    
+    def _filter_results_by_pattern(self, results: List[DiscoveryResult], query: str) -> List[DiscoveryResult]:
+        """
+        Filter discovery results by pattern matching on name, package, and description.
+        
+        Args:
+            results: List of discovery results
+            query: Pattern to match
+            
+        Returns:
+            Filtered list of results
+        """
+        if not query:
+            return results
+            
+        filtered = []
+        for result in results:
+            # Check name, package, and description
+            if (self._matches_pattern(result.name, query) or 
+                self._matches_pattern(result.package or "", query) or
+                self._matches_pattern(result.description or "", query)):
+                filtered.append(result)
+                
+        return filtered
         
     async def discover_servers(
         self,
@@ -97,14 +160,28 @@ class ServerDiscovery:
         
         per_source_limit = limit // source_count if source_count > 0 else limit
         
+        # Determine if this is a pattern search that needs broader API queries
+        is_pattern_search = query and (any(char in query for char in ['*', '?', '[']) or query.startswith('regex:'))
+        
+        # For pattern searches, use broader search terms for APIs, then filter results
+        if is_pattern_search:
+            # Extract base search term from pattern (e.g., 'aws*' -> 'aws')
+            if query.startswith('regex:'):
+                api_query = None  # Use broad search for regex
+            else:
+                base_term = query.split('*')[0].split('?')[0].split('[')[0]
+                api_query = base_term if len(base_term) >= 2 else None
+        else:
+            api_query = query
+        
         if not server_type or server_type == ServerType.NPM:
-            tasks.append(self._discover_npm_servers(query, per_source_limit))
+            tasks.append(self._discover_npm_servers(api_query, per_source_limit))
             
         if not server_type or server_type == ServerType.DOCKER:
-            tasks.append(self._discover_docker_hub_servers(query, per_source_limit))
+            tasks.append(self._discover_docker_hub_servers(api_query, per_source_limit))
             
         if not server_type or server_type == ServerType.DOCKER_DESKTOP:
-            tasks.append(self._discover_docker_desktop_servers(query, per_source_limit))
+            tasks.append(self._discover_docker_desktop_servers(api_query, per_source_limit))
         
         # Run discovery tasks concurrently
         if tasks:
@@ -115,6 +192,10 @@ class ServerDiscovery:
                 else:
                     results.extend(task_result)
             
+        # Apply pattern filtering if this was a pattern search
+        if is_pattern_search:
+            results = self._filter_results_by_pattern(results, query)
+        
         # Sort by relevance (downloads, update time, etc.)
         results.sort(key=self._calculate_relevance_score, reverse=True)
         

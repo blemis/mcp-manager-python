@@ -5,9 +5,11 @@ This manager is a thin wrapper around claude mcp CLI commands.
 """
 
 import asyncio
+import os
 import subprocess
 import sys
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Dict, Any
+from pydantic import BaseModel
 
 from mcp_manager.core.claude_interface import ClaudeInterface
 from mcp_manager.core.exceptions import MCPManagerError
@@ -16,6 +18,21 @@ from mcp_manager.utils.config import get_config
 from mcp_manager.utils.logging import get_logger
 
 logger = get_logger(__name__)
+
+
+class SyncCheckResult(BaseModel):
+    """Result of synchronization check between mcp-manager and Claude."""
+    
+    in_sync: bool
+    claude_available: bool
+    will_start_claude_session: bool
+    manager_servers: List[str]
+    claude_servers: List[str]
+    missing_in_claude: List[str]
+    missing_in_manager: List[str]
+    issues: List[str]
+    warnings: List[str]
+    docker_gateway_test: Optional[Dict[str, Any]] = None
 
 
 class SimpleMCPManager:
@@ -299,10 +316,27 @@ class SimpleMCPManager:
     async def _refresh_docker_gateway(self) -> bool:
         """Refresh docker-gateway by removing and re-adding it with updated servers."""
         try:
-            # Remove existing gateway if it exists
+            # Remove existing gateway if it exists - try all scopes
             if self.claude.server_exists("docker-gateway"):
-                self.claude.remove_server("docker-gateway")
-                logger.debug("Removed existing docker-gateway")
+                # Try removing from different scopes until successful
+                removed = False
+                for scope in ["user", "project", "local"]:
+                    try:
+                        result = subprocess.run(
+                            [self.claude.claude_path, "mcp", "remove", "--scope", scope, "docker-gateway"],
+                            capture_output=True,
+                            text=True,
+                            timeout=30,
+                        )
+                        if result.returncode == 0:
+                            logger.debug(f"Removed existing docker-gateway from {scope} scope")
+                            removed = True
+                            break
+                    except Exception:
+                        continue
+                
+                if not removed:
+                    logger.warning("Could not remove docker-gateway from any scope, proceeding anyway")
             
             # Re-add with current server list
             return await self._import_docker_gateway_to_claude_code()
@@ -667,3 +701,892 @@ class SimpleMCPManager:
         except Exception as e:
             logger.warning(f"Error removing Docker image {image}: {e}")
             return True
+    
+    async def check_sync_status(self) -> SyncCheckResult:
+        """
+        Check synchronization status between mcp-manager and Claude.
+        
+        Returns:
+            SyncCheckResult with detailed sync status information
+        """
+        logger.debug("Checking synchronization status between mcp-manager and Claude")
+        
+        issues = []
+        warnings = []
+        manager_servers = []
+        claude_servers = []
+        missing_in_claude = []
+        missing_in_manager = []
+        claude_available = False
+        will_start_claude_session = False
+        
+        try:
+            # Check if Claude CLI is available
+            claude_available, _ = self._check_command("claude", ["--version"])
+            if not claude_available:
+                issues.append("Claude CLI not available - install Claude Code first")
+                return SyncCheckResult(
+                    in_sync=False,
+                    claude_available=claude_available,
+                    will_start_claude_session=False,
+                    manager_servers=manager_servers,
+                    claude_servers=claude_servers,
+                    missing_in_claude=missing_in_claude,
+                    missing_in_manager=missing_in_manager,
+                    issues=issues,
+                    warnings=warnings,
+                    docker_gateway_test=None
+                )
+            
+            # Check if running 'claude mcp list' will start a session
+            try:
+                # First check if Claude has an active session by trying a quick command
+                result = subprocess.run(
+                    ["claude", "--help"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                )
+                # If this succeeds without prompting, Claude is ready
+                if result.returncode == 0:
+                    will_start_claude_session = False
+                else:
+                    will_start_claude_session = True
+                    warnings.append("Running sync check will start a new Claude session")
+            except Exception:
+                will_start_claude_session = True
+                warnings.append("Cannot determine Claude session status - may start a new session")
+            
+            # Get servers from mcp-manager's perspective
+            try:
+                servers = await self.list_servers()
+                manager_servers = [s.name for s in servers]
+                logger.debug(f"Found {len(manager_servers)} servers in manager: {manager_servers}")
+            except Exception as e:
+                issues.append(f"Failed to get servers from mcp-manager: {e}")
+                manager_servers = []
+            
+            # Get servers from Claude CLI
+            try:
+                logger.debug("Getting server list from Claude CLI")
+                result = subprocess.run(
+                    ["claude", "mcp", "list"],
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                )
+                
+                if result.returncode == 0:
+                    # Parse Claude's output and expand docker-gateway if present
+                    claude_servers = await self._parse_claude_server_list(result.stdout.strip())
+                    logger.debug(f"Found {len(claude_servers)} servers in Claude (after expansion): {claude_servers}")
+                else:
+                    issues.append(f"Failed to get server list from Claude: {result.stderr}")
+                    
+            except subprocess.TimeoutExpired:
+                issues.append("Claude CLI command timed out - Claude may need authentication")
+            except Exception as e:
+                issues.append(f"Error running Claude CLI: {e}")
+            
+            # Compare server lists
+            manager_set = set(manager_servers)
+            claude_set = set(claude_servers)
+            
+            # Find discrepancies
+            missing_in_claude = list(manager_set - claude_set)
+            missing_in_manager = list(claude_set - manager_set)
+            
+            # Now that we've expanded docker-gateway, the comparison should be more accurate
+            # Any remaining discrepancies are real sync issues
+            
+            # Check for configuration issues
+            if missing_in_claude:
+                issues.append(f"Servers in mcp-manager but not in Claude: {', '.join(missing_in_claude)}")
+            
+            if missing_in_manager:
+                warnings.append(f"Servers in Claude but not visible in mcp-manager: {', '.join(missing_in_manager)}")
+            
+            # Additional checks
+            await self._perform_additional_sync_checks(issues, warnings)
+            
+            # Test Docker gateway if present
+            docker_gateway_test = await self._test_docker_gateway()
+            
+            # Determine if in sync
+            in_sync = len(issues) == 0 and len(missing_in_claude) == 0
+            
+            return SyncCheckResult(
+                in_sync=in_sync,
+                claude_available=claude_available,
+                will_start_claude_session=will_start_claude_session,
+                manager_servers=manager_servers,
+                claude_servers=claude_servers,
+                missing_in_claude=missing_in_claude,
+                missing_in_manager=missing_in_manager,
+                issues=issues,
+                warnings=warnings,
+                docker_gateway_test=docker_gateway_test
+            )
+            
+        except Exception as e:
+            logger.error(f"Failed to check sync status: {e}")
+            issues.append(f"Sync check failed: {e}")
+            
+            return SyncCheckResult(
+                in_sync=False,
+                claude_available=claude_available,
+                will_start_claude_session=will_start_claude_session,
+                manager_servers=manager_servers,
+                claude_servers=claude_servers,
+                missing_in_claude=missing_in_claude,
+                missing_in_manager=missing_in_manager,
+                issues=issues,
+                warnings=warnings,
+                docker_gateway_test=None
+            )
+    
+    async def _perform_additional_sync_checks(self, issues: List[str], warnings: List[str]) -> None:
+        """Perform additional synchronization checks."""
+        try:
+            # Check if Claude configuration file exists and is readable
+            claude_config_path = self.claude.get_config_path()
+            if not claude_config_path.exists():
+                issues.append("Claude configuration file not found")
+            elif not claude_config_path.is_file():
+                issues.append("Claude configuration path is not a file")
+            else:
+                # Check if configuration is readable
+                try:
+                    import json
+                    with open(claude_config_path) as f:
+                        config_data = json.load(f)
+                    
+                    # Check for common configuration issues
+                    if "mcpServers" not in config_data:
+                        warnings.append("No MCP servers section found in Claude configuration")
+                    
+                    # Check for problematic configurations
+                    mcp_servers = config_data.get("mcpServers", {})
+                    for server_name, server_config in mcp_servers.items():
+                        command = server_config.get("command", "")
+                        
+                        # Check for known problematic patterns
+                        if "mcp/" in command and "docker run" in command:
+                            issues.append(f"Server '{server_name}' has problematic Docker command - run cleanup")
+                            
+                except json.JSONDecodeError:
+                    issues.append("Claude configuration file is corrupted (invalid JSON)")
+                except Exception as e:
+                    warnings.append(f"Could not fully validate Claude configuration: {e}")
+            
+            # Check Docker Desktop integration if available
+            try:
+                docker_available, _ = self._check_command("docker", ["--version"])
+                if docker_available:
+                    # Check if docker-gateway is properly configured
+                    enabled_servers = await self._get_enabled_docker_servers()
+                    if enabled_servers:
+                        # Verify docker-gateway exists in Claude
+                        servers = self.claude.list_servers()
+                        has_gateway = any(s.name == "docker-gateway" for s in servers)
+                        if not has_gateway:
+                            issues.append("Docker Desktop servers enabled but docker-gateway not configured in Claude")
+                
+            except Exception as e:
+                warnings.append(f"Could not check Docker Desktop integration: {e}")
+                
+        except Exception as e:
+            logger.warning(f"Additional sync checks failed: {e}")
+            warnings.append("Could not perform all sync checks")
+    
+    async def _parse_claude_server_list(self, claude_output: str) -> List[str]:
+        """
+        Parse Claude CLI output and expand docker-gateway into individual servers.
+        
+        Args:
+            claude_output: Raw output from 'claude mcp list'
+            
+        Returns:
+            List of server names with docker-gateway expanded
+        """
+        servers = []
+        
+        try:
+            logger.debug(f"Parsing Claude output: {claude_output}")
+            output_lines = claude_output.strip().split('\n')
+            
+            for line in output_lines:
+                line = line.strip()
+                if not line or line.startswith('No servers') or line.startswith('Servers:'):
+                    continue
+                
+                logger.debug(f"Processing line: '{line}'")
+                
+                # Check if line contains docker-gateway command
+                if "docker" in line and "mcp" in line and "gateway" in line and "--servers" in line:
+                    # This is a docker-gateway command line, extract the server list
+                    expanded_servers = await self._extract_servers_from_gateway_command(line)
+                    servers.extend(expanded_servers)
+                    logger.debug(f"Expanded docker-gateway command to: {expanded_servers}")
+                elif line.startswith("docker-gateway"):
+                    # Handle "docker-gateway: server1,server2" format
+                    expanded_servers = await self._expand_docker_gateway_from_claude_output(line)
+                    servers.extend(expanded_servers)
+                    logger.debug(f"Expanded docker-gateway to: {expanded_servers}")
+                else:
+                    # Regular server - extract server name (first word/column)
+                    parts = line.split()
+                    if parts:
+                        server_name = parts[0].rstrip(':')  # Remove trailing colon
+                        # Skip if it looks like a command path
+                        if not server_name.startswith('/') and server_name not in servers:
+                            servers.append(server_name)
+                            logger.debug(f"Added regular server: {server_name}")
+            
+            logger.debug(f"Final parsed servers: {servers}")
+            return servers
+            
+        except Exception as e:
+            logger.warning(f"Failed to parse Claude server list: {e}")
+            # Fallback: try to get enabled servers from docker directly
+            try:
+                enabled_servers = await self._get_enabled_docker_servers()
+                logger.debug(f"Fallback to Docker servers: {enabled_servers}")
+                return enabled_servers
+            except Exception:
+                return []
+    
+    async def _extract_servers_from_gateway_command(self, command_line: str) -> List[str]:
+        """
+        Extract server names from a docker-gateway command line.
+        
+        Args:
+            command_line: Command line like "/opt/homebrew/bin/docker mcp gateway run --servers aws-diagram,curl,playwright"
+            
+        Returns:
+            List of individual server names
+        """
+        try:
+            logger.debug(f"Extracting servers from command: {command_line}")
+            
+            # Look for --servers argument
+            if "--servers" not in command_line:
+                logger.debug("No --servers argument found")
+                return []
+            
+            # Split by --servers and get the part after it
+            parts = command_line.split("--servers", 1)
+            if len(parts) < 2:
+                logger.debug("Could not split on --servers")
+                return []
+            
+            # Get the servers part and clean it up
+            servers_part = parts[1].strip()
+            
+            # Handle cases where there might be additional arguments after the server list
+            # Take only the first token after --servers
+            servers_part = servers_part.split()[0] if servers_part.split() else ""
+            
+            if not servers_part:
+                logger.debug("Empty servers part")
+                return []
+            
+            # Split by comma and clean up names
+            server_names = [s.strip() for s in servers_part.split(",") if s.strip()]
+            logger.debug(f"Extracted server names: {server_names}")
+            
+            return server_names
+            
+        except Exception as e:
+            logger.warning(f"Failed to extract servers from gateway command: {e}")
+            return []
+    
+    async def _expand_docker_gateway_from_claude_output(self, gateway_line: str) -> List[str]:
+        """
+        Expand docker-gateway from Claude output line into individual server names.
+        
+        Args:
+            gateway_line: Line from Claude output containing docker-gateway info
+            
+        Returns:
+            List of individual Docker Desktop server names
+        """
+        try:
+            # Claude output might look like:
+            # "docker-gateway: aws-diagram,curl,playwright"
+            # or just "docker-gateway"
+            
+            if ":" in gateway_line:
+                # Extract the server list after the colon
+                _, servers_part = gateway_line.split(":", 1)
+                servers_part = servers_part.strip()
+                
+                if servers_part:
+                    # Split by comma and clean up names
+                    server_names = [s.strip() for s in servers_part.split(",") if s.strip()]
+                    return server_names
+            
+            # If no servers listed or different format, try to get from Docker directly
+            logger.debug("No servers found in docker-gateway line, checking Docker Desktop directly")
+            enabled_servers = await self._get_enabled_docker_servers()
+            return enabled_servers
+            
+        except Exception as e:
+            logger.warning(f"Failed to expand docker-gateway from Claude output: {e}")
+            # Fallback: try to get enabled servers directly
+            try:
+                enabled_servers = await self._get_enabled_docker_servers()
+                return enabled_servers
+            except Exception:
+                return []
+    
+    async def _test_docker_gateway(self) -> Optional[Dict[str, Any]]:
+        """
+        Test Docker gateway functionality by running dry-run command.
+        
+        Returns:
+            Dict with test results or None if no docker-gateway found
+        """
+        try:
+            # Check if docker-gateway is configured by checking Claude directly
+            # (not from list_servers which shows expanded servers)
+            try:
+                result = subprocess.run(
+                    ["claude", "mcp", "list"],
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                )
+                
+                claude_has_docker_gateway = False
+                if result.returncode == 0 and result.stdout:
+                    claude_has_docker_gateway = "docker-gateway" in result.stdout
+                    
+            except Exception as e:
+                logger.warning(f"Failed to check Claude for docker-gateway: {e}")
+                return None
+            
+            if not claude_has_docker_gateway:
+                logger.debug("No docker-gateway found in Claude configuration")
+                return None
+            
+            logger.debug("Testing Docker gateway functionality")
+            
+            # Check if Docker is available
+            docker_available, _ = self._check_command("docker", ["--version"])
+            if not docker_available:
+                return {
+                    "status": "failed",
+                    "error": "Docker command not available",
+                    "servers_tested": [],
+                    "working_servers": [],
+                    "failed_servers": [],
+                    "total_tools": 0
+                }
+            
+            # Get current Docker Desktop servers from registry (most accurate)
+            docker_servers = await self._get_enabled_docker_servers()
+            
+            if not docker_servers:
+                return {
+                    "status": "no_servers",
+                    "error": "No enabled Docker Desktop servers found",
+                    "servers_tested": [],
+                    "working_servers": [],
+                    "failed_servers": [],
+                    "total_tools": 0
+                }
+            
+            if not docker_servers:
+                return {
+                    "status": "failed",
+                    "error": "No Docker servers configured",
+                    "servers_tested": [],
+                    "working_servers": [],
+                    "failed_servers": [],
+                    "total_tools": 0
+                }
+            
+            # Run Docker gateway test command
+            servers_list = ",".join(docker_servers)
+            test_command = [
+                "docker", "mcp", "gateway", "run",
+                "--servers", servers_list,
+                "--dry-run", "--verbose"
+            ]
+            
+            logger.debug(f"Running Docker gateway test: {' '.join(test_command)}")
+            
+            result = subprocess.run(
+                test_command,
+                capture_output=True,
+                text=True,
+                timeout=60
+            )
+            
+            
+            # Parse the output - Docker gateway uses stderr for its output
+            working_servers = []
+            failed_servers = []
+            total_tools = 0
+            
+            # Docker gateway outputs to stderr, not stdout
+            output_text = result.stderr if result.stderr else result.stdout
+            output_lines = output_text.split('\n') if output_text else []
+            
+            for line in output_lines:
+                line = line.strip()
+                
+                # Look for server status lines like "> aws-diagram: (3 tools)"
+                if line.startswith("> ") and ": (" in line and " tools)" in line:
+                    try:
+                        # Extract server name and tool count
+                        server_info = line[2:]  # Remove "> "
+                        server_name = server_info.split(":")[0].strip()
+                        
+                        # Handle different formats: "(3 tools)" or "(6 tools) (1 prompts) (1 resources)"
+                        parts_with_parens = server_info.split("(")
+                        if len(parts_with_parens) > 1:
+                            # Find the tools count - look for first "(N tools)" pattern
+                            tools_count = 0
+                            for part in parts_with_parens[1:]:  # Skip the server name part
+                                if "tools)" in part:
+                                    tools_part = part.split(")")[0].strip()
+                                    try:
+                                        tools_count = int(tools_part.split()[0])
+                                        break
+                                    except (ValueError, IndexError):
+                                        continue
+                            
+                            working_servers.append({
+                                "name": server_name,
+                                "tools": tools_count
+                            })
+                            total_tools += tools_count
+                        
+                    except Exception as e:
+                        logger.debug(f"Failed to parse server line '{line}': {e}")
+                
+                # Look for error messages like "> Can't start filesystem: Error..."
+                elif line.startswith("> Can't start ") and ":" in line:
+                    try:
+                        error_part = line[2:]  # Remove "> "
+                        if "Can't start " in error_part:
+                            server_name = error_part.split("Can't start ")[1].split(":")[0].strip()
+                            error_msg = error_part.split(":", 1)[1].strip() if ":" in error_part else "Unknown error"
+                            
+                            failed_servers.append({
+                                "name": server_name,
+                                "error": error_msg
+                            })
+                    except Exception as e:
+                        logger.debug(f"Failed to parse error line '{line}': {e}")
+            
+            # Determine overall status
+            if result.returncode == 0 and working_servers:
+                status = "success"
+                error = None
+            elif result.returncode == 0 and not working_servers and not failed_servers:
+                status = "warning"
+                error = "No server status found in output"
+            else:
+                status = "failed"
+                error = f"Command failed (exit {result.returncode})"
+                if result.stderr:
+                    error += f": {result.stderr[:200]}"
+            
+            return {
+                "status": status,
+                "error": error,
+                "servers_tested": docker_servers,
+                "working_servers": working_servers,
+                "failed_servers": failed_servers,
+                "total_tools": total_tools,
+                "raw_output": (result.stderr if result.stderr else result.stdout)[:1000] if (result.stderr or result.stdout) else None,
+                "stderr_output": result.stderr[:500] if result.stderr else None,
+                "exit_code": result.returncode,
+                "command": " ".join(test_command),
+                "debug_lines_found": len([line for line in output_lines if line.startswith("> ") and ": (" in line])
+            }
+            
+        except subprocess.TimeoutExpired:
+            return {
+                "status": "failed",
+                "error": "Docker gateway test timed out (60s)",
+                "servers_tested": docker_servers if 'docker_servers' in locals() else [],
+                "working_servers": [],
+                "failed_servers": [],
+                "total_tools": 0
+            }
+        except Exception as e:
+            logger.warning(f"Docker gateway test failed: {e}")
+            return {
+                "status": "failed",
+                "error": f"Test execution failed: {e}",
+                "servers_tested": docker_servers if 'docker_servers' in locals() else [],
+                "working_servers": [],
+                "failed_servers": [],
+                "total_tools": 0
+            }
+    
+    async def get_server_details(self, server_name: str) -> Optional[Dict[str, Any]]:
+        """Get detailed information about a specific server including its tools."""
+        try:
+            servers = await self.list_servers()
+            server = next((s for s in servers if s.name == server_name), None)
+            
+            if not server:
+                return None
+            
+            details = {
+                "name": server.name,
+                "type": server.server_type.value,
+                "scope": server.scope.value if server.scope else "unknown",
+                "status": "enabled" if server.enabled else "disabled",
+                "command": server.command,
+                "args": server.args,
+                "env": server.env,
+                "tools": [],
+                "description": getattr(server, 'description', ''),
+            }
+            
+            # Try to get tool information using different methods
+            if server.server_type == ServerType.DOCKER_DESKTOP:
+                details.update(self._get_docker_desktop_server_tools(server_name))
+            else:
+                details.update(self._get_generic_server_tools(server))
+            
+            return details
+            
+        except Exception as e:
+            logger.warning(f"Failed to get server details for {server_name}: {e}")
+            return None
+    
+    def _get_docker_desktop_server_tools(self, server_name: str) -> Dict[str, Any]:
+        """Get tool information for Docker Desktop MCP server using docker mcp tools."""
+        try:
+            # Get all tools mapped by server
+            all_server_tools = self._get_all_docker_tools()
+            if not all_server_tools:
+                logger.debug(f"No tools found via docker mcp tools")
+                return {"tool_count": 0, "tools": [], "source": "error"}
+            
+            # Get tools for this specific server
+            server_tools = all_server_tools.get(server_name, [])
+            
+            return {
+                "tool_count": len(server_tools),
+                "tools": server_tools,
+                "source": "docker_mcp_tools_mapped"
+            }
+            
+        except Exception as e:
+            logger.debug(f"Failed to get Docker server tools for {server_name}: {e}")
+            return {"tool_count": 0, "tools": [], "source": "error"}
+    
+    def _get_all_docker_tools(self) -> Dict[str, List[Dict[str, Any]]]:
+        """Get all tools mapped by server using docker mcp tools list --verbose --format json."""
+        try:
+            # Step 1: Get verbose output to determine server order and tool counts
+            verbose_result = subprocess.run(
+                ["docker", "mcp", "tools", "list", "--verbose"],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            if verbose_result.returncode != 0:
+                logger.debug(f"docker mcp tools list --verbose failed: {verbose_result.stderr}")
+                return {}
+            
+            # Parse server order and tool counts from stderr
+            server_tool_counts = []
+            all_lines = verbose_result.stderr.strip().split('\n') if verbose_result.stderr else []
+            
+            for line in all_lines:
+                if "gateway:" in line and "tools)" in line:
+                    # Extract server name and tool count from lines like:
+                    # "- gateway:   > filesystem: (11 tools)"
+                    if "> " in line and ": (" in line and " tools)" in line:
+                        server_info = line.split("> ")[1]  # Get "filesystem: (11 tools)"
+                        server_name = server_info.split(":")[0].strip()
+                        count_part = server_info.split("(")[1].split(" tools)")[0]
+                        try:
+                            tool_count = int(count_part)
+                            server_tool_counts.append((server_name, tool_count))
+                        except ValueError:
+                            pass
+            
+            if not server_tool_counts:
+                logger.debug("No server tool counts found in verbose output")
+                return {}
+                
+            # Step 2: Get all tools with full JSON schema
+            json_result = subprocess.run(
+                ["docker", "mcp", "tools", "list", "--verbose", "--format", "json"],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            if json_result.returncode != 0:
+                logger.debug(f"docker mcp tools list --format json failed: {json_result.stderr}")
+                return {}
+            
+            # Parse JSON tools
+            import json
+            try:
+                all_tools_json = json.loads(json_result.stdout)
+                if not isinstance(all_tools_json, list):
+                    logger.debug("Expected JSON array of tools")
+                    return {}
+            except json.JSONDecodeError as e:
+                logger.debug(f"Failed to parse JSON tools: {e}")
+                return {}
+            
+            logger.debug(f"Found {len(all_tools_json)} tools in JSON, server counts: {server_tool_counts}")
+            
+            # Step 3: Map tools to servers based on tool names and functionality 
+            # Initialize server tool collections
+            server_tools = {}
+            for server_name, _ in server_tool_counts:
+                server_tools[server_name] = []
+            
+            # Define tool patterns for each server type
+            filesystem_tools = {
+                'create_directory', 'directory_tree', 'edit_file', 'get_file_info',
+                'list_allowed_directories', 'list_directory', 'move_file', 
+                'read_file', 'read_multiple_files', 'search_files', 'write_file'
+            }
+            
+            sqlite_tools = {
+                'create_table', 'describe_table', 'list_tables', 'read_query', 'write_query'
+            }
+            
+            diagram_tools = {
+                'append_insight', 'generate_diagram', 'get_diagram_examples', 'list_icons'
+            }
+            
+            # Map each tool to the appropriate server based on its name
+            for tool_json in all_tools_json:
+                tool_name = tool_json.get("name", "unknown")
+                
+                # Extract parameters from JSON schema
+                parameters = []
+                if "inputSchema" in tool_json and "properties" in tool_json["inputSchema"]:
+                    for param_name, param_info in tool_json["inputSchema"]["properties"].items():
+                        parameters.append({
+                            "name": param_name,
+                            "type": param_info.get("type", "unknown"),
+                            "description": param_info.get("description", ""),
+                            "required": param_name in tool_json["inputSchema"].get("required", [])
+                        })
+                
+                tool_data = {
+                    "name": tool_name,
+                    "description": tool_json.get("description", ""),
+                    "parameters": parameters
+                }
+                
+                # Assign tool to the appropriate server
+                if tool_name in filesystem_tools:
+                    server_tools['filesystem'].append(tool_data)
+                elif tool_name in sqlite_tools:
+                    server_tools['SQLite'].append(tool_data)
+                elif tool_name in diagram_tools:
+                    server_tools['aws-diagram'].append(tool_data)
+                else:
+                    logger.warning(f"Unknown tool {tool_name}, assigning to first available server")
+                    # Assign to the server with the fewest tools assigned so far
+                    min_server = min(server_tools.keys(), key=lambda s: len(server_tools[s]))
+                    server_tools[min_server].append(tool_data)
+            
+            logger.info(f"Mapped tools to servers: {[(s, len(tools)) for s, tools in server_tools.items()]}")
+            return server_tools
+            
+        except Exception as e:
+            logger.debug(f"Failed to get all docker tools: {e}")
+            return {}
+    
+    
+    
+    
+    def _generate_server_tools(self, server_name: str, tool_count: int, server_description: str = "") -> List[Dict[str, Any]]:
+        """Generate basic tool information with detected count - no hardcoded descriptions."""
+        tools = []
+        
+        for i in range(tool_count):
+            tools.append({
+                "name": f"Tool {i+1}",
+                "description": f"MCP tool provided by {server_name} server"
+            })
+        
+        return tools
+    
+    
+    
+    def _get_generic_server_tools(self, server: 'Server') -> Dict[str, Any]:
+        """Get tool information for generic MCP servers by attempting to communicate directly."""
+        try:
+            if server.server_type == ServerType.NPM:
+                return self._get_npm_server_tools(server)
+            elif server.server_type == ServerType.DOCKER:
+                return self._get_docker_server_tools(server)
+            else:
+                return self._get_unknown_server_tools(server)
+            
+        except Exception as e:
+            logger.debug(f"Failed to get generic server tools: {e}")
+            return {"tool_count": 0, "tools": [], "source": "error"}
+    
+    def _get_npm_server_tools(self, server: 'Server') -> Dict[str, Any]:
+        """Get tool information for NPM-based MCP servers."""
+        try:
+            # Extract package name from command
+            package_name = None
+            if server.command == "npx" and server.args:
+                # Find the package name in args (skip flags like -y)
+                for arg in server.args:
+                    if not arg.startswith("-"):
+                        package_name = arg
+                        break
+            
+            if not package_name:
+                return {
+                    "tool_count": "Unknown",
+                    "tools": [],
+                    "source": "npm_no_package",
+                    "package_name": None
+                }
+            
+            # Try to discover tools by running the server with introspection
+            tools = self._discover_mcp_tools_via_stdio(server)
+            
+            return {
+                "tool_count": len(tools) if tools else "Unknown",
+                "tools": tools or [],
+                "source": "npm_discovered" if tools else "npm_failed",
+                "package_name": package_name
+            }
+            
+        except Exception as e:
+            logger.debug(f"Failed to get NPM server tools: {e}")
+            return {"tool_count": "Error", "tools": [], "source": "npm_error"}
+    
+    def _get_docker_server_tools(self, server: 'Server') -> Dict[str, Any]:
+        """Get tool information for Docker-based MCP servers."""
+        try:
+            # Try to discover tools by running the container with introspection
+            tools = self._discover_mcp_tools_via_stdio(server)
+            
+            return {
+                "tool_count": len(tools) if tools else "Unknown",
+                "tools": tools or [],
+                "source": "docker_discovered" if tools else "docker_failed"
+            }
+            
+        except Exception as e:
+            logger.debug(f"Failed to get Docker server tools: {e}")
+            return {"tool_count": "Error", "tools": [], "source": "docker_error"}
+    
+    def _get_unknown_server_tools(self, server: 'Server') -> Dict[str, Any]:
+        """Get tool information for servers of unknown type."""
+        try:
+            # Try generic MCP protocol communication
+            tools = self._discover_mcp_tools_via_stdio(server)
+            
+            return {
+                "tool_count": len(tools) if tools else "Unknown",
+                "tools": tools or [],
+                "source": "generic_discovered" if tools else "generic_failed"
+            }
+            
+        except Exception as e:
+            logger.debug(f"Failed to get unknown server tools: {e}")
+            return {"tool_count": "Error", "tools": [], "source": "generic_error"}
+    
+    def _discover_mcp_tools_via_stdio(self, server: 'Server') -> List[Dict[str, Any]]:
+        """Attempt to discover MCP tools by communicating with the server via stdio."""
+        try:
+            # Build the command to run the MCP server
+            if server.command == "npx":
+                cmd = ["npx"] + (server.args or [])
+            elif server.command == "docker":
+                cmd = ["docker"] + (server.args or [])
+            else:
+                cmd = [server.command] + (server.args or [])
+            
+            logger.debug(f"Attempting MCP tool discovery for {server.name} with command: {' '.join(cmd)}")
+            
+            # Try to communicate with the MCP server using a simple protocol request
+            # This is a basic implementation - in practice, you'd want more robust MCP protocol handling
+            mcp_request = {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/list",
+                "params": {}
+            }
+            
+            import json
+            request_json = json.dumps(mcp_request)
+            
+            # Run the server process with a timeout
+            result = subprocess.run(
+                cmd,
+                input=request_json + "\n",
+                capture_output=True,
+                text=True,
+                timeout=10,
+                cwd=server.working_dir,
+                env={**os.environ, **(server.env or {})}
+            )
+            
+            if result.returncode != 0:
+                logger.debug(f"MCP server {server.name} exited with code {result.returncode}: {result.stderr}")
+                return []
+            
+            # Try to parse the response
+            lines = result.stdout.strip().split('\n')
+            for line in lines:
+                if line.strip():
+                    try:
+                        response = json.loads(line)
+                        if "result" in response and "tools" in response["result"]:
+                            tools = response["result"]["tools"]
+                            parsed_tools = []
+                            for tool in tools:
+                                parsed_tools.append({
+                                    "name": tool.get("name", "unknown"),
+                                    "description": tool.get("description", ""),
+                                    "parameters": self._parse_mcp_tool_parameters(tool.get("inputSchema", {}))
+                                })
+                            return parsed_tools
+                    except json.JSONDecodeError:
+                        continue
+            
+            logger.debug(f"No valid MCP tools response found for {server.name}")
+            return []
+            
+        except subprocess.TimeoutExpired:
+            logger.debug(f"Timeout while discovering tools for {server.name}")
+            return []
+        except Exception as e:
+            logger.debug(f"Failed to discover MCP tools for {server.name}: {e}")
+            return []
+    
+    def _parse_mcp_tool_parameters(self, input_schema: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Parse MCP tool input schema into parameter list."""
+        parameters = []
+        
+        properties = input_schema.get("properties", {})
+        required = set(input_schema.get("required", []))
+        
+        for param_name, param_info in properties.items():
+            parameters.append({
+                "name": param_name,
+                "type": param_info.get("type", "unknown"),
+                "description": param_info.get("description", ""),
+                "required": param_name in required
+            })
+        
+        return parameters

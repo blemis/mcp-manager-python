@@ -266,10 +266,15 @@ def cli(ctx: click.Context, debug: bool, verbose: bool, config_dir: Optional[Pat
         config.logging.level = "INFO"
         
     setup_logging(
+        enabled=config.logging.enabled,
         level=config.logging.level,
+        console_level=config.logging.console_level,
         log_file=config.get_log_file(),
         format_type=config.logging.format_type,
         enable_rich=config.logging.enable_rich,
+        suppress_http=config.logging.suppress_http,
+        max_bytes=config.logging.max_bytes,
+        backup_count=config.logging.backup_count,
     )
     
     # Override config directory if provided
@@ -465,7 +470,7 @@ def disable(name: str):
 @cli.command()
 @click.option(
     "--query", "-q",
-    help="Search query"
+    help="Search query (supports wildcards like 'aws*' and regex like 'regex:^file.*')"
 )
 @click.option(
     "--type",
@@ -486,7 +491,14 @@ def disable(name: str):
 )
 @handle_errors
 def discover(query: Optional[str], server_type: Optional[str], limit: int, update_catalog: bool):
-    """Discover available MCP servers."""
+    """
+    Discover available MCP servers with pattern matching support.
+    
+    Query supports:
+    - Wildcards: 'aws*' matches aws-s3, aws-dynamodb, etc.
+    - Regex: 'regex:^file.*server$' for advanced patterns
+    - Simple text: 'filesystem' for substring matching
+    """
     discovery = cli_context.get_discovery()
     
     type_filter = ServerType(server_type) if server_type else None
@@ -705,6 +717,123 @@ def sync():
     console.print("[dim]All changes are immediately reflected in Claude Code.[/dim]")
 
 
+@cli.command("check-sync")
+@click.option(
+    "--verbose", "-v",
+    is_flag=True,
+    help="Show detailed sync status information"
+)
+@handle_errors
+def check_sync(verbose: bool):
+    """Check synchronization status between mcp-manager and Claude."""
+    manager = cli_context.get_manager()
+    
+    console.print("[blue]🔄 Checking synchronization status...[/blue]")
+    
+    try:
+        sync_result = asyncio.run(manager.check_sync_status())
+    except Exception as e:
+        console.print(f"[red]✗ Failed to check sync status: {e}[/red]")
+        sys.exit(1)
+    
+    # Overall status
+    if sync_result.in_sync:
+        console.print("[green]✅ MCP Manager and Claude are in sync![/green]")
+    else:
+        console.print("[red]❌ MCP Manager and Claude are out of sync[/red]")
+    
+    console.print()
+    
+    # Show issues
+    if sync_result.issues:
+        console.print("[bold red]Issues Found:[/bold red]")
+        for issue in sync_result.issues:
+            console.print(f"  [red]✗[/red] {issue}")
+        console.print()
+    
+    # Show warnings
+    if sync_result.warnings:
+        console.print("[bold yellow]Warnings:[/bold yellow]")
+        for warning in sync_result.warnings:
+            console.print(f"  [yellow]⚠[/yellow] {warning}")
+        console.print()
+    
+    # Docker gateway test results
+    if sync_result.docker_gateway_test:
+        console.print("[bold]Docker Gateway Test:[/bold]")
+        test = sync_result.docker_gateway_test
+        
+        status = test.get("status", "unknown")
+        if status == "success":
+            console.print("  [green]✅ PASSED[/green]")
+        elif status == "warning":
+            console.print("  [yellow]⚠️ WARNING[/yellow]")
+        else:
+            console.print("  [red]❌ FAILED[/red]")
+        
+        # Show error if any
+        if test.get("error"):
+            console.print(f"  [red]Error:[/red] {test['error']}")
+        
+        # Show working servers
+        working_servers = test.get("working_servers", [])
+        failed_servers = test.get("failed_servers", [])
+        total_tools = test.get("total_tools", 0)
+        
+        if working_servers:
+            console.print("  [green]Working servers:[/green]")
+            for server in working_servers:
+                name = server.get("name", "Unknown")
+                tools = server.get("tools", 0)
+                console.print(f"    • {name}: {tools} tools")
+        
+        if failed_servers:
+            console.print("  [red]Failed servers:[/red]")
+            for server in failed_servers:
+                name = server.get("name", "Unknown")
+                error = server.get("error", "Unknown error")
+                console.print(f"    • {name}: {error}")
+        
+        if total_tools > 0:
+            console.print(f"  [cyan]Total tools available:[/cyan] {total_tools}")
+        
+        if verbose and test.get("command"):
+            console.print(f"  [dim]Command tested:[/dim] {test['command']}")
+            if test.get("raw_output"):
+                console.print(f"  [dim]Raw output (first 500 chars):[/dim] {test['raw_output'][:500]}")
+            if test.get("debug_lines_found"):
+                console.print(f"  [dim]Server status lines found:[/dim] {test['debug_lines_found']}")
+        
+        console.print()
+    
+    # Show detailed information if verbose
+    if verbose:
+        console.print("[bold]Detailed Information:[/bold]")
+        
+        if sync_result.claude_available:
+            console.print("  [green]✅ Claude CLI available[/green]")
+        else:
+            console.print("  [red]❌ Claude CLI not available[/red]")
+        
+        console.print(f"  [cyan]MCP Manager servers:[/cyan] {len(sync_result.manager_servers)}")
+        for server in sync_result.manager_servers:
+            console.print(f"    • {server}")
+        
+        console.print(f"  [cyan]Claude servers:[/cyan] {len(sync_result.claude_servers)}")
+        for server in sync_result.claude_servers:
+            console.print(f"    • {server}")
+        
+        if sync_result.missing_in_claude:
+            console.print(f"  [yellow]Missing in Claude:[/yellow] {', '.join(sync_result.missing_in_claude)}")
+        
+        if sync_result.missing_in_manager:
+            console.print(f"  [blue]Missing in Manager:[/blue] {', '.join(sync_result.missing_in_manager)}")
+    
+    # Exit with error code if not in sync
+    if not sync_result.in_sync:
+        sys.exit(1)
+
+
 @cli.command(name="system-info")
 @handle_errors
 def system_info():
@@ -758,6 +887,18 @@ def tui():
         console.print(f"[red]TUI Error: {e}[/red]")
         sys.exit(1)
 
+
+@cli.command("tui-simple")
+@handle_errors
+def tui_simple():
+    """Launch the simple Rich-based terminal user interface."""
+    try:
+        from mcp_manager.tui.simple_tui import main as simple_main
+        import asyncio
+        asyncio.run(simple_main())
+    except Exception as e:
+        console.print(f"[red]Simple TUI Error: {e}[/red]")
+        sys.exit(1)
 
 @cli.command("tui-textual")
 @handle_errors
@@ -891,6 +1032,369 @@ async def _cleanup_impl(dry_run: bool, no_backup: bool):
             if backup_path:
                 console.print(f"[yellow]Restoring from backup...[/yellow]")
                 shutil.copy2(backup_path, claude_config)
+
+
+@cli.command("server-details")
+@click.argument("server_name")
+@handle_errors
+def server_details(server_name: str):
+    """Show detailed information about a specific server including its tools.
+    
+    Displays comprehensive information about an MCP server including:
+    - Basic server information (type, status, command)
+    - Available tools and their descriptions
+    - Usage examples for Claude Code
+    
+    Example:
+      mcp-manager server-details SQLite
+      mcp-manager server-details filesystem
+    """
+    asyncio.run(_server_details_impl(server_name))
+
+
+async def _server_details_impl(server_name: str):
+    """Implementation of server-details command."""
+    manager = cli_context.get_manager()
+    
+    console.print(f"[blue]🔍 Getting details for server: {server_name}[/blue]")
+    console.print()
+    
+    # Get detailed server information
+    details = await manager.get_server_details(server_name)
+    
+    if not details:
+        console.print(f"[red]❌ Server '{server_name}' not found[/red]")
+        console.print()
+        
+        # Show available servers
+        servers = await manager.list_servers()
+        if servers:
+            console.print("[yellow]💡 Available servers:[/yellow]")
+            for server in servers:
+                console.print(f"  • {server.name} ({server.server_type.value})")
+        else:
+            console.print("[yellow]💡 No servers configured[/yellow]")
+        return
+    
+    # Display server details
+    from rich.table import Table
+    from rich.panel import Panel
+    from rich import box
+    
+    # Server header
+    status_color = "green" if details['status'] == "enabled" else "red"
+    console.print(Panel(
+        f"[bold cyan]{details['name']}[/bold cyan] - [{status_color}]{details['status'].upper()}[/{status_color}]",
+        title="📦 MCP Server Details",
+        style="blue",
+        box=box.ROUNDED
+    ))
+    console.print()
+    
+    # Basic information table
+    info_table = Table(
+        title="Server Information",
+        box=box.ROUNDED,
+        show_header=True,
+        header_style="bold white on blue"
+    )
+    info_table.add_column("Property", style="cyan", width=15)
+    info_table.add_column("Value", style="white")
+    
+    info_table.add_row("Name", details['name'])
+    info_table.add_row("Type", details['type'])
+    info_table.add_row("Scope", details.get('scope', 'unknown'))
+    info_table.add_row("Status", f"[{status_color}]{details['status']}[/{status_color}]")
+    info_table.add_row("Command", details.get('command', 'N/A'))
+    
+    if details.get('args'):
+        args_str = ' '.join(details['args']) if isinstance(details['args'], list) else str(details['args'])
+        info_table.add_row("Arguments", args_str)
+    
+    if details.get('env'):
+        env_count = len(details['env']) if isinstance(details['env'], dict) else 0
+        info_table.add_row("Environment", f"{env_count} variables")
+    
+    console.print(info_table)
+    console.print()
+    
+    # Tools information
+    tool_count = details.get('tool_count', 'Unknown')
+    tools = details.get('tools', [])
+    source = details.get('source', 'unknown')
+    
+    if tool_count != 'Unknown' and isinstance(tool_count, int) and tool_count > 0:
+        console.print(f"[bold green]🔧 {tool_count} Tools Available[/bold green] [dim]({source})[/dim]")
+        console.print()
+        
+        if tools:
+            tools_table = Table(
+                title="Available Tools",
+                box=box.ROUNDED,
+                show_header=True,
+                header_style="bold white on green"
+            )
+            tools_table.add_column("#", style="dim", width=4, justify="center")
+            tools_table.add_column("Tool Name", style="cyan", width=25)
+            tools_table.add_column("Description", style="white")
+            
+            for i, tool in enumerate(tools, 1):
+                tool_name = tool.get('name', f'Tool {i}')
+                tool_desc = tool.get('description', 'No description available')
+                tools_table.add_row(str(i), tool_name, tool_desc)
+            
+            console.print(tools_table)
+        else:
+            console.print("[dim]Individual tool names not available - tools accessible via MCP protocol[/dim]")
+        
+        console.print()
+        
+        # Usage examples
+        console.print("[bold]💡 Usage in Claude Code:[/bold]")
+        
+        if details['type'] == 'docker-desktop':
+            console.print("[dim]These tools are available via Docker Desktop MCP integration:[/dim]")
+            console.print(f"  [yellow]@{details['name']} <tool-command>[/yellow]")
+            console.print()
+            
+            console.print("[cyan]General usage:[/cyan]")
+            console.print(f"  [yellow]@{details['name']} <command> [arguments][/yellow]")
+            console.print(f"  [yellow]@{details['name']} help[/yellow] - Show available commands")
+        else:
+            console.print(f"[dim]General MCP server usage:[/dim]")
+            console.print(f"  [yellow]@{details['name']} <command>[/yellow]")
+            
+    elif tool_count == 'Unknown':
+        console.print(f"[yellow]🔧 Tool Information Not Available[/yellow] [dim]({source})[/dim]")
+        console.print()
+        console.print("[dim]This server type does not provide detailed tool information.[/dim]")
+        console.print(f"[dim]Try using:[/dim] [yellow]@{details['name']} help[/yellow]")
+        
+    else:
+        console.print(f"[red]⚠️ No Tools Detected[/red] [dim]({source})[/dim]")
+        console.print()
+        console.print("[dim]This may indicate a server configuration issue.[/dim]")
+        console.print("Consider checking the server configuration or status.")
+
+
+@cli.command()
+@click.argument("name")
+@click.option(
+    "--interactive", "-i",
+    is_flag=True,
+    help="Interactive configuration mode with prompts"
+)
+@click.option(
+    "--show", "-s",
+    is_flag=True,
+    help="Show current configuration without modifying"
+)
+@handle_errors
+def configure(name: str, interactive: bool, show: bool):
+    """Configure or reconfigure an MCP server that requires additional settings.
+    
+    This command allows you to:
+    - View current configuration for servers like filesystem, SQLite, PostgreSQL
+    - Modify configuration interactively 
+    - Update Docker Desktop MCP server settings
+    
+    Examples:
+      mcp-manager configure filesystem --interactive
+      mcp-manager configure SQLite --show
+      mcp-manager configure postgresql --interactive
+    """
+    asyncio.run(_configure_impl(name, interactive, show))
+
+
+async def _configure_impl(name: str, interactive: bool, show: bool):
+    """Implementation of configure command."""
+    import os
+    import yaml
+    from pathlib import Path
+    from rich.prompt import Prompt, Confirm
+    
+    manager = cli_context.get_manager()
+    
+    console.print(f"[bold blue]🔧 Configuring MCP Server: {name}[/bold blue]")
+    
+    # Get current server configuration
+    servers = await manager.list_servers()
+    target_server = next((s for s in servers if s.name == name), None)
+    
+    if not target_server:
+        console.print(f"[red]✗[/red] Server '{name}' not found")
+        console.print("[yellow]💡[/yellow] Available servers:")
+        for server in servers:
+            console.print(f"  • {server.name} ({server.server_type.value})")
+        return
+    
+    console.print(f"[cyan]Server Type:[/cyan] {target_server.server_type.value}")
+    console.print(f"[cyan]Current Command:[/cyan] {target_server.command}")
+    
+    # Check if this is a configurable server
+    configurable_servers = {
+        'filesystem': {
+            'description': 'Filesystem access requires specifying allowed directories',
+            'config_type': 'docker_mcp' if 'docker' in target_server.command else 'args',
+            'settings': ['directory_paths']
+        },
+        'sqlite': {
+            'description': 'SQLite server requires a database file path',
+            'config_type': 'docker_mcp' if 'docker' in target_server.command else 'args',
+            'settings': ['db_path']
+        },
+        'postgresql': {
+            'description': 'PostgreSQL server requires database connection details',
+            'config_type': 'args',
+            'settings': ['connection_string']
+        }
+    }
+    
+    # Find matching configurable server
+    config_info = None
+    for key, info in configurable_servers.items():
+        if key in name.lower():
+            config_info = info
+            break
+    
+    if not config_info:
+        console.print(f"[yellow]⚠[/yellow] Server '{name}' does not require additional configuration")
+        console.print(f"[dim]Current configuration is sufficient for this server type[/dim]")
+        return
+    
+    console.print(f"[blue]ℹ[/blue] {config_info['description']}")
+    
+    # Show current configuration
+    if config_info['config_type'] == 'docker_mcp':
+        # Docker Desktop MCP server - check config.yaml
+        docker_config_file = Path.home() / ".docker" / "mcp" / "config.yaml"
+        current_config = {}
+        
+        if docker_config_file.exists():
+            try:
+                with open(docker_config_file, 'r') as f:
+                    docker_config = yaml.safe_load(f) or {}
+                    current_config = docker_config.get(name, {})
+            except Exception as e:
+                console.print(f"[yellow]⚠[/yellow] Could not read Docker MCP config: {e}")
+        
+        console.print(f"\n[bold]Current Docker MCP Configuration:[/bold]")
+        if current_config:
+            console.print(yaml.dump({name: current_config}, default_flow_style=False))
+        else:
+            console.print(f"[dim]No configuration found for {name}[/dim]")
+        
+        if show:
+            return
+            
+        if not interactive:
+            console.print(f"[yellow]💡[/yellow] Use --interactive to modify configuration")
+            console.print(f"[yellow]💡[/yellow] Or edit directly: {docker_config_file}")
+            return
+        
+        # Interactive configuration for Docker MCP servers
+        if 'filesystem' in name.lower():
+            console.print(f"\n[bold]Configure Filesystem Paths:[/bold]")
+            console.print(f"[dim]Current paths: {current_config.get('paths', ['None configured'])}[/dim]")
+            
+            if Confirm.ask("Modify filesystem paths?"):
+                new_paths = []
+                console.print(f"[blue]Enter directory paths (press Enter with empty path to finish):[/blue]")
+                
+                # Add current paths as defaults
+                existing_paths = current_config.get('paths', [])
+                for i, path in enumerate(existing_paths):
+                    console.print(f"[dim]Current path {i+1}: {path}[/dim]")
+                    new_path = Prompt.ask(f"Path {i+1}", default=path)
+                    if new_path.strip():
+                        new_paths.append(os.path.expanduser(new_path.strip()))
+                
+                # Add new paths
+                path_num = len(existing_paths) + 1
+                while True:
+                    new_path = Prompt.ask(f"Path {path_num} (empty to finish)", default="")
+                    if not new_path.strip():
+                        break
+                    new_paths.append(os.path.expanduser(new_path.strip()))
+                    path_num += 1
+                
+                if new_paths:
+                    # Update Docker MCP config
+                    docker_config_file.parent.mkdir(parents=True, exist_ok=True)
+                    
+                    full_config = {}
+                    if docker_config_file.exists():
+                        try:
+                            with open(docker_config_file, 'r') as f:
+                                full_config = yaml.safe_load(f) or {}
+                        except:
+                            pass
+                    
+                    full_config[name] = {'paths': new_paths, 'env': {}}
+                    
+                    with open(docker_config_file, 'w') as f:
+                        yaml.dump(full_config, f, default_flow_style=False)
+                    
+                    console.print(f"[green]✓[/green] Updated filesystem paths: {new_paths}")
+                    console.print(f"[green]📁[/green] Configuration saved to: {docker_config_file}")
+                else:
+                    console.print(f"[yellow]No paths specified - configuration unchanged[/yellow]")
+        
+        elif 'sqlite' in name.lower():
+            console.print(f"\n[bold]Configure SQLite Database:[/bold]")
+            current_db = current_config.get('args', [])
+            if current_db and len(current_db) >= 2:
+                current_path = current_db[1]  # --db-path VALUE
+            else:
+                current_path = "/tmp/mcp-database.db"
+            
+            console.print(f"[dim]Current database: {current_path}[/dim]")
+            
+            if Confirm.ask("Modify database path?"):
+                new_db_path = Prompt.ask("Database file path", default=current_path)
+                new_db_path = os.path.expanduser(new_db_path.strip())
+                
+                # Ensure directory exists
+                os.makedirs(os.path.dirname(new_db_path), exist_ok=True)
+                
+                # Create database if it doesn't exist
+                if not os.path.exists(new_db_path):
+                    import sqlite3
+                    with sqlite3.connect(new_db_path):
+                        pass
+                    console.print(f"[green]✓[/green] Created database file: {new_db_path}")
+                
+                # Update Docker MCP config
+                docker_config_file.parent.mkdir(parents=True, exist_ok=True)
+                
+                full_config = {}
+                if docker_config_file.exists():
+                    try:
+                        with open(docker_config_file, 'r') as f:
+                            full_config = yaml.safe_load(f) or {}
+                    except:
+                        pass
+                
+                full_config[name] = {
+                    'args': ['--db-path', new_db_path],
+                    'env': {}
+                }
+                
+                with open(docker_config_file, 'w') as f:
+                    yaml.dump(full_config, f, default_flow_style=False)
+                
+                console.print(f"[green]✓[/green] Updated database path: {new_db_path}")
+                console.print(f"[green]📁[/green] Configuration saved to: {docker_config_file}")
+        
+    else:
+        # Non-Docker server - show args
+        console.print(f"\n[bold]Current Arguments:[/bold] {target_server.args}")
+        
+        if show:
+            return
+            
+        console.print(f"[yellow]💡[/yellow] This server uses command-line arguments")
+        console.print(f"[yellow]💡[/yellow] Use 'mcp-manager remove {name}' and 'mcp-manager add {name} <new-command>' to reconfigure")
 
 
 def launch_interactive_menu():

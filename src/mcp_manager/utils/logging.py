@@ -77,39 +77,65 @@ class MCPLogger:
         
     def setup_logging(
         self,
+        enabled: bool = True,
         level: Union[str, int] = logging.INFO,
+        console_level: Union[str, int] = logging.WARNING,
         log_file: Optional[Path] = None,
         format_type: str = "text",
         enable_rich: bool = True,
         max_bytes: int = 10 * 1024 * 1024,  # 10MB
         backup_count: int = 5,
+        suppress_http: bool = True,
         **kwargs: Any,
     ) -> None:
         """
         Setup logging configuration.
         
         Args:
-            level: Logging level
+            enabled: Enable logging completely
+            level: File logging level
+            console_level: Console logging level
             log_file: Path to log file (optional)
             format_type: Format type ('text', 'json')
             enable_rich: Enable Rich console output
             max_bytes: Maximum log file size before rotation
             backup_count: Number of backup files to keep
+            suppress_http: Suppress HTTP request logging
             **kwargs: Additional configuration options
         """
         if self._setup_done:
             return
+        
+        # If logging is disabled, set to CRITICAL level to suppress most messages
+        if not enabled:
+            root_logger = logging.getLogger()
+            root_logger.setLevel(logging.CRITICAL)
+            root_logger.handlers.clear()
             
-        # Convert string level to int
+            # When logging is disabled, suppress HTTP requests to reduce noise
+            http_loggers = [
+                "httpx", "urllib3", "requests", "aiohttp",
+                "httpcore", "h11", "h2", "hpack"
+            ]
+            for logger_name in http_loggers:
+                http_logger = logging.getLogger(logger_name)
+                http_logger.setLevel(logging.CRITICAL)
+                
+            self._setup_done = True
+            return
+            
+        # Convert string levels to int
         if isinstance(level, str):
             level = getattr(logging, level.upper())
+        if isinstance(console_level, str):
+            console_level = getattr(logging, console_level.upper())
             
-        # Setup root logger
+        # Setup root logger - use the most permissive level
         root_logger = logging.getLogger()
-        root_logger.setLevel(level)
+        root_logger.setLevel(min(level, console_level))
         root_logger.handlers.clear()
         
-        # Console handler
+        # Console handler with separate level
         if enable_rich:
             console = Console(stderr=True)
             console_handler = RichHandler(
@@ -128,7 +154,7 @@ class MCPLogger:
                 )
                 console_handler.setFormatter(formatter)
                 
-        console_handler.setLevel(level)
+        console_handler.setLevel(console_level)  # Use console_level for console
         root_logger.addHandler(console_handler)
         
         # File handler
@@ -151,9 +177,20 @@ class MCPLogger:
                 )
                 file_handler.setFormatter(file_formatter)
                 
-            file_handler.setLevel(level)
+            file_handler.setLevel(level)  # Use file level for file
             root_logger.addHandler(file_handler)
-            
+        
+        # Suppress HTTP request logging only if explicitly requested
+        if suppress_http:
+            # Suppress httpx, urllib3, and other HTTP libraries
+            http_loggers = [
+                "httpx", "urllib3", "requests", "aiohttp",
+                "httpcore", "h11", "h2", "hpack"
+            ]
+            for logger_name in http_loggers:
+                http_logger = logging.getLogger(logger_name)
+                http_logger.setLevel(logging.WARNING)
+                
         self._setup_done = True
         
     def get_logger(self, name: str) -> logging.Logger:

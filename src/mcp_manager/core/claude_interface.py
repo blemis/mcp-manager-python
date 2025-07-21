@@ -28,6 +28,10 @@ class ClaudeInterface:
         self.docker_path = self._discover_docker_path()
         self._check_claude_availability()
     
+    def get_config_path(self) -> Path:
+        """Get the path to Claude's configuration file."""
+        return Path.home() / ".claude.json"
+    
     def _discover_claude_path(self) -> str:
         """Discover the path to claude executable."""
         # Try common locations and use 'which' command

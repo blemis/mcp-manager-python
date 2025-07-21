@@ -24,14 +24,17 @@ logger = get_logger(__name__)
 class LoggingConfig(BaseModel):
     """Logging configuration."""
     
-    level: str = Field(default="INFO", description="Logging level")
+    enabled: bool = Field(default=True, description="Enable logging completely")
+    level: str = Field(default="INFO", description="File logging level")
+    console_level: str = Field(default="WARNING", description="Console logging level")
     format_type: str = Field(default="text", description="Log format (text/json)")
-    file: Optional[str] = Field(default=None, description="Log file path")
+    file: Optional[str] = Field(default="mcp-manager.log", description="Log file path")
     enable_rich: bool = Field(default=True, description="Enable Rich console output")
     max_bytes: int = Field(default=10 * 1024 * 1024, description="Max log file size")
     backup_count: int = Field(default=5, description="Number of backup files")
+    suppress_http: bool = Field(default=False, description="Suppress HTTP request logging")
     
-    @field_validator("level")
+    @field_validator("level", "console_level")
     @classmethod
     def validate_level(cls, v: str) -> str:
         """Validate logging level."""

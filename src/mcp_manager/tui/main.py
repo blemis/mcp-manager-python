@@ -181,7 +181,7 @@ class MCPManagerApp(App):
         with Vertical():
             with Horizontal(classes="form-container"):
                 yield Label("Search Servers:")
-                yield Input(placeholder="Enter search query...", id="search-input")
+                yield Input(placeholder="Search (supports aws*, regex:^file.*, etc.)", id="search-input")
                 yield Button("Search", id="search-button", classes="-primary")
                 
             yield DataTable(id="discovery-table", classes="server-table")
