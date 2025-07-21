@@ -758,17 +758,6 @@ def tui():
         console.print(f"[red]TUI Error: {e}[/red]")
         sys.exit(1)
 
-@cli.command("tui-simple")
-@handle_errors
-def tui_simple():
-    """Launch the simple menu-based terminal user interface."""
-    try:
-        from mcp_manager.tui.simple_tui import main as simple_main
-        import asyncio
-        asyncio.run(simple_main())
-    except Exception as e:
-        console.print(f"[red]Simple TUI Error: {e}[/red]")
-        sys.exit(1)
 
 @cli.command("tui-textual")
 @handle_errors
