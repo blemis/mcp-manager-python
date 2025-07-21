@@ -156,6 +156,68 @@ mcp-manager remove filesystem
 mcp-manager --help
 ```
 
+## ⚙️ Understanding Server Operations
+
+### What is the difference technically between enable, disable and remove?
+
+Great question! Let me explain the technical differences between these three operations in the context of MCP Manager and Docker Desktop servers:
+
+#### **Enable**
+- **Purpose**: Make a server available for use by Claude Code
+- **Docker Desktop**: Activates the server in Docker Desktop's registry
+- **Claude Code**: Adds server to Claude's configuration (directly or via docker-gateway)
+- **Docker Image**: May trigger image pull when first accessed
+- **Reversible**: Yes, can be disabled
+
+**For Docker Desktop servers:**
+```bash
+docker mcp server enable SQLite        # Enable in Docker Desktop
+claude mcp add docker-gateway "..."    # Add/update gateway in Claude
+```
+
+#### **Disable**
+- **Purpose**: Stop a server from being available, but keep it installed
+- **Docker Desktop**: Deactivates server in Docker Desktop's registry
+- **Claude Code**: Removes from active configuration but server definition remains available
+- **Docker Image**: Now cleaned up automatically (our fix)
+- **Reversible**: Yes, can be re-enabled
+
+**For Docker Desktop servers:**
+```bash
+docker mcp server disable SQLite       # Disable in Docker Desktop
+claude mcp remove docker-gateway       # Remove from Claude
+claude mcp add docker-gateway "..."    # Re-add gateway without this server
+docker rmi mcp/sqlite:latest          # Clean up image (automated)
+```
+
+#### **Remove**
+- **Purpose**: Completely uninstall and delete a server
+- **Docker Desktop**: Not applicable (DD servers are built-in)
+- **Claude Code**: Completely removes server configuration
+- **Docker Image**: Should be cleaned up (for custom Docker servers)
+- **Reversible**: No, must be re-added/re-installed
+
+**For regular MCP servers:**
+```bash
+claude mcp remove server-name          # Remove from Claude completely
+# For Docker-based servers, should also clean up images
+```
+
+#### **Key Technical Differences**
+
+| Operation | Server Config | Docker Image        | Registry Entry | Reversible |
+|-----------|---------------|---------------------|----------------|------------|
+| **Enable**    | ✅ Added       | 📥 Pulled on-demand | ✅ Active       | ✅ Yes      |
+| **Disable**   | ❌ Removed     | 🗑️ Cleaned up      | 💤 Inactive    | ✅ Yes      |
+| **Remove**    | 🗑️ Deleted   | 🗑️ Cleaned up      | 🗑️ Deleted    | ❌ No       |
+
+#### **Docker Desktop Specific Behavior**
+
+Docker Desktop MCP servers are **built-in**, so:
+- **Enable/Disable**: Toggles availability in Docker Desktop's registry
+- **Remove**: Not possible - they're part of Docker Desktop itself
+- **Images**: Pulled from Docker Hub when needed, cleaned up when disabled
+
 ## Architecture
 
 ### Project Structure
