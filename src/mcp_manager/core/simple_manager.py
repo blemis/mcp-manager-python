@@ -1551,11 +1551,21 @@ class SimpleMCPManager:
             # Try to discover tools by running the container with introspection
             tools = self._discover_mcp_tools_via_stdio(server)
             
-            return {
+            # For Docker containers, provide better fallback information
+            docker_image = self._extract_docker_image_from_args(server.args or [])
+            
+            result = {
                 "tool_count": len(tools) if tools else "Unknown",
                 "tools": tools or [],
-                "source": "docker_discovered" if tools else "docker_failed"
+                "source": "docker_discovered" if tools else "docker_container_introspection_failed",
+                "docker_image": docker_image
             }
+            
+            # If tool discovery failed, provide helpful fallback info
+            if not tools:
+                result["fallback_info"] = self._get_docker_fallback_info(docker_image, server)
+            
+            return result
             
         except Exception as e:
             logger.debug(f"Failed to get Docker server tools: {e}")
@@ -1856,3 +1866,55 @@ class SimpleMCPManager:
         except Exception as e:
             logger.debug(f"Failed to find matching Docker images for {image_pattern}: {e}")
             return []
+    
+    def _extract_docker_image_from_args(self, args: List[str]) -> Optional[str]:
+        """Extract Docker image name from command arguments."""
+        # Look for image name in Docker run command
+        # Format: docker run [...options...] image_name
+        if "run" in args:
+            run_index = args.index("run")
+            # Skip options and find the image name (first non-option argument after 'run')
+            for i in range(run_index + 1, len(args)):
+                arg = args[i]
+                # Skip common Docker options
+                if arg.startswith('-'):
+                    continue
+                if arg in ['run', '-i', '--rm', '--pull', 'always', '-it', '--interactive', '--tty']:
+                    continue
+                # This should be the image name
+                return arg
+        return None
+    
+    def _get_docker_fallback_info(self, docker_image: Optional[str], server: 'Server') -> Dict[str, Any]:
+        """Provide helpful fallback information for Docker-based MCP servers."""
+        info = {
+            "reason": "Docker container introspection failed",
+            "suggestions": []
+        }
+        
+        if docker_image:
+            info["docker_image"] = docker_image
+            info["suggestions"].extend([
+                "Try running the container manually to see available tools:",
+                f"docker run -it --rm {docker_image}",
+                "Check the container documentation or Docker Hub page for tool information"
+            ])
+            
+            # Provide common tools based on image name patterns
+            if "filesystem" in docker_image.lower():
+                info["likely_tools"] = [
+                    {"name": "list_directory", "description": "List files and directories"},
+                    {"name": "read_file", "description": "Read file contents"},
+                    {"name": "write_file", "description": "Write or create files"},
+                    {"name": "create_directory", "description": "Create directories"}
+                ]
+            elif "sqlite" in docker_image.lower():
+                info["likely_tools"] = [
+                    {"name": "execute_query", "description": "Execute SQL queries"},
+                    {"name": "list_tables", "description": "List database tables"},
+                    {"name": "describe_table", "description": "Get table schema"}
+                ]
+        else:
+            info["suggestions"].append("Check the server configuration for correct Docker image")
+        
+        return info

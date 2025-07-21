@@ -242,7 +242,33 @@ async def _show_server_details_after_install(manager, server_name: str):
                         param_desc = param.get('description', '')
                         details_content.append(f"      - [yellow]{param_name}[/yellow] ([cyan]{param_type}[/cyan]){param_required}: {param_desc}")
         else:
-            details_content.append(f"\n[yellow]No tool information available yet[/yellow]")
+            # Enhanced display for cases where tool discovery failed
+            source = server_details.get('source', 'unknown')
+            if source == "docker_container_introspection_failed":
+                details_content.append(f"\n[yellow]Tool discovery failed for Docker container[/yellow]")
+                
+                # Show fallback information
+                fallback_info = server_details.get('fallback_info', {})
+                docker_image = server_details.get('docker_image')
+                
+                if docker_image:
+                    details_content.append(f"[dim]Docker Image: {docker_image}[/dim]")
+                
+                # Show likely tools
+                likely_tools = fallback_info.get('likely_tools', [])
+                if likely_tools:
+                    details_content.append(f"\n[bold cyan]Likely Available Tools:[/bold cyan]")
+                    for tool in likely_tools:
+                        details_content.append(f"  • [bold green]{tool['name']}[/bold green]: {tool['description']}")
+                
+                # Show troubleshooting suggestions
+                suggestions = fallback_info.get('suggestions', [])
+                if suggestions:
+                    details_content.append(f"\n[bold cyan]Troubleshooting:[/bold cyan]")
+                    for suggestion in suggestions:
+                        details_content.append(f"  • {suggestion}")
+            else:
+                details_content.append(f"\n[yellow]No tool information available yet[/yellow]")
         
         # Claude usage instructions
         details_content.append(f"\n[bold cyan]Usage in Claude:[/bold cyan]")
@@ -1308,8 +1334,46 @@ async def _server_details_impl(server_name: str):
     elif tool_count == 'Unknown':
         console.print(f"[yellow]🔧 Tool Information Not Available[/yellow] [dim]({source})[/dim]")
         console.print()
-        console.print("[dim]This server type does not provide detailed tool information.[/dim]")
-        console.print(f"[dim]Try using:[/dim] [yellow]@{details['name']} help[/yellow]")
+        
+        # Enhanced display for Docker containers
+        if source == "docker_container_introspection_failed":
+            fallback_info = details.get('fallback_info', {})
+            docker_image = details.get('docker_image')
+            
+            console.print("[dim]Docker container tool discovery failed.[/dim]")
+            
+            if docker_image:
+                console.print(f"[dim]Docker Image: {docker_image}[/dim]")
+            
+            # Show likely tools if available
+            likely_tools = fallback_info.get('likely_tools', [])
+            if likely_tools:
+                console.print()
+                console.print("[bold cyan]🔍 Likely Available Tools:[/bold cyan]")
+                
+                tools_table = Table(
+                    box=box.SIMPLE,
+                    show_header=True,
+                    header_style="bold cyan"
+                )
+                tools_table.add_column("Tool", style="green", width=20)
+                tools_table.add_column("Description", style="white")
+                
+                for tool in likely_tools:
+                    tools_table.add_row(tool['name'], tool['description'])
+                
+                console.print(tools_table)
+            
+            # Show troubleshooting suggestions
+            suggestions = fallback_info.get('suggestions', [])
+            if suggestions:
+                console.print()
+                console.print("[bold cyan]💡 Troubleshooting:[/bold cyan]")
+                for suggestion in suggestions:
+                    console.print(f"  [dim]• {suggestion}[/dim]")
+        else:
+            console.print("[dim]This server type does not provide detailed tool information.[/dim]")
+            console.print(f"[dim]Try using:[/dim] [yellow]@{details['name']} help[/yellow]")
         
     else:
         console.print(f"[red]⚠️ No Tools Detected[/red] [dim]({source})[/dim]")

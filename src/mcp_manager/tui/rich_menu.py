@@ -1861,11 +1861,43 @@ class RichMenuApp:
                     box=box.ROUNDED
                 ))
             else:
+                # Enhanced error display for Docker containers with fallback info
+                error_content = f"[yellow]Tool information not available[/yellow]\n"
+                
+                # Show more descriptive source information
+                if source == "docker_container_introspection_failed":
+                    error_content += f"[dim]Reason: Docker container tool discovery failed[/dim]\n"
+                elif source == "docker_failed":
+                    error_content += f"[dim]Reason: Docker container communication failed[/dim]\n"
+                else:
+                    error_content += f"[dim]Source: {source}[/dim]\n"
+                
+                # Show fallback information if available
+                fallback_info = details.get('fallback_info', {})
+                docker_image = details.get('docker_image')
+                
+                if docker_image:
+                    error_content += f"[dim]Docker Image: {docker_image}[/dim]\n"
+                
+                # Show likely tools if available
+                likely_tools = fallback_info.get('likely_tools', [])
+                if likely_tools:
+                    error_content += f"\n[bold cyan]Likely Available Tools:[/bold cyan]\n"
+                    for tool in likely_tools:
+                        error_content += f"  • [green]{tool['name']}[/green]: {tool['description']}\n"
+                
+                error_content += f"\n[bold]General Usage:[/bold]\n"
+                error_content += f"  • [yellow]@{details['name']} <command>[/yellow]\n"
+                
+                # Show suggestions if available
+                suggestions = fallback_info.get('suggestions', [])
+                if suggestions:
+                    error_content += f"\n[bold cyan]Troubleshooting:[/bold cyan]\n"
+                    for suggestion in suggestions:
+                        error_content += f"  • [dim]{suggestion}[/dim]\n"
+                
                 console.print(Panel(
-                    f"[yellow]Tool information not available[/yellow]\n"
-                    f"[dim]Source: {source}[/dim]\n\n"
-                    f"[bold]General Usage:[/bold]\n"
-                    f"  • [yellow]@{details['name']} <command>[/yellow]",
+                    error_content.rstrip('\n'),
                     title="🔧 Tools & Usage", 
                     style="yellow",
                     box=box.ROUNDED
