@@ -5,11 +5,14 @@ This manager is a thin wrapper around claude mcp CLI commands.
 """
 
 import asyncio
-from typing import List, Optional
+import subprocess
+import sys
+from typing import List, Optional, Tuple
 
 from mcp_manager.core.claude_interface import ClaudeInterface
 from mcp_manager.core.exceptions import MCPManagerError
-from mcp_manager.core.models import Server, ServerType, ServerScope
+from mcp_manager.core.models import Server, ServerType, ServerScope, SystemInfo
+from mcp_manager.utils.config import get_config
 from mcp_manager.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -105,7 +108,7 @@ class SimpleMCPManager:
         scope: Optional[ServerScope] = None,
     ) -> bool:
         """
-        Remove an MCP server.
+        Remove an MCP server and clean up Docker images if applicable.
         
         Args:
             name: Server name to remove
@@ -116,11 +119,45 @@ class SimpleMCPManager:
         """
         logger.debug(f"Removing server '{name}' from Claude")
         
-        # Check if this is a Docker Desktop server
-        if name.startswith("docker-desktop-") or await self._is_docker_desktop_server(name):
-            return await self._disable_docker_desktop_server(name)
+        # Get server details from Claude's list to find Docker images
+        servers = await self.list_servers()
+        server = next((s for s in servers if s.name == name), None)
+        docker_image = None
+        
+        if server:
+            logger.debug(f"Server details - Name: {server.name}, Type: {server.server_type}, Command: {server.command}, Args: {server.args}")
+            if server.server_type in [ServerType.DOCKER, ServerType.DOCKER_DESKTOP]:
+                docker_image = self._extract_docker_image(server.command, server.args)
+                logger.debug(f"Extracted Docker image: {docker_image}")
+                
+                # If extraction failed, try alternative methods based on server type
+                if not docker_image and server.server_type == ServerType.DOCKER_DESKTOP:
+                    # For Docker Desktop servers, the image follows the pattern: mcp/server-name
+                    docker_image = f"mcp/{server.name.lower()}"
+                    logger.debug(f"Using Docker Desktop pattern: {docker_image}")
+                
+            else:
+                logger.debug(f"Server type {server.server_type} is not Docker-based, skipping image cleanup")
         else:
-            return self.claude.remove_server(name)
+            logger.debug(f"Could not find server details for {name}")
+        
+        # Remove the server
+        success = False
+        if name.startswith("docker-desktop-") or await self._is_docker_desktop_server(name):
+            success = await self._disable_docker_desktop_server(name)
+        else:
+            success = self.claude.remove_server(name)
+        
+        # Clean up Docker image if removal was successful and we have an image
+        if success and docker_image:
+            logger.debug(f"Attempting to remove Docker image: {docker_image}")
+            image_removed = await self._remove_docker_image(docker_image)
+            if image_removed:
+                logger.debug(f"Docker image cleanup completed for: {docker_image}")
+            else:
+                logger.warning(f"Docker image cleanup failed for: {docker_image}")
+        
+        return success
     
     async def enable_server(self, name: str) -> Server:
         """
@@ -138,7 +175,7 @@ class SimpleMCPManager:
         # Check if server already exists
         server = self.claude.get_server(name)
         if server:
-            logger.info(f"Server '{name}' is already enabled in Claude")
+            logger.debug(f"Server '{name}' is already enabled in Claude")
             return server
         
         # If not found, we can't enable it without knowing the command
@@ -208,7 +245,7 @@ class SimpleMCPManager:
             else:
                 server_name = name
             
-            logger.info(f"Enabling Docker Desktop MCP server: {server_name}")
+            logger.debug(f"Enabling Docker Desktop MCP server: {server_name}")
             
             # Step 1: Enable the server in Docker Desktop
             result = subprocess.run(
@@ -222,14 +259,14 @@ class SimpleMCPManager:
                 logger.error(f"Failed to enable Docker Desktop server {server_name}: {result.stderr}")
                 return False
             
-            logger.info(f"Successfully enabled {server_name} in Docker Desktop")
+            logger.debug(f"Successfully enabled {server_name} in Docker Desktop")
             
             # Step 2: Sync all Docker Desktop servers to Claude Code
             # Refresh the gateway to include the newly enabled server
             sync_success = await self._refresh_docker_gateway()
             
             if sync_success:
-                logger.info(f"Successfully synced {server_name} to Claude Code")
+                logger.debug(f"Successfully synced {server_name} to Claude Code")
                 return True
             else:
                 logger.error("Failed to sync Docker Desktop servers to Claude Code")
@@ -279,11 +316,11 @@ class SimpleMCPManager:
         try:
             # Check if docker-gateway already exists
             if self.claude.server_exists("docker-gateway"):
-                logger.info("docker-gateway already configured in Claude Code")
+                logger.debug("docker-gateway already configured in Claude Code")
                 return True
             
             # Try to automatically add docker-gateway
-            logger.info("Setting up docker-gateway for Docker Desktop integration")
+            logger.debug("Setting up docker-gateway for Docker Desktop integration")
             
             # Get the list of enabled Docker servers from registry
             enabled_servers = await self._get_enabled_docker_servers()
@@ -304,7 +341,7 @@ class SimpleMCPManager:
             )
             
             if success:
-                logger.info(f"Successfully set up docker-gateway with servers: {servers_list}")
+                logger.debug(f"Successfully set up docker-gateway with servers: {servers_list}")
                 return True
             else:
                 logger.error("Failed to add docker-gateway to Claude Code")
@@ -325,7 +362,7 @@ class SimpleMCPManager:
             else:
                 server_name = name
             
-            logger.info(f"Disabling Docker Desktop MCP server: {server_name}")
+            logger.debug(f"Disabling Docker Desktop MCP server: {server_name}")
             
             # Step 1: Disable the server in Docker Desktop
             result = subprocess.run(
@@ -339,14 +376,19 @@ class SimpleMCPManager:
                 logger.error(f"Failed to disable Docker Desktop server {server_name}: {result.stderr}")
                 return False
             
-            logger.info(f"Successfully disabled {server_name} in Docker Desktop")
+            logger.debug(f"Successfully disabled {server_name} in Docker Desktop")
             
             # Step 2: Update docker-gateway with the new server list
             # Force refresh the gateway with updated server list
             sync_success = await self._refresh_docker_gateway()
             
+            # Step 3: Clean up Docker Desktop MCP image if removal was successful
             if sync_success:
-                logger.info(f"Successfully removed {server_name} from Claude Code")
+                # Docker Desktop MCP servers use the format: mcp-docker-desktop/server-name:latest
+                docker_image = f"mcp-docker-desktop/{server_name}:latest"
+                await self._remove_docker_image(docker_image)
+                
+                logger.debug(f"Successfully removed {server_name} from Claude Code")
                 return True
             else:
                 logger.error("Failed to sync Docker Desktop servers to Claude Code")
@@ -396,3 +438,232 @@ class SimpleMCPManager:
             logger.warning(f"Failed to expand docker-gateway: {e}")
             # If expansion fails, return the gateway as-is
             return [gateway_server]
+    
+    def get_system_info(self) -> SystemInfo:
+        """Get system information and dependency status."""
+        logger.debug("Gathering system information")
+        
+        # Python version
+        python_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+        
+        # Platform
+        import platform
+        platform_name = platform.system()
+        
+        # Check Claude CLI
+        claude_available, claude_version = self._check_command("claude", ["--version"])
+        
+        # Check NPM
+        npm_available, npm_version = self._check_command("npm", ["--version"])
+        
+        # Check Docker  
+        docker_available, docker_version = self._check_command("docker", ["--version"])
+        
+        # Check Git
+        git_available, git_version = self._check_command("git", ["--version"])
+        
+        # Get config
+        config = get_config()
+        
+        return SystemInfo(
+            python_version=python_version,
+            platform=platform_name,
+            claude_cli_available=claude_available,
+            claude_cli_version=claude_version,
+            npm_available=npm_available,
+            npm_version=npm_version,
+            docker_available=docker_available,
+            docker_version=docker_version,
+            git_available=git_available,
+            git_version=git_version,
+            config_dir=config.get_config_dir(),
+            log_file=config.get_log_file(),
+        )
+    
+    def _check_command(self, command: str, args: List[str]) -> Tuple[bool, Optional[str]]:
+        """Check if a command is available and get its version."""
+        try:
+            result = subprocess.run(
+                [command] + args,
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=False
+            )
+            
+            if result.returncode == 0:
+                # Extract version from output
+                output = result.stdout.strip()
+                if not output:
+                    output = result.stderr.strip()
+                
+                # Clean up version string
+                version = output.split('\n')[0]
+                if command == "claude":
+                    # Claude output might be "claude 1.2.3"
+                    parts = version.split()
+                    if len(parts) >= 2:
+                        version = parts[-1]
+                elif command in ["npm", "docker", "git"]:
+                    # Extract version number from common patterns
+                    import re
+                    match = re.search(r'(\d+\.\d+\.\d+)', version)
+                    if match:
+                        version = match.group(1)
+                
+                return True, version
+            else:
+                return False, None
+                
+        except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.SubprocessError):
+            return False, None
+    
+    def _extract_docker_image(self, command: str, args: List[str]) -> Optional[str]:
+        """
+        Extract Docker image name from server command and args.
+        
+        Args:
+            command: Server command (typically 'docker')
+            args: Command arguments
+            
+        Returns:
+            Docker image name if found, None otherwise
+        """
+        if command != "docker":
+            return None
+        
+        try:
+            # Log the full command for debugging
+            logger.debug(f"Extracting image from command: {command} {' '.join(args)}")
+            
+            # Look for the image name in Docker run command
+            # Typical format: ["run", "-i", "--rm", "--pull", "always", "image:tag"]
+            if "run" in args:
+                run_index = args.index("run")
+                
+                # The image name is typically the last argument that doesn't start with -
+                # and comes after all the flags
+                for i in range(len(args) - 1, run_index, -1):
+                    arg = args[i]
+                    logger.debug(f"Checking arg[{i}]: '{arg}'")
+                    # Image name should contain : or / and not start with -
+                    if not arg.startswith("-") and (":" in arg or "/" in arg):
+                        logger.debug(f"Found image with : or /: {arg}")
+                        return arg
+                
+                # Fallback: find the last non-flag argument that isn't a known flag value
+                for i in range(len(args) - 1, run_index, -1):
+                    arg = args[i]
+                    if (not arg.startswith("-") and 
+                        arg not in ["always", "missing", "never", "run"] and
+                        len(arg) > 3):  # Image names are typically longer than 3 chars
+                        logger.debug(f"Found fallback image: {arg}")
+                        return arg
+            
+            # Try to extract from the full command if it contains common Docker image patterns
+            full_command = ' '.join(args)
+            import re
+            # Look for patterns like mcp-docker-desktop/name:tag or registry/name:tag
+            patterns = [
+                r'(mcp-docker-desktop/[^:\s]+(?::[^:\s]+)?)',
+                r'([a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+(?::[a-zA-Z0-9._-]+)?)',
+                r'([a-zA-Z0-9._-]+:[a-zA-Z0-9._-]+)'
+            ]
+            
+            for pattern in patterns:
+                match = re.search(pattern, full_command)
+                if match:
+                    image = match.group(1)
+                    logger.debug(f"Found image via regex: {image}")
+                    return image
+            
+            logger.debug("No Docker image found in command")
+            return None
+        except Exception as e:
+            logger.warning(f"Failed to extract Docker image from command: {e}")
+            return None
+    
+    async def _remove_docker_image(self, image: str) -> bool:
+        """
+        Remove a Docker image.
+        
+        Args:
+            image: Docker image name to remove
+            
+        Returns:
+            True if removed successfully or image doesn't exist
+        """
+        try:
+            logger.debug(f"Removing Docker image: {image}")
+            
+            # Try multiple image variations (with/without tags)
+            image_variations = [
+                image,
+                f"{image}:latest",
+                image.replace(":latest", ""),  # Remove :latest if present
+            ]
+            
+            # Remove duplicates while preserving order
+            image_variations = list(dict.fromkeys(image_variations))
+            
+            removed_any = False
+            for img_variant in image_variations:
+                logger.debug(f"Trying to remove image variant: {img_variant}")
+                
+                # First check if image exists
+                check_result = subprocess.run(
+                    ["docker", "image", "inspect", img_variant],
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                )
+                
+                if check_result.returncode != 0:
+                    logger.debug(f"Docker image {img_variant} not found")
+                    continue
+                
+                # Try to remove this variant
+                logger.debug(f"Found image {img_variant}, attempting removal")
+                result = subprocess.run(
+                    ["docker", "rmi", "-f", img_variant],
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                )
+                
+                if result.returncode == 0:
+                    logger.debug(f"Successfully removed Docker image: {img_variant}")
+                    removed_any = True
+                else:
+                    logger.debug(f"Failed to remove {img_variant}: {result.stderr}")
+                    # Try alternative removal method for this variant
+                    alt_result = subprocess.run(
+                        ["docker", "image", "rm", "-f", img_variant],
+                        capture_output=True,
+                        text=True,
+                        timeout=30,
+                    )
+                    
+                    if alt_result.returncode == 0:
+                        logger.debug(f"Successfully removed {img_variant} with alternative method")
+                        removed_any = True
+            
+            # Clean up dangling images if we removed anything
+            if removed_any:
+                cleanup_result = subprocess.run(
+                    ["docker", "image", "prune", "-f"],
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                )
+                if cleanup_result.returncode == 0:
+                    logger.debug("Cleaned up dangling Docker images")
+            
+            return True  # Always return True to not fail the server removal
+                
+        except subprocess.TimeoutExpired:
+            logger.warning(f"Timeout removing Docker image {image}")
+            return True
+        except Exception as e:
+            logger.warning(f"Error removing Docker image {image}: {e}")
+            return True

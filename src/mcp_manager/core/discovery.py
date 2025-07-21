@@ -681,7 +681,7 @@ class ServerDiscovery:
                 logger.warning("Docker command not found")
                 return False
             
-            logger.info("Updating Docker MCP catalog...")
+            logger.debug("Updating Docker MCP catalog...")
             result = subprocess.run(
                 [docker_path, "mcp", "catalog", "update"],
                 capture_output=True,
@@ -693,7 +693,7 @@ class ServerDiscovery:
                 logger.warning(f"Failed to update Docker MCP catalog: {result.stderr}")
                 return False
             
-            logger.info("Docker MCP catalog updated successfully")
+            logger.debug("Docker MCP catalog updated successfully")
             # Clear cache after update
             self.clear_cache()
             return True

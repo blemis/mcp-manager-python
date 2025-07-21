@@ -1,5 +1,9 @@
-"""Terminal User Interface for MCP Manager."""
+"""
+TUI (Terminal User Interface) package for MCP Manager.
 
-from mcp_manager.tui.main import main
+Provides interactive terminal interfaces using Rich for a better user experience.
+"""
 
-__all__ = ["main"]
+from mcp_manager.tui.rich_menu import main as rich_menu_main
+
+__all__ = ["rich_menu_main"]

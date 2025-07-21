@@ -75,7 +75,7 @@ def handle_errors(func):
     return wrapper
 
 
-@click.group(name="mcp-manager")
+@click.group(name="mcp-manager", invoke_without_command=True)
 @click.version_option(__version__)
 @click.option(
     "--debug",
@@ -92,12 +92,19 @@ def handle_errors(func):
     type=click.Path(path_type=Path),
     help="Configuration directory"
 )
+@click.option(
+    "--menu", "-m",
+    is_flag=True,
+    help="Launch interactive menu (default when no command given)"
+)
 @click.pass_context
-def cli(ctx: click.Context, debug: bool, verbose: bool, config_dir: Optional[Path]):
+def cli(ctx: click.Context, debug: bool, verbose: bool, config_dir: Optional[Path], menu: bool):
     """
     Enterprise-grade MCP server management tool.
     
     Manage MCP (Model Context Protocol) servers with professional CLI and TUI interfaces.
+    
+    When called without a command, launches an interactive menu interface.
     """
     # Ensure context object exists
     ctx.ensure_object(dict)
@@ -122,6 +129,10 @@ def cli(ctx: click.Context, debug: bool, verbose: bool, config_dir: Optional[Pat
         config.config_dir = str(config_dir)
         
     logger.debug("CLI initialized")
+    
+    # If no subcommand was provided, launch interactive menu
+    if ctx.invoked_subcommand is None:
+        launch_interactive_menu()
 
 
 @cli.command("list")
@@ -692,6 +703,22 @@ async def _cleanup_impl(dry_run: bool, no_backup: bool):
             if backup_path:
                 console.print(f"[yellow]Restoring from backup...[/yellow]")
                 shutil.copy2(backup_path, claude_config)
+
+
+def launch_interactive_menu():
+    """Launch the interactive menu interface."""
+    try:
+        from mcp_manager.tui.rich_menu import main as rich_menu_main
+        console.print("[blue]🚀 Launching interactive menu...[/blue]")
+        rich_menu_main()
+    except ImportError as e:
+        console.print("[red]Interactive menu dependencies not available[/red]")
+        console.print(f"Error: {e}")
+        console.print("Install with: pip install mcp-manager[rich]")
+        sys.exit(1)
+    except Exception as e:
+        console.print(f"[red]Error launching interactive menu: {e}[/red]")
+        sys.exit(1)
 
 
 def main():

@@ -4,60 +4,112 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is the Claude MCP Manager - a CLI tool for managing MCP (Model Context Protocol) servers used by Claude Code. The tool manages configurations for both Docker Desktop MCP servers and NPM-based MCP servers.
+This is the Claude MCP Manager - an enterprise-grade Python tool for managing MCP (Model Context Protocol) servers used by Claude Code. The tool provides both a modern terminal user interface (TUI) and comprehensive command-line interface (CLI) for discovering, installing, configuring, and managing MCP servers.
 
 ## Key Concepts
 
 ### MCP Servers
-- **Docker Desktop MCP Servers**: Pre-built servers available through Docker Desktop (puppeteer, search, http, k8s, terraform, aws)
-- **NPM MCP Servers**: JavaScript/TypeScript servers installed via npm (playwright, filesystem, sqlite)
+- **Docker Desktop MCP Servers**: Pre-built servers available through Docker Desktop (SQLite, filesystem, search, http, k8s, terraform, aws)
+- **NPM MCP Servers**: JavaScript/TypeScript servers installed via npm (playwright, filesystem, sqlite, brave-search)
+- **Docker Hub Servers**: Community-built servers available via Docker containers
 - **Custom MCP Servers**: User-defined servers with custom commands
 
-### Configuration Files
-The tool manages three configuration levels:
-1. `~/.config/mcp-manager/servers.json` - User-level server registry
-2. `./.mcp-config.json` - Project-level overrides (in working directory)
-3. `~/.config/claude-code/mcp-servers.json` - Claude Code integration config
+### Configuration Architecture (Claude Code)
+Claude Code uses a hierarchical configuration system:
+1. **Internal State**: `~/.claude.json` - Source of truth managed by `claude mcp` commands
+2. **User Config**: `~/.config/claude-code/mcp-servers.json` - User-level overrides
+3. **Project Config**: `./.mcp.json` - Project-specific configurations
+
+### MCP Manager Configuration
+The tool uses TOML-based configuration with hierarchical overrides:
+1. **System Configuration**: `/etc/mcp-manager/config.toml`
+2. **User Configuration**: `~/.config/mcp-manager/config.toml` 
+3. **Project Configuration**: `./.mcp-manager.toml`
+4. **Environment Variables**: `MCP_MANAGER_*`
 
 ## Implementation Structure
 
-The project should include:
-- `install.sh` - Installation script that sets up the tool, PATH, and shell aliases
-- `mcp-manager` - Main executable script (likely Bash) that handles all commands
-- Supporting scripts for specific functionality (if needed)
-
-## Core Commands to Implement
-
-```bash
-# Server management
-mcp-manager list                          # List all servers and status
-mcp-manager enable <server-name>          # Enable a server
-mcp-manager disable <server-name>         # Disable a server
-mcp-manager add <name> <type> <command>   # Add custom server
-
-# Docker MCP specific
-mcp-manager list dmcp                     # List available Docker MCP servers
-mcp-manager add dmcp <server-name>        # Add Docker MCP server
-
-# Configuration
-mcp-manager project <server> <enabled>    # Set project-level override
-mcp-manager aliases                       # Generate shell aliases
+The project is a Python package with modular architecture:
+```
+src/mcp_manager/
+├── core/                 # Core business logic
+│   ├── simple_manager.py # Main MCP management
+│   ├── discovery.py      # Server discovery
+│   └── claude_interface.py # Claude Code integration
+├── cli/                  # Command-line interface
+│   └── main.py          # CLI commands with Click
+├── tui/                  # Terminal user interface
+│   └── menu_app.py      # TUI with Textual
+└── utils/                # Utilities and helpers
+    ├── config.py        # Configuration management
+    ├── logging.py       # Structured logging
+    └── validation.py    # Input validation
 ```
 
-## Key Features to Implement
+## Core Commands (Current Implementation)
 
-1. **Dynamic Docker Discovery**: Query Docker Desktop to find available MCP servers
-2. **JSON Configuration Management**: Read/write JSON configs maintaining proper structure
-3. **Shell Alias Generation**: Create shortcuts like `mcp-docker-puppeteer-on`
-4. **Claude Code Integration**: Update `~/.config/claude-code/mcp-servers.json` when servers change
+```bash
+# Modern user interfaces
+mcp-tui                                   # Launch terminal user interface
+mcp-manager tui                          # Alternative TUI command
 
-## Implementation Notes
+# Easy installation with unique Install IDs
+mcp-manager discover --query filesystem  # Find servers with unique IDs
+mcp-manager install-package dd-SQLite    # One-command installation
+mcp-manager install-package modelcontextprotocol-filesystem
 
-- Docker MCP servers use the command format: `docker run -i --rm --pull always mcp-docker-desktop/server-name:latest`
-- NPM servers typically use: `npx -y @package/name`
-- The tool should validate server availability before enabling
-- Project overrides should merge with (not replace) user configuration
-- Shell aliases should be idempotent and handle both individual and group controls
+# Server management
+mcp-manager list                         # List all servers and status
+mcp-manager add <name> <command>         # Add custom server
+mcp-manager remove <server-name>         # Remove server
+mcp-manager cleanup                      # Fix broken configurations
+
+# Discovery and search
+mcp-manager discover                     # Discover all available servers
+mcp-manager discover --type npm          # Filter by server type
+mcp-manager discover --update-catalog    # Refresh Docker Desktop catalog
+
+# Configuration management
+mcp-manager config                       # Show current configuration
+mcp-manager --scope user/project         # Set configuration scope
+```
+
+## Key Features (Implemented)
+
+1. **Unique Install IDs**: Distinguish servers with same names (dd-SQLite vs mcp-sqlite)
+2. **One-Command Installation**: `mcp-manager install-package <install-id>`
+3. **Multi-Source Discovery**: NPM registry, Docker Hub, Docker Desktop catalogs
+4. **Duplicate Detection**: Automatic warnings for similar functionality servers
+5. **Docker Desktop Integration**: Uses `docker mcp` commands and docker-gateway
+6. **Configuration Cleanup**: Automatically fix broken MCP configurations
+7. **Structured Logging**: JSON and text logging with rotation
+8. **Type Safety**: Full type hints and mypy validation
+9. **Comprehensive Testing**: Unit and integration test coverage
+
+## Critical Implementation Details
+
+### Docker Desktop Integration
+- Use `docker mcp server enable/disable` for Docker Desktop servers
+- Import all enabled DD servers with: `claude mcp add-from-claude-desktop docker-gateway`
+- The docker-gateway acts as a unified proxy for all enabled DD servers
+- Automatic synchronization between DD state and Claude Code's internal configuration
+
+### NPX Command Handling
+- Use proper `--` separator: `npx -y @package/name -- --arg value`
+- Validate command arguments and handle complex parameter passing
+- Support for servers requiring configuration (directories, API keys)
+
+### Discovery System
+- Real-time discovery from NPM registry, Docker Hub, Docker Desktop
+- Quality scoring and relevance ranking for search results
+- Caching with TTL for performance optimization
+- Install ID generation for unique server identification
+
+### Configuration Management
+- TOML-based configuration with Pydantic validation
+- Hierarchical configuration with proper precedence
+- Automatic backup creation before destructive operations
+- Environment variable support for all configuration options
 
 ## Development Guidance
 

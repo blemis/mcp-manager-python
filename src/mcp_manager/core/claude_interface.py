@@ -249,7 +249,7 @@ class ClaudeInterface:
         """
         try:
             result = subprocess.run(
-                [self.claude_path, "mcp", "get", "--scope", "user", name],
+                [self.claude_path, "mcp", "get", name],
                 capture_output=True,
                 text=True,
                 timeout=30,
