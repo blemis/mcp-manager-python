@@ -1688,13 +1688,53 @@ class SimpleMCPManager:
                     "package_name": None
                 }
             
-            # Try to discover tools by running the server with introspection
-            tools = self._discover_mcp_tools_via_stdio(server)
+            # Try multiple methods to discover NPM server tools
+            tools = []
+            
+            # Method 1: MCP protocol communication
+            try:
+                tools = self._discover_npm_tools_via_mcp_protocol(server, package_name)
+                if tools:
+                    return {
+                        "tool_count": len(tools),
+                        "tools": tools,
+                        "source": "npm_mcp_protocol",
+                        "package_name": package_name
+                    }
+            except Exception as e:
+                logger.debug(f"NPM MCP protocol discovery failed for {package_name}: {e}")
+            
+            # Method 2: Legacy stdio discovery (fallback)
+            try:
+                tools = self._discover_mcp_tools_via_stdio(server)
+                if tools:
+                    return {
+                        "tool_count": len(tools),
+                        "tools": tools,
+                        "source": "npm_stdio_discovery",
+                        "package_name": package_name
+                    }
+            except Exception as e:
+                logger.debug(f"NPM stdio discovery failed for {package_name}: {e}")
+            
+            # Method 3: Package metadata analysis (informational fallback)
+            try:
+                package_info = self._get_npm_package_metadata(package_name)
+                if package_info:
+                    return {
+                        "tool_count": "Unknown",
+                        "tools": [],
+                        "source": "npm_package_metadata",
+                        "package_name": package_name,
+                        "package_info": package_info
+                    }
+            except Exception as e:
+                logger.debug(f"NPM package metadata retrieval failed for {package_name}: {e}")
             
             return {
-                "tool_count": len(tools) if tools else "Unknown",
-                "tools": tools or [],
-                "source": "npm_discovered" if tools else "npm_failed",
+                "tool_count": "Unknown",
+                "tools": [],
+                "source": "npm_all_methods_failed",
                 "package_name": package_name
             }
             
@@ -1841,6 +1881,129 @@ class SimpleMCPManager:
             })
         
         return parameters
+    
+    def _discover_npm_tools_via_mcp_protocol(self, server: 'Server', package_name: str) -> List[Dict[str, Any]]:
+        """Discover NPM server tools using MCP protocol communication."""
+        import subprocess
+        import json
+        import os
+        
+        try:
+            # Build the command to run the NPM MCP server
+            cmd = ["npx"] + (server.args or [])
+            
+            logger.debug(f"Attempting MCP protocol discovery for NPM server {package_name}")
+            
+            # MCP initialization handshake
+            init_request = {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": "2024-11-05",
+                    "capabilities": {
+                        "tools": {}
+                    },
+                    "clientInfo": {
+                        "name": "mcp-manager",
+                        "version": "1.0.0"
+                    }
+                }
+            }
+            
+            tools_request = {
+                "jsonrpc": "2.0",
+                "id": 2,
+                "method": "tools/list",
+                "params": {}
+            }
+            
+            # Send both initialization and tools request
+            requests = json.dumps(init_request) + "\n" + json.dumps(tools_request) + "\n"
+            
+            # Run the server process with a timeout
+            result = subprocess.run(
+                cmd,
+                input=requests,
+                capture_output=True,
+                text=True,
+                timeout=30,
+                cwd=server.working_dir,
+                env={**os.environ, **(server.env or {})}
+            )
+            
+            if result.returncode != 0:
+                logger.debug(f"NPM MCP server {package_name} exited with code {result.returncode}: {result.stderr}")
+                return []
+            
+            # Parse responses line by line
+            lines = result.stdout.strip().split('\n')
+            for line in lines:
+                if line.strip():
+                    try:
+                        response = json.loads(line)
+                        # Look for tools/list response
+                        if (response.get("id") == 2 and 
+                            "result" in response and 
+                            "tools" in response["result"]):
+                            
+                            tools_data = response["result"]["tools"]
+                            parsed_tools = []
+                            
+                            for tool in tools_data:
+                                parsed_tools.append({
+                                    "name": tool.get("name", "unknown"),
+                                    "description": tool.get("description", ""),
+                                    "parameters": self._parse_mcp_tool_parameters(tool.get("inputSchema", {})),
+                                    "source": "npm_mcp_protocol"
+                                })
+                            
+                            logger.debug(f"Successfully discovered {len(parsed_tools)} tools for NPM server {package_name}")
+                            return parsed_tools
+                            
+                    except json.JSONDecodeError:
+                        continue
+            
+            logger.debug(f"No valid MCP tools response found for NPM server {package_name}")
+            return []
+            
+        except subprocess.TimeoutExpired:
+            logger.debug(f"Timeout while discovering tools for NPM server {package_name}")
+            return []
+        except Exception as e:
+            logger.debug(f"Failed to discover NPM tools via MCP protocol for {package_name}: {e}")
+            return []
+    
+    def _get_npm_package_metadata(self, package_name: str) -> Optional[Dict[str, Any]]:
+        """Get metadata about an NPM package."""
+        import subprocess
+        import json
+        
+        try:
+            # Use npm view to get package information
+            result = subprocess.run(
+                ["npm", "view", package_name, "--json"],
+                capture_output=True,
+                text=True,
+                timeout=15
+            )
+            
+            if result.returncode == 0:
+                package_data = json.loads(result.stdout)
+                return {
+                    "version": package_data.get("version"),
+                    "description": package_data.get("description"),
+                    "keywords": package_data.get("keywords", []),
+                    "repository": package_data.get("repository"),
+                    "homepage": package_data.get("homepage")
+                }
+            else:
+                logger.debug(f"npm view failed for {package_name}: {result.stderr}")
+                return None
+                
+        except Exception as e:
+            logger.debug(f"Failed to get NPM package metadata for {package_name}: {e}")
+            return None
     
     async def _enable_docker_desktop_server_simple(self, name: str) -> bool:
         """Enable a Docker Desktop MCP server (simplified version for enable_server)."""
