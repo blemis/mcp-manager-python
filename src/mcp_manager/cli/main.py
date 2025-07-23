@@ -2119,6 +2119,201 @@ def monitor_status_quick():
     console.print("[dim]Full status available with: mcp-manager monitor --status[/dim]")
 
 
+@cli.group("mode")
+def mode():
+    """Manage MCP Manager operation modes (Direct/Proxy/Hybrid)."""
+    pass
+
+
+@mode.command("status")
+@handle_errors
+def mode_status():
+    """Show current operation mode and configuration."""
+    try:
+        from mcp_manager.core.modes import ModeManager
+        from mcp_manager.core.config.proxy_config import ProxyModeConfig
+        
+        # Get configuration
+        config = get_config()
+        
+        # Create proxy config
+        try:
+            proxy_config = ProxyModeConfig()
+        except Exception as e:
+            console.print(f"[yellow]Warning: Could not load proxy config: {e}[/yellow]")
+            proxy_config = None
+        
+        # Create mode manager
+        try:
+            # Add proxy config to main config if it doesn't exist
+            if not hasattr(config, 'proxy'):
+                config.proxy = proxy_config
+            mode_manager = ModeManager(config)
+        except Exception as e:
+            console.print(f"[red]Error creating mode manager: {e}[/red]")
+            # Fallback to basic status
+            console.print("[blue]📋 MCP Manager Mode Status[/blue]")
+            console.print()
+            console.print("current_mode: direct")
+            console.print("proxy_available: false")
+            console.print("direct_available: true")
+            return
+        
+        # Get mode information
+        mode_info = mode_manager.get_mode_info()
+        current_mode = mode_manager.get_current_mode()
+        
+        console.print("[blue]📋 MCP Manager Mode Status[/blue]")
+        console.print()
+        console.print(f"current_mode: {current_mode.value}")
+        console.print(f"direct_available: {mode_info.get('direct_available', True)}")
+        console.print(f"proxy_available: {mode_info.get('proxy_available', False)}")
+        console.print()
+        
+        if proxy_config and proxy_config.enabled:
+            console.print("[blue]🔧 Proxy Configuration[/blue]")
+            console.print(f"  endpoint: {proxy_config.get_proxy_endpoint()}")
+            console.print(f"  authentication: {'enabled' if proxy_config.is_authentication_required() else 'disabled'}")
+            console.print(f"  caching: {'enabled' if proxy_config.enable_caching else 'disabled'}")
+            console.print()
+        
+        console.print(f"supported_modes: {', '.join(mode_info.get('supported_modes', ['direct']))}")
+        
+    except Exception as e:
+        console.print(f"[red]Error getting mode status: {e}[/red]")
+        logger.error(f"Mode status error: {e}")
+
+
+@mode.command("switch")
+@click.argument('target_mode', type=click.Choice(['direct', 'proxy', 'hybrid']))
+@click.option('--force', is_flag=True, help='Force mode switch without validation')
+@handle_errors
+def mode_switch(target_mode: str, force: bool):
+    """Switch between operation modes."""
+    try:
+        from mcp_manager.core.modes import ModeManager, OperationMode
+        from mcp_manager.core.config.proxy_config import ProxyModeConfig
+        
+        # Get configuration
+        config = get_config()
+        
+        # Create proxy config
+        try:
+            proxy_config = ProxyModeConfig()
+            if not hasattr(config, 'proxy'):
+                config.proxy = proxy_config
+        except Exception as e:
+            console.print(f"[red]Error loading proxy config: {e}[/red]")
+            return
+        
+        # Create mode manager
+        mode_manager = ModeManager(config)
+        target = OperationMode(target_mode)
+        
+        console.print(f"[blue]🔄 Switching to {target_mode} mode...[/blue]")
+        
+        if force:
+            console.print("[yellow]⚠️  Force mode enabled - skipping validation[/yellow]")
+        
+        # Attempt mode switch
+        success = mode_manager.switch_mode(target, force=force)
+        
+        if success:
+            console.print(f"[green]✅ Successfully switched to {target_mode} mode[/green]")
+        else:
+            console.print(f"[red]❌ Failed to switch to {target_mode} mode[/red]")
+            console.print("[dim]Use --force to override validation checks[/dim]")
+    
+    except Exception as e:
+        console.print(f"[red]Error switching modes: {e}[/red]")
+        logger.error(f"Mode switch error: {e}")
+
+
+@cli.group("proxy")
+def proxy():
+    """Manage MCP proxy server (unified endpoint mode)."""
+    pass
+
+
+@proxy.command("status")
+@handle_errors
+def proxy_status():
+    """Show proxy server status and statistics."""
+    console.print("[blue]📊 MCP Proxy Status[/blue]")
+    console.print()
+    
+    try:
+        from mcp_manager.core.config.proxy_config import ProxyModeConfig
+        
+        proxy_config = ProxyModeConfig()
+        
+        if not proxy_config.enabled:
+            console.print("[yellow]⚠️  Proxy mode is disabled[/yellow]")
+            console.print("Enable with: export MCP_PROXY_MODE=true")
+            return
+        
+        console.print(f"🌐 Endpoint: {proxy_config.get_proxy_endpoint()}")
+        console.print(f"🔌 MCP Endpoint: {proxy_config.get_mcp_endpoint()}")
+        console.print(f"🔐 Authentication: {'enabled' if proxy_config.is_authentication_required() else 'disabled'}")
+        console.print(f"💾 Caching: {'enabled' if proxy_config.enable_caching else 'disabled'}")
+        console.print(f"⚖️  Load Balancing: {'enabled' if proxy_config.enable_load_balancing else 'disabled'}")
+        console.print()
+        console.print("[dim]Note: Actual proxy server implementation pending[/dim]")
+        
+    except Exception as e:
+        console.print(f"[red]Error getting proxy status: {e}[/red]")
+
+
+@proxy.command("validate")
+@handle_errors  
+def proxy_validate():
+    """Validate proxy configuration and requirements."""
+    console.print("[blue]🔍 Validating Proxy Configuration[/blue]")
+    console.print()
+    
+    try:
+        from mcp_manager.core.modes import ModeManager
+        from mcp_manager.core.config.proxy_config import ProxyModeConfig
+        
+        # Load configuration
+        config = get_config()
+        proxy_config = ProxyModeConfig()
+        
+        if not hasattr(config, 'proxy'):
+            config.proxy = proxy_config
+        
+        # Create mode manager and validate
+        mode_manager = ModeManager(config)
+        validation_result = mode_manager.validate_proxy_requirements(proxy_config)
+        
+        if validation_result.valid:
+            console.print("[green]✅ Proxy configuration is valid[/green]")
+        else:
+            console.print("[red]❌ Proxy configuration has issues[/red]")
+        
+        # Show validation details
+        if validation_result.issues:
+            console.print()
+            console.print("[red]🚨 Issues:[/red]")
+            for issue in validation_result.issues:
+                console.print(f"  • {issue}")
+        
+        if validation_result.warnings:
+            console.print()
+            console.print("[yellow]⚠️  Warnings:[/yellow]")
+            for warning in validation_result.warnings:
+                console.print(f"  • {warning}")
+        
+        if validation_result.recommendations:
+            console.print()
+            console.print("[blue]💡 Recommendations:[/blue]")
+            for rec in validation_result.recommendations:
+                console.print(f"  • {rec}")
+    
+    except Exception as e:
+        console.print(f"[red]Error validating proxy config: {e}[/red]")
+
+
 def launch_interactive_menu():
     """Launch the interactive menu interface."""
     try:
