@@ -161,7 +161,6 @@ class SimpleMCPManager:
         env: Optional[dict] = None,
         args: Optional[List[str]] = None,
         scope: ServerScope = ServerScope.USER,
-        check_duplicates: bool = True,
     ) -> Server:
         """
         Add a new MCP server.
@@ -174,7 +173,6 @@ class SimpleMCPManager:
             env: Environment variables
             args: Command arguments
             scope: Server scope (ignored - Claude manages globally)
-            check_duplicates: Whether to check for similar servers (default: True)
             
         Returns:
             The created server
@@ -182,17 +180,6 @@ class SimpleMCPManager:
         # Mark operation start to prevent sync loops
         self._mark_operation_start()
         logger.debug(f"Adding server '{name}' to Claude")
-        
-        # Check for similar servers if requested
-        if check_duplicates:
-            similar_servers = await self._check_for_similar_servers(name, server_type, command, args)
-            if similar_servers:
-                # Raise exception with similar servers info for CLI to handle
-                from mcp_manager.core.exceptions import DuplicateServerError
-                raise DuplicateServerError(
-                    f"Found {len(similar_servers)} similar server(s) to '{name}'",
-                    similar_servers=similar_servers
-                )
         
         # Handle Docker Desktop servers specially
         if server_type == ServerType.DOCKER_DESKTOP:
@@ -234,6 +221,16 @@ class SimpleMCPManager:
         )
         
         return server
+    
+    async def check_for_similar_servers(
+        self,
+        name: str,
+        server_type: ServerType,
+        command: str,
+        args: Optional[List[str]] = None
+    ) -> List[Dict[str, Any]]:
+        """Check for servers with similar functionality (public method for CLI)."""
+        return await self._check_for_similar_servers(name, server_type, command, args)
     
     async def _check_for_similar_servers(
         self,
