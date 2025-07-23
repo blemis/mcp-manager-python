@@ -321,13 +321,15 @@ class SimpleMCPManager:
             logger.error(f"Cleanup failed: {e}")
             return {"error": str(e)}
     
-    # Discovery Methods (additional compatibility methods)
+    # Discovery Methods (additional compatibility methods) 
     async def check_for_similar_servers(self, name: str, server_type: ServerType,
                                       command: str, args: Optional[List[str]] = None) -> List[Dict[str, Any]]:
         """Check for servers with similar functionality (CLI compatibility method)."""
         try:
             # This is a simplified version - in the full implementation this would
             # use the discovery manager to find similar servers from catalogs
+            # For now, return empty list asynchronously
+            await asyncio.sleep(0)  # Make it properly async
             return []  # Return empty list for now to fix CLI compatibility
         except Exception as e:
             logger.error(f"Failed to check for similar servers: {e}")

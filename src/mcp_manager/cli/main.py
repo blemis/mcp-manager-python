@@ -819,7 +819,7 @@ def install_package(install_id: str):
         console.print(f"[blue]Installing[/blue] {target_result.package} as [cyan]{server_name}[/cyan]")
         
         # Check if server already exists
-        existing_servers = await manager.list_servers()
+        existing_servers = manager.list_servers()
         if any(s.name == server_name for s in existing_servers):
             console.print(f"[yellow]⚠[/yellow] Server '{server_name}' already exists")
             from rich.prompt import Confirm
@@ -829,7 +829,7 @@ def install_package(install_id: str):
         
         # Check for similar servers that might provide the same functionality
         try:
-            existing_servers = await manager.list_servers()
+            existing_servers = manager.list_servers()
             similar_servers = discovery.detect_similar_servers(target_result, existing_servers)
             
             if similar_servers:
