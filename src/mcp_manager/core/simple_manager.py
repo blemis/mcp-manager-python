@@ -6,8 +6,10 @@ This manager is a thin wrapper around claude mcp CLI commands.
 
 import asyncio
 import os
+import sqlite3
 import subprocess
 import sys
+import uuid
 from datetime import datetime
 from typing import List, Optional, Tuple, Dict, Any
 from pydantic import BaseModel
@@ -57,6 +59,19 @@ class SimpleMCPManager:
         self.tool_registry = ToolRegistryService()
         self.tool_discovery = ToolDiscoveryAggregator()
         
+        # Initialize usage analytics service
+        self.analytics_enabled = os.getenv("MCP_ANALYTICS_ENABLED", "true").lower() == "true"
+        self.analytics_service = None
+        
+        if self.analytics_enabled:
+            try:
+                from mcp_manager.analytics import UsageAnalyticsService
+                self.analytics_service = UsageAnalyticsService()
+                logger.info("Usage analytics service enabled")
+            except Exception as e:
+                logger.warning(f"Failed to initialize analytics service: {e}")
+                self.analytics_enabled = False
+        
         # Initialize AI-powered tool recommender (optional)
         self.tool_recommender = None
         self.ai_recommendations_enabled = os.getenv("MCP_AI_RECOMMENDATIONS", "true").lower() == "true"
@@ -77,7 +92,8 @@ class SimpleMCPManager:
         logger.info("SimpleMCPManager initialized with tool registry", extra={
             "auto_discover_tools": self.auto_discover_tools,
             "background_discovery": self.background_discovery,
-            "ai_recommendations": self.ai_recommendations_enabled
+            "ai_recommendations": self.ai_recommendations_enabled,
+            "analytics_enabled": self.analytics_enabled
         })
     
     @classmethod
@@ -3726,6 +3742,19 @@ class SimpleMCPManager:
             
             response = await self.tool_recommender.get_recommendations(request)
             
+            # Record recommendation analytics if enabled
+            if self.analytics_enabled and self.analytics_service:
+                self.analytics_service.record_recommendation_analytics(
+                    session_id=request.context.get("session_id", str(uuid.uuid4())) if request.context else str(uuid.uuid4()),
+                    user_query=response.query,
+                    recommendations_count=len(response.recommendations),
+                    llm_provider=response.llm_provider,
+                    model_used=response.model_used,
+                    processing_time_ms=response.processing_time_ms,
+                    tools_analyzed=response.total_tools_analyzed,
+                    context_data=request.context
+                )
+            
             # Convert to dictionary format for easier consumption
             return {
                 "status": "success",
@@ -3866,6 +3895,226 @@ class SimpleMCPManager:
             tips.append(f"✅ These tools have high success rates: {', '.join(reliable_tools[:3])}")
         
         return tips
+    
+    def record_tool_usage(self, canonical_name: str, user_query: str, selected: bool,
+                         success: bool, response_time_ms: int, error_details: Optional[str] = None,
+                         context: Optional[Dict[str, Any]] = None, session_id: Optional[str] = None) -> bool:
+        """
+        Record tool usage analytics.
+        
+        Args:
+            canonical_name: Tool canonical name (server/tool)
+            user_query: Original user query
+            selected: Whether tool was selected by user
+            success: Whether execution was successful
+            response_time_ms: Response time in milliseconds
+            error_details: Error details if failed
+            context: Additional context information
+            session_id: User session identifier
+            
+        Returns:
+            True if recorded successfully
+        """
+        if not self.analytics_enabled or not self.analytics_service:
+            return True
+        
+        return self.analytics_service.record_tool_usage(
+            canonical_name=canonical_name,
+            user_query=user_query,
+            selected=selected,
+            success=success,
+            response_time_ms=response_time_ms,
+            error_details=error_details,
+            context=context,
+            session_id=session_id
+        )
+    
+    def get_usage_analytics(self, days: int = 7) -> Dict[str, Any]:
+        """
+        Get usage analytics summary.
+        
+        Args:
+            days: Number of days to analyze
+            
+        Returns:
+            Dictionary with usage analytics
+        """
+        if not self.analytics_enabled or not self.analytics_service:
+            return {
+                "status": "disabled",
+                "message": "Analytics are not enabled. Set MCP_ANALYTICS_ENABLED=true to enable.",
+                "period_days": days
+            }
+        
+        try:
+            summary = self.analytics_service.get_usage_summary(days)
+            return {
+                "status": "success",
+                **summary
+            }
+        except Exception as e:
+            logger.error(f"Failed to get usage analytics: {e}")
+            return {
+                "status": "error",
+                "message": f"Failed to retrieve analytics: {e}",
+                "period_days": days
+            }
+    
+    def get_trending_queries(self, limit: int = 10) -> Dict[str, Any]:
+        """
+        Get trending query patterns.
+        
+        Args:
+            limit: Maximum number of results
+            
+        Returns:
+            Dictionary with trending queries
+        """
+        if not self.analytics_enabled or not self.analytics_service:
+            return {
+                "status": "disabled",
+                "message": "Analytics are not enabled.",
+                "trending_queries": []
+            }
+        
+        try:
+            trends = self.analytics_service.get_trending_queries(limit)
+            return {
+                "status": "success",
+                "trending_queries": trends,
+                "limit": limit
+            }
+        except Exception as e:
+            logger.error(f"Failed to get trending queries: {e}")
+            return {
+                "status": "error",
+                "message": f"Failed to retrieve trending queries: {e}",
+                "trending_queries": []
+            }
+    
+    def record_recommendation_feedback(self, session_id: str, selected_tool: Optional[str] = None,
+                                     satisfaction_score: Optional[float] = None) -> bool:
+        """
+        Record user feedback on AI recommendations.
+        
+        Args:
+            session_id: Recommendation session ID
+            selected_tool: Tool user actually selected
+            satisfaction_score: User satisfaction score (0-1)
+            
+        Returns:   
+            True if recorded successfully
+        """
+        if not self.analytics_enabled or not self.analytics_service:
+            return True
+        
+        try:
+            # Update the existing recommendation analytics record
+            with sqlite3.connect(str(self.analytics_service.db_path)) as conn:
+                cursor = conn.cursor()
+                
+                cursor.execute("""
+                    UPDATE recommendation_analytics 
+                    SET user_selected_tool = ?, user_satisfaction_score = ?
+                    WHERE session_id = ?
+                """, (selected_tool, satisfaction_score, session_id))
+                
+                conn.commit()
+                
+                return cursor.rowcount > 0
+                
+        except Exception as e:
+            logger.error(f"Failed to record recommendation feedback: {e}")
+            return False
+    
+    async def update_server_analytics(self) -> Dict[str, Any]:
+        """
+        Update server analytics for all servers.
+        
+        Returns:
+            Dictionary with update results
+        """
+        if not self.analytics_enabled or not self.analytics_service:
+            return {
+                "status": "disabled",
+                "message": "Analytics are not enabled."
+            }
+        
+        try:
+            servers = await self.list_servers()
+            updated_servers = []
+            
+            for server in servers:
+                if not server.enabled:
+                    continue
+                
+                # Get server tools
+                server_tools = self.tool_registry.get_tools_by_server(server.name)
+                
+                # Calculate metrics
+                total_tools = len(server_tools)
+                active_tools = len([t for t in server_tools if t.usage_count > 0])
+                
+                # Get usage statistics from tool registry
+                total_requests = sum(t.usage_count for t in server_tools)
+                avg_response_time = sum(t.average_response_time for t in server_tools) / max(len(server_tools), 1)
+                avg_success_rate = sum(t.success_rate for t in server_tools) / max(len(server_tools), 1)
+                
+                # Record server analytics
+                success = self.analytics_service.record_server_analytics(
+                    server_name=server.name,
+                    server_type=server.server_type,
+                    total_tools=total_tools,
+                    active_tools=active_tools,
+                    total_requests=total_requests,
+                    successful_requests=int(total_requests * avg_success_rate),
+                    average_response_time_ms=avg_response_time * 1000,  # Convert to ms
+                    uptime_percentage=1.0 if server.enabled else 0.0,
+                    error_rate=1.0 - avg_success_rate,
+                    discovery_success_rate=1.0  # Assume successful if tools exist
+                )
+                
+                if success:
+                    updated_servers.append(server.name)
+            
+            return {
+                "status": "success",
+                "updated_servers": updated_servers,
+                "servers_processed": len(servers)
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to update server analytics: {e}")
+            return {
+                "status": "error",
+                "message": f"Failed to update server analytics: {e}"
+            }
+    
+    def cleanup_analytics_data(self) -> Dict[str, Any]:
+        """
+        Clean up old analytics data.
+        
+        Returns:
+            Dictionary with cleanup results
+        """
+        if not self.analytics_enabled or not self.analytics_service:
+            return {
+                "status": "disabled",
+                "message": "Analytics are not enabled."
+            }
+        
+        try:
+            cleanup_stats = self.analytics_service.cleanup_old_data()
+            return {
+                "status": "success",
+                **cleanup_stats
+            }
+        except Exception as e:
+            logger.error(f"Failed to cleanup analytics data: {e}")
+            return {
+                "status": "error",
+                "message": f"Failed to cleanup analytics data: {e}"
+            }
 
     async def _update_server_status(self, server_name: str, enabled: bool):
         """Update the enabled status of a server in the catalog."""
