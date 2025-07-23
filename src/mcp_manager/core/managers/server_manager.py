@@ -75,7 +75,12 @@ class ServerManager:
                 )
                 
                 # Add via Claude interface
-                success = self.claude.add_server(server)
+                success = self.claude.add_server(
+                    name=server.name,
+                    command=server.command,
+                    args=server.args,
+                    env=server.env
+                )
                 
                 if success:
                     logger.info(f"Successfully added server: {name}")

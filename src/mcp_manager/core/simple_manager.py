@@ -90,16 +90,32 @@ class SimpleMCPManager:
         return self._mode_manager
     
     # Server Management Methods (delegate to ServerManager)
-    def add_server(self, name: str, command: str, args: Optional[List[str]] = None,
-                   env: Optional[Dict[str, str]] = None,
-                   working_dir: Optional[str] = None,
-                   server_type: ServerType = ServerType.CUSTOM,
-                   scope: ServerScope = ServerScope.USER) -> bool:
-        """Add a new MCP server."""
-        return self.server_manager.add_server(
+    async def add_server(self, name: str, server_type: ServerType, command: str,
+                   description: Optional[str] = None, env: Optional[dict] = None,
+                   args: Optional[List[str]] = None, scope: ServerScope = ServerScope.USER,
+                   working_dir: Optional[str] = None) -> Server:
+        """Add a new MCP server (CLI-compatible signature)."""
+        # Use the server manager to add the server
+        success = self.server_manager.add_server(
             name=name, command=command, args=args, env=env,
             working_dir=working_dir, server_type=server_type, scope=scope
         )
+        
+        if success:
+            # Return the server object that was created
+            server = Server(
+                name=name,
+                command=command,
+                args=args or [],
+                env=env or {},
+                working_dir=working_dir,
+                server_type=server_type,
+                scope=scope,
+                enabled=True
+            )
+            return server
+        else:
+            raise MCPManagerError(f"Failed to add server {name}")
     
     def remove_server(self, name: str, scope: ServerScope = ServerScope.USER) -> bool:
         """Remove an MCP server."""
@@ -305,6 +321,18 @@ class SimpleMCPManager:
             logger.error(f"Cleanup failed: {e}")
             return {"error": str(e)}
     
+    # Discovery Methods (additional compatibility methods)
+    async def check_for_similar_servers(self, name: str, server_type: ServerType,
+                                      command: str, args: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+        """Check for servers with similar functionality (CLI compatibility method)."""
+        try:
+            # This is a simplified version - in the full implementation this would
+            # use the discovery manager to find similar servers from catalogs
+            return []  # Return empty list for now to fix CLI compatibility
+        except Exception as e:
+            logger.error(f"Failed to check for similar servers: {e}")
+            return []
+
     # Utility methods for backwards compatibility
     def wait_for_sync_cooldown(self) -> None:
         """Wait for sync cooldown period after operations."""
