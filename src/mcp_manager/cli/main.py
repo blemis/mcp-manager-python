@@ -554,21 +554,31 @@ def add(
     manager = cli_context.get_manager()
     
     # Add server using simple manager
-    try:
-        if server_type:
-            manager.add_server(name, command, args, server_type)
-        else:
-            # Auto-detect server type based on command
-            if command == 'npx':
-                server_type = ServerType.NPM
-            elif command.endswith('/docker') or command == 'docker':
-                server_type = ServerType.CUSTOM
+    async def add_server_async():
+        try:
+            if server_type:
+                detected_server_type = server_type
             else:
-                server_type = ServerType.CUSTOM
-            manager.add_server(name, command, args, server_type)
-        console.print(f"✅ Successfully added server: {name}")
-    except Exception as e:
-        console.print(f"❌ Failed to add server {name}: {e}")
+                # Auto-detect server type based on command
+                if command == 'npx':
+                    detected_server_type = ServerType.NPM
+                elif command.endswith('/docker') or command == 'docker':
+                    detected_server_type = ServerType.DOCKER
+                else:
+                    detected_server_type = ServerType.CUSTOM
+            
+            server = await manager.add_server(
+                name=name,
+                server_type=detected_server_type,
+                command=command,
+                args=args,
+                check_duplicates=True
+            )
+            console.print(f"✅ Successfully added server: {name}")
+        except Exception as e:
+            console.print(f"❌ Failed to add server {name}: {e}")
+    
+    asyncio.run(add_server_async())
 
 
 @cli.command()

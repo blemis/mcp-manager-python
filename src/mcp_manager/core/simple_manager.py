@@ -161,6 +161,7 @@ class SimpleMCPManager:
         env: Optional[dict] = None,
         args: Optional[List[str]] = None,
         scope: ServerScope = ServerScope.USER,
+        check_duplicates: bool = True,
     ) -> Server:
         """
         Add a new MCP server.
@@ -173,6 +174,7 @@ class SimpleMCPManager:
             env: Environment variables
             args: Command arguments
             scope: Server scope (ignored - Claude manages globally)
+            check_duplicates: Whether to check for similar servers (default: True)
             
         Returns:
             The created server
@@ -180,6 +182,22 @@ class SimpleMCPManager:
         # Mark operation start to prevent sync loops
         self._mark_operation_start()
         logger.debug(f"Adding server '{name}' to Claude")
+        
+        # Check for similar servers if requested
+        if check_duplicates:
+            similar_servers = await self._check_for_similar_servers(name, server_type, command, args)
+            if similar_servers:
+                logger.warning(f"Found {len(similar_servers)} similar server(s) to '{name}':")
+                for similar_info in similar_servers:
+                    similar_server = similar_info["server"]
+                    score = similar_info["similarity_score"]
+                    reasons = similar_info["reasons"]
+                    server_type_str = similar_server.server_type.value if hasattr(similar_server.server_type, 'value') else str(similar_server.server_type)
+                    logger.warning(f"  - {similar_server.name} ({server_type_str}) - {score}% similarity")
+                    logger.warning(f"    Reasons: {', '.join(reasons)}")
+                
+                # For now, just log warnings. CLI can decide whether to prompt user.
+                # This ensures duplicate detection works for all add_server calls.
         
         # Handle Docker Desktop servers specially
         if server_type == ServerType.DOCKER_DESKTOP:
@@ -200,7 +218,7 @@ class SimpleMCPManager:
         # Add to our catalog as enabled
         await self._add_server_to_catalog(
             name=name,
-            server_type=server_type.value,
+            server_type=server_type.value if hasattr(server_type, 'value') else str(server_type),
             enabled=True,
             command=command,
             args=args or [],
@@ -221,6 +239,42 @@ class SimpleMCPManager:
         )
         
         return server
+    
+    async def _check_for_similar_servers(
+        self,
+        name: str,
+        server_type: ServerType,
+        command: str,
+        args: Optional[List[str]] = None
+    ) -> List[Dict[str, Any]]:
+        """Check for servers with similar functionality."""
+        try:
+            from mcp_manager.core.discovery import ServerDiscovery
+            from mcp_manager.core.models import DiscoveryResult
+            
+            # Create a mock DiscoveryResult for the new server
+            target_result = DiscoveryResult(
+                name=name,
+                package=name,  # Use name as package for simplicity
+                version="unknown",
+                description="",
+                server_type=server_type,
+                install_command=command,
+                install_args=args or []
+            )
+            
+            # Get existing servers
+            existing_servers = await self.list_servers()
+            
+            # Use discovery service to detect similar servers
+            discovery = ServerDiscovery()
+            similar_servers = discovery.detect_similar_servers(target_result, existing_servers)
+            
+            return similar_servers
+            
+        except Exception as e:
+            logger.debug(f"Failed to check for similar servers: {e}")
+            return []
     
     async def remove_server(
         self,
