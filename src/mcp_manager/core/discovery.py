@@ -855,22 +855,22 @@ class ServerDiscovery:
         # Remove common prefixes and suffixes
         name = server_name.lower()
         
+        # Remove common suffixes first (more specific patterns)
+        suffixes_to_remove = ['-mcp', '_mcp', '-server', '_server', '-client', '_client']
+        for suffix in suffixes_to_remove:
+            if name.endswith(suffix):
+                name = name[:-len(suffix)]
+                break
+        
         # Remove common prefixes
         prefixes_to_remove = [
             'mcp-', 'mcp_', '@modelcontextprotocol/', '@', 'dd-', 'docker-',
-            'official-', 'playwright-', 'npm-', 'node-'
+            'official-', 'npm-', 'node-'
         ]
         
         for prefix in prefixes_to_remove:
             if name.startswith(prefix):
                 name = name[len(prefix):]
-                break
-        
-        # Remove common suffixes
-        suffixes_to_remove = ['-mcp', '_mcp', '-server', '_server', '-client', '_client']
-        for suffix in suffixes_to_remove:
-            if name.endswith(suffix):
-                name = name[:-len(suffix)]
                 break
         
         return name

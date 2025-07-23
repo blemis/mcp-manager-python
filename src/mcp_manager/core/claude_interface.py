@@ -132,10 +132,19 @@ class ClaudeInterface:
                     name = parts[0].strip()
                     command_and_args = parts[1].strip()
                     
-                    # Split command and args
+                    # Split command and args, filtering out status indicators
                     cmd_parts = command_and_args.split()
                     command = cmd_parts[0] if cmd_parts else ""
-                    args = cmd_parts[1:] if len(cmd_parts) > 1 else []
+                    
+                    # Filter out status indicators like "-", "✓", "Connected", "Disconnected"
+                    status_indicators = {"-", "✓", "Connected", "Disconnected", "Failed", "Error"}
+                    args = []
+                    for part in cmd_parts[1:]:
+                        if part not in status_indicators:
+                            args.append(part)
+                        else:
+                            # Stop processing once we hit a status indicator
+                            break
                     
                     # Determine server type
                     server_type = self._determine_server_type(command)
