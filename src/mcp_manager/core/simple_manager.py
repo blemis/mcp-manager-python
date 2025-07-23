@@ -72,22 +72,33 @@ class SimpleMCPManager:
                 logger.warning(f"Failed to initialize analytics service: {e}")
                 self.analytics_enabled = False
         
-        # Initialize AI-powered tool recommender (optional)
+        # Initialize AI-powered tool recommender (lazy loading)
         self.tool_recommender = None
+        self._ai_recommender_initialized = False
         self.ai_recommendations_enabled = os.getenv("MCP_AI_RECOMMENDATIONS", "true").lower() == "true"
-        
-        if self.ai_recommendations_enabled:
-            try:
-                from mcp_manager.ai.tool_recommender import ToolRecommendationService
-                self.tool_recommender = ToolRecommendationService(self.tool_registry)
-                logger.info("AI-powered tool recommendations enabled")
-            except Exception as e:
-                logger.warning(f"Failed to initialize AI tool recommender: {e}")
-                self.ai_recommendations_enabled = False
         
         # Configuration from environment
         self.auto_discover_tools = os.getenv("MCP_AUTO_DISCOVER_TOOLS", "true").lower() == "true"
         self.background_discovery = os.getenv("MCP_BACKGROUND_DISCOVERY", "false").lower() == "true"
+    
+    def _initialize_ai_recommender(self) -> None:
+        """Initialize AI recommender only when needed (lazy loading)."""
+        if self._ai_recommender_initialized:
+            return
+        
+        self._ai_recommender_initialized = True
+        
+        if not self.ai_recommendations_enabled:
+            logger.debug("AI recommendations disabled via configuration")
+            return
+        
+        try:
+            from mcp_manager.ai.tool_recommender import ToolRecommendationService
+            self.tool_recommender = ToolRecommendationService(self.tool_registry)
+            logger.info("AI-powered tool recommendations enabled")
+        except Exception as e:
+            logger.warning(f"Failed to initialize AI tool recommender: {e}")
+            self.ai_recommendations_enabled = False
         
         logger.info("SimpleMCPManager initialized with tool registry", extra={
             "auto_discover_tools": self.auto_discover_tools,
@@ -3721,6 +3732,9 @@ class SimpleMCPManager:
         Returns:
             Dictionary with AI-generated tool recommendations
         """
+        # Initialize AI recommender only when needed
+        self._initialize_ai_recommender()
+        
         if not self.ai_recommendations_enabled or not self.tool_recommender:
             return {
                 "status": "disabled",
@@ -3806,6 +3820,9 @@ class SimpleMCPManager:
         Returns:
             Dictionary with contextual tool suggestions
         """
+        # Initialize AI recommender only when needed
+        self._initialize_ai_recommender()
+        
         if not self.ai_recommendations_enabled or not self.tool_recommender:
             return {
                 "status": "disabled",
