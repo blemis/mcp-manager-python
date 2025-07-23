@@ -269,3 +269,112 @@ class ToolUsageAnalytics(BaseModel):
         if v < 0:
             raise ValueError("Response time must be non-negative")
         return v
+
+
+class RecommendationAnalytics(BaseModel):
+    """Analytics for AI-powered tool recommendations."""
+    
+    id: Optional[int] = Field(default=None, description="Database ID")
+    session_id: str = Field(description="Recommendation session ID")
+    user_query: str = Field(description="Original user query")
+    query_category: Optional[str] = Field(default=None, description="Inferred query category")
+    recommendations_count: int = Field(description="Number of recommendations provided")
+    llm_provider: str = Field(description="LLM provider used")
+    model_used: str = Field(description="Specific model used")
+    processing_time_ms: int = Field(description="Total processing time")
+    tools_analyzed: int = Field(description="Number of tools analyzed")
+    user_selected_tool: Optional[str] = Field(default=None, description="Tool user actually selected")
+    user_satisfaction_score: Optional[float] = Field(default=None, description="User satisfaction (0-1)")
+    timestamp: datetime = Field(default_factory=datetime.utcnow, description="Recommendation timestamp")
+    context_data: Dict[str, Any] = Field(default_factory=dict, description="Request context")
+    
+    @field_validator('user_satisfaction_score')
+    @classmethod
+    def validate_satisfaction(cls, v: Optional[float]) -> Optional[float]:
+        """Validate satisfaction score is between 0.0 and 1.0."""
+        if v is not None and not 0.0 <= v <= 1.0:
+            raise ValueError("Satisfaction score must be between 0.0 and 1.0")
+        return v
+
+
+class ServerAnalytics(BaseModel):
+    """Analytics for MCP server performance and usage."""
+    
+    id: Optional[int] = Field(default=None, description="Database ID")
+    server_name: str = Field(description="Server name")
+    server_type: ServerType = Field(description="Server type")
+    date: datetime = Field(description="Analytics date (daily aggregation)")
+    total_tools: int = Field(default=0, description="Total tools available")
+    active_tools: int = Field(default=0, description="Tools used at least once")
+    total_requests: int = Field(default=0, description="Total tool requests")
+    successful_requests: int = Field(default=0, description="Successful requests")
+    average_response_time_ms: float = Field(default=0.0, description="Average response time")
+    peak_concurrent_usage: int = Field(default=0, description="Peak concurrent usage")
+    uptime_percentage: float = Field(default=100.0, description="Server uptime percentage")
+    error_rate: float = Field(default=0.0, description="Error rate (0-1)")
+    discovery_success_rate: float = Field(default=1.0, description="Tool discovery success rate")
+    last_updated: datetime = Field(default_factory=datetime.utcnow, description="Last update timestamp")
+    
+    @field_validator('uptime_percentage', 'error_rate', 'discovery_success_rate')
+    @classmethod
+    def validate_percentage(cls, v: float) -> float:
+        """Validate percentage values are between 0.0 and 1.0."""
+        if not 0.0 <= v <= 1.0:
+            raise ValueError("Percentage values must be between 0.0 and 1.0")
+        return v
+
+
+class QueryPattern(BaseModel):
+    """Analytics for user query patterns and trends."""
+    
+    id: Optional[int] = Field(default=None, description="Database ID")
+    query_hash: str = Field(description="Hashed query for privacy")
+    query_category: str = Field(description="Categorized query type")
+    query_keywords: List[str] = Field(default_factory=list, description="Extracted keywords")
+    frequency: int = Field(default=1, description="Query frequency count")
+    success_rate: float = Field(default=0.0, description="Query success rate")
+    average_recommendation_count: float = Field(default=0.0, description="Average recommendations provided")
+    most_selected_tools: List[str] = Field(default_factory=list, description="Most commonly selected tools")
+    first_seen: datetime = Field(default_factory=datetime.utcnow, description="First occurrence")
+    last_seen: datetime = Field(default_factory=datetime.utcnow, description="Last occurrence")
+    trending_score: float = Field(default=0.0, description="Trending score based on recent activity")
+    
+    @field_validator('success_rate')
+    @classmethod
+    def validate_success_rate(cls, v: float) -> float:
+        """Validate success rate is between 0.0 and 1.0."""
+        if not 0.0 <= v <= 1.0:
+            raise ValueError("Success rate must be between 0.0 and 1.0")
+        return v
+
+
+class APIUsageAnalytics(BaseModel):
+    """Analytics for API endpoint usage and performance."""
+    
+    id: Optional[int] = Field(default=None, description="Database ID")
+    endpoint: str = Field(description="API endpoint path")
+    method: str = Field(description="HTTP method")
+    date: datetime = Field(description="Usage date (hourly aggregation)")
+    request_count: int = Field(default=0, description="Number of requests")
+    success_count: int = Field(default=0, description="Successful requests")
+    error_count: int = Field(default=0, description="Error requests")
+    average_response_time_ms: float = Field(default=0.0, description="Average response time")
+    max_response_time_ms: int = Field(default=0, description="Maximum response time")
+    data_transferred_bytes: int = Field(default=0, description="Total data transferred")
+    unique_clients: int = Field(default=0, description="Number of unique client IPs")
+    rate_limited_requests: int = Field(default=0, description="Rate limited requests")
+    last_updated: datetime = Field(default_factory=datetime.utcnow, description="Last update timestamp")
+    
+    @property
+    def success_rate(self) -> float:
+        """Calculate success rate."""
+        if self.request_count == 0:
+            return 0.0
+        return self.success_count / self.request_count
+    
+    @property
+    def error_rate(self) -> float:
+        """Calculate error rate.""" 
+        if self.request_count == 0:
+            return 0.0
+        return self.error_count / self.request_count
