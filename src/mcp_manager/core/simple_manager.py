@@ -187,17 +187,12 @@ class SimpleMCPManager:
         if check_duplicates:
             similar_servers = await self._check_for_similar_servers(name, server_type, command, args)
             if similar_servers:
-                logger.warning(f"Found {len(similar_servers)} similar server(s) to '{name}':")
-                for similar_info in similar_servers:
-                    similar_server = similar_info["server"]
-                    score = similar_info["similarity_score"]
-                    reasons = similar_info["reasons"]
-                    server_type_str = similar_server.server_type.value if hasattr(similar_server.server_type, 'value') else str(similar_server.server_type)
-                    logger.warning(f"  - {similar_server.name} ({server_type_str}) - {score}% similarity")
-                    logger.warning(f"    Reasons: {', '.join(reasons)}")
-                
-                # For now, just log warnings. CLI can decide whether to prompt user.
-                # This ensures duplicate detection works for all add_server calls.
+                # Raise exception with similar servers info for CLI to handle
+                from mcp_manager.core.exceptions import DuplicateServerError
+                raise DuplicateServerError(
+                    f"Found {len(similar_servers)} similar server(s) to '{name}'",
+                    similar_servers=similar_servers
+                )
         
         # Handle Docker Desktop servers specially
         if server_type == ServerType.DOCKER_DESKTOP:

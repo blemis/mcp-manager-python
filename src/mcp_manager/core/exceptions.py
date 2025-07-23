@@ -89,3 +89,26 @@ class NetworkError(MCPManagerError):
 class TimeoutError(MCPManagerError):
     """Operation timeout errors."""
     pass
+
+
+class DuplicateServerError(MCPManagerError):
+    """Error raised when similar servers are detected during installation."""
+    
+    def __init__(
+        self,
+        message: str,
+        similar_servers: Optional[list] = None,
+        error_code: Optional[str] = None,
+        details: Optional[Dict[str, Any]] = None,
+    ):
+        """
+        Initialize DuplicateServerError.
+        
+        Args:
+            message: Error message
+            similar_servers: List of similar server information
+            error_code: Optional error code
+            details: Optional additional details
+        """
+        super().__init__(message, error_code, details)
+        self.similar_servers = similar_servers or []

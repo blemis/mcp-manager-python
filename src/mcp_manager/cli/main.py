@@ -17,7 +17,7 @@ from rich.text import Text
 
 from mcp_manager import __version__
 from mcp_manager.core.discovery import ServerDiscovery
-from mcp_manager.core.exceptions import MCPManagerError
+from mcp_manager.core.exceptions import MCPManagerError, DuplicateServerError
 from mcp_manager.core.simple_manager import SimpleMCPManager
 from mcp_manager.core.models import ServerScope, ServerType
 from mcp_manager.core.change_detector import detect_external_changes, ChangeDetector
@@ -575,6 +575,42 @@ def add(
                 check_duplicates=True
             )
             console.print(f"✅ Successfully added server: {name}")
+            
+        except DuplicateServerError as e:
+            # Handle duplicate server detection
+            console.print(f"[yellow]⚠[/yellow] {e.message}")
+            console.print(f"[yellow]Found {len(e.similar_servers)} similar server(s) that might provide the same functionality:[/yellow]")
+            
+            for similar_info in e.similar_servers:
+                similar_server = similar_info["server"]
+                score = similar_info["similarity_score"]
+                reasons = similar_info["reasons"]
+                recommendation = similar_info["recommendation"]
+                server_type_str = similar_server.server_type.value if hasattr(similar_server.server_type, 'value') else str(similar_server.server_type)
+                
+                console.print(f"  • [cyan]{similar_server.name}[/cyan] ({server_type_str}) - Similarity: {score}%")
+                console.print(f"    [dim]Reasons: {', '.join(reasons)}[/dim]")
+                console.print(f"    [dim]Recommendation: {recommendation}[/dim]")
+            
+            console.print(f"\n[yellow]Installing multiple servers for the same functionality may cause conflicts.[/yellow]")
+            from rich.prompt import Confirm
+            try:
+                if Confirm.ask("Continue anyway?"):
+                    # Retry without duplicate checking
+                    server = await manager.add_server(
+                        name=name,
+                        server_type=detected_server_type,
+                        command=command,
+                        args=args,
+                        check_duplicates=False
+                    )
+                    console.print(f"✅ Successfully added server: {name}")
+                else:
+                    console.print("[dim]Installation cancelled[/dim]")
+            except (EOFError, KeyboardInterrupt):
+                # Handle non-interactive terminals
+                console.print("[dim]Installation cancelled (non-interactive terminal)[/dim]")
+                
         except Exception as e:
             console.print(f"❌ Failed to add server {name}: {e}")
     
@@ -841,6 +877,7 @@ def install_package(install_id: str):
                 command=target_result.install_command,
                 description=target_result.description,
                 args=install_args,
+                check_duplicates=False  # Already handled above
             )
             console.print(f"[green]✓[/green] Installed server: {server.name}")
             console.print("[dim]Server is now active in Claude Code![/dim]")
@@ -892,16 +929,54 @@ def install(name: str):
             console.print(f"[yellow]ℹ[/yellow] Using closest match: {exact_match.name}")
         
         # Install the server
-        server = await manager.add_server(
-            name=exact_match.name,
-            server_type=exact_match.server_type,
-            command=exact_match.install_command,
-            description=exact_match.description,
-        )
-        
-        console.print(f"[green]✓[/green] Installed server: {server.name}")
-        console.print(f"[dim]Command: {exact_match.install_command}[/dim]")
-        console.print("\n[green]✓[/green] Server is now active in Claude Code!")
+        try:
+            server = await manager.add_server(
+                name=exact_match.name,
+                server_type=exact_match.server_type,
+                command=exact_match.install_command,
+                description=exact_match.description,
+                check_duplicates=True  # Enable duplicate checking for fallback path
+            )
+            
+            console.print(f"[green]✓[/green] Installed server: {server.name}")
+            console.print(f"[dim]Command: {exact_match.install_command}[/dim]")
+            console.print("\n[green]✓[/green] Server is now active in Claude Code!")
+            
+        except DuplicateServerError as e:
+            # Handle duplicate server detection
+            console.print(f"[yellow]⚠[/yellow] {e.message}")
+            console.print(f"[yellow]Found {len(e.similar_servers)} similar server(s) that might provide the same functionality:[/yellow]")
+            
+            for similar_info in e.similar_servers:
+                similar_server = similar_info["server"]
+                score = similar_info["similarity_score"]
+                reasons = similar_info["reasons"]
+                recommendation = similar_info["recommendation"]
+                server_type_str = similar_server.server_type.value if hasattr(similar_server.server_type, 'value') else str(similar_server.server_type)
+                
+                console.print(f"  • [cyan]{similar_server.name}[/cyan] ({server_type_str}) - Similarity: {score}%")
+                console.print(f"    [dim]Reasons: {', '.join(reasons)}[/dim]")
+                console.print(f"    [dim]Recommendation: {recommendation}[/dim]")
+            
+            console.print(f"\n[yellow]Installing multiple servers for the same functionality may cause conflicts.[/yellow]")
+            from rich.prompt import Confirm
+            try:
+                if Confirm.ask("Continue anyway?"):
+                    # Retry without duplicate checking
+                    server = await manager.add_server(
+                        name=exact_match.name,
+                        server_type=exact_match.server_type,
+                        command=exact_match.install_command,
+                        description=exact_match.description,
+                        check_duplicates=False
+                    )
+                    console.print(f"[green]✓[/green] Installed server: {server.name}")
+                    console.print(f"[dim]Command: {exact_match.install_command}[/dim]")
+                    console.print("\n[green]✓[/green] Server is now active in Claude Code!")
+                else:
+                    console.print("[dim]Installation cancelled[/dim]")
+            except (EOFError, KeyboardInterrupt):
+                console.print("[dim]Installation cancelled (non-interactive terminal)[/dim]")
     
     asyncio.run(find_and_install())
 
