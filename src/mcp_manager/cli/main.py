@@ -781,18 +781,31 @@ def install_package(install_id: str):
                 console.print("[dim]Installation cancelled[/dim]")
                 return
         
-        # TODO: Add similar server detection
-        # Check for similar servers that might provide the same functionality  
-        similar_servers = []  # Placeholder for now
-        if similar_servers:
-            console.print(f"[yellow]⚠[/yellow] Found similar servers that might provide the same functionality:")
-            for similar in similar_servers:
-                console.print(f"  • {similar.name} ({similar.server_type.value}) - {similar.description or 'No description'}")
-            console.print(f"\n[yellow]Installing multiple servers for the same functionality may cause conflicts.[/yellow]")
-            from rich.prompt import Confirm
-            if not Confirm.ask("Continue anyway?"):
-                console.print("[dim]Installation cancelled[/dim]")
-                return
+        # Check for similar servers that might provide the same functionality
+        try:
+            existing_servers = await manager.list_servers()
+            similar_servers = discovery.detect_similar_servers(target_result, existing_servers)
+            
+            if similar_servers:
+                console.print(f"[yellow]⚠[/yellow] Found {len(similar_servers)} similar server(s) that might provide the same functionality:")
+                for similar_info in similar_servers:
+                    similar_server = similar_info["server"]
+                    score = similar_info["similarity_score"]
+                    reasons = similar_info["reasons"]
+                    recommendation = similar_info["recommendation"]
+                    
+                    console.print(f"  • [cyan]{similar_server.name}[/cyan] ({similar_server.server_type.value}) - Similarity: {score}%")
+                    console.print(f"    [dim]Reasons: {', '.join(reasons)}[/dim]")
+                    console.print(f"    [dim]Recommendation: {recommendation}[/dim]")
+                
+                console.print(f"\n[yellow]Installing multiple servers for the same functionality may cause conflicts.[/yellow]")
+                from rich.prompt import Confirm
+                if not Confirm.ask("Continue anyway?"):
+                    console.print("[dim]Installation cancelled[/dim]")
+                    return
+        except Exception as e:
+            logger.debug(f"Failed to check for similar servers: {e}")
+            # Continue with installation even if similarity check fails
         
         # Check if server needs additional configuration
         install_args = target_result.install_args or []
