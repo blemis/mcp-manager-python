@@ -55,31 +55,73 @@ class SimpleMCPManager:
         """Initialize the manager."""
         self.claude = ClaudeInterface()
         
+        # Lazy initialization - only create these when needed
+        self._tool_registry = None
+        self._tool_discovery = None
+        self._analytics_service = None
+        self._services_initialized = False
+        
+        # Initialize AI-powered tool recommender (lazy loading)
+        self.tool_recommender = None
+        self._ai_recommender_initialized = False
+        
+        # Configuration from environment
+        self.analytics_enabled = os.getenv("MCP_ANALYTICS_ENABLED", "true").lower() == "true"
+        self.ai_recommendations_enabled = os.getenv("MCP_AI_RECOMMENDATIONS", "true").lower() == "true"
+        self.auto_discover_tools = os.getenv("MCP_AUTO_DISCOVER_TOOLS", "true").lower() == "true"
+        self.background_discovery = os.getenv("MCP_BACKGROUND_DISCOVERY", "false").lower() == "true"
+        
+        logger.debug("SimpleMCPManager initialized (services will be loaded on demand)")
+    
+    def _initialize_services(self) -> None:
+        """Initialize tool registry, discovery, and analytics services when needed."""
+        if self._services_initialized:
+            return
+        
+        self._services_initialized = True
+        
+        logger.debug("Initializing tool registry and discovery services")
+        
         # Initialize tool registry and discovery services
-        self.tool_registry = ToolRegistryService()
-        self.tool_discovery = ToolDiscoveryAggregator()
+        self._tool_registry = ToolRegistryService()
+        self._tool_discovery = ToolDiscoveryAggregator()
         
         # Initialize usage analytics service
-        self.analytics_enabled = os.getenv("MCP_ANALYTICS_ENABLED", "true").lower() == "true"
-        self.analytics_service = None
-        
         if self.analytics_enabled:
             try:
                 from mcp_manager.analytics import UsageAnalyticsService
-                self.analytics_service = UsageAnalyticsService()
+                self._analytics_service = UsageAnalyticsService()
                 logger.info("Usage analytics service enabled")
             except Exception as e:
                 logger.warning(f"Failed to initialize analytics service: {e}")
                 self.analytics_enabled = False
         
-        # Initialize AI-powered tool recommender (lazy loading)
-        self.tool_recommender = None
-        self._ai_recommender_initialized = False
-        self.ai_recommendations_enabled = os.getenv("MCP_AI_RECOMMENDATIONS", "true").lower() == "true"
-        
-        # Configuration from environment
-        self.auto_discover_tools = os.getenv("MCP_AUTO_DISCOVER_TOOLS", "true").lower() == "true"
-        self.background_discovery = os.getenv("MCP_BACKGROUND_DISCOVERY", "false").lower() == "true"
+        logger.info("Tool registry and discovery services initialized", extra={
+            "auto_discover_tools": self.auto_discover_tools,
+            "background_discovery": self.background_discovery,
+            "analytics_enabled": self.analytics_enabled
+        })
+    
+    @property
+    def tool_registry(self) -> ToolRegistryService:
+        """Get tool registry service (lazy initialization)."""
+        if self._tool_registry is None:
+            self._initialize_services()
+        return self._tool_registry
+    
+    @property
+    def tool_discovery(self) -> ToolDiscoveryAggregator:
+        """Get tool discovery service (lazy initialization)."""
+        if self._tool_discovery is None:
+            self._initialize_services()
+        return self._tool_discovery
+    
+    @property
+    def analytics_service(self) -> Optional[Any]:
+        """Get analytics service (lazy initialization)."""
+        if not self._services_initialized:
+            self._initialize_services()
+        return self._analytics_service
     
     def _initialize_ai_recommender(self) -> None:
         """Initialize AI recommender only when needed (lazy loading)."""
@@ -99,13 +141,6 @@ class SimpleMCPManager:
         except Exception as e:
             logger.warning(f"Failed to initialize AI tool recommender: {e}")
             self.ai_recommendations_enabled = False
-        
-        logger.info("SimpleMCPManager initialized with tool registry", extra={
-            "auto_discover_tools": self.auto_discover_tools,
-            "background_discovery": self.background_discovery,
-            "ai_recommendations": self.ai_recommendations_enabled,
-            "analytics_enabled": self.analytics_enabled
-        })
     
     @classmethod
     def _mark_operation_start(cls):
@@ -123,6 +158,15 @@ class SimpleMCPManager:
             if not is_safe:
                 logger.debug(f"Sync blocked: only {time_since_operation:.1f}s since last operation (need {cls._operation_cooldown}s)")
             return is_safe
+    
+    def list_servers_fast(self) -> List[Server]:
+        """
+        Ultra-fast server listing using memory cache with background sync.
+        
+        Returns:
+            Cached list of servers (sub-second response time)
+        """
+        return self.claude.list_servers_cached()
     
     async def list_servers(self) -> List[Server]:
         """
@@ -161,7 +205,7 @@ class SimpleMCPManager:
             else:
                 result.append(server)
                 
-                # Auto-populate catalog for non-docker-gateway servers too
+                # Auto-populate catalog for servers that aren't tracked yet
                 catalog = await self._get_server_catalog()
                 if server.name not in catalog["servers"]:
                     await self._add_server_to_catalog(
@@ -3584,22 +3628,22 @@ class SimpleMCPManager:
             # Discover tools using the aggregator
             result = await self.tool_discovery.discover_from_server(server)
             
-            if result.success and result.tools_discovered:
+            if result.success and result.tools:
                 # Register each discovered tool
                 registered_count = 0
-                for tool in result.tools_discovered:
+                for tool in result.tools:
                     if self.tool_registry.register_tool(tool):
                         registered_count += 1
                 
                 logger.info(f"Registered {registered_count} tools for server '{server.name}'", extra={
                     "server_name": server.name,
                     "server_type": server.server_type.value,
-                    "tools_discovered": len(result.tools_discovered),
+                    "tools_discovered": len(result.tools),
                     "tools_registered": registered_count,
-                    "discovery_duration": result.discovery_duration_seconds
+                    "discovery_time_ms": result.discovery_time_ms
                 })
                 
-            elif result.success and not result.tools_discovered:
+            elif result.success and not result.tools:
                 logger.debug(f"No tools discovered for server '{server.name}' (server may not support tool discovery)")
                 
             else:

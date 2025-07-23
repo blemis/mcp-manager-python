@@ -5,10 +5,13 @@ This module provides a Python interface to Claude Code's internal MCP state
 via the claude mcp CLI commands.
 """
 
+import asyncio
 import json
 import os
 import shutil
 import subprocess
+import threading
+import time
 from typing import Dict, List, Optional, Tuple
 from pathlib import Path
 
@@ -20,13 +23,129 @@ logger = get_logger(__name__)
 
 
 class ClaudeInterface:
-    """Interface to Claude Code's MCP management."""
+    """Interface to Claude Code's MCP management with memory cache and background sync."""
     
     def __init__(self):
-        """Initialize Claude interface."""
+        """Initialize Claude interface with caching."""
         self.claude_path = self._discover_claude_path()
         self.docker_path = self._discover_docker_path()
         self._check_claude_availability()
+        
+        # Memory cache for server list
+        self._server_cache: Optional[List[Server]] = None
+        self._cache_timestamp: float = 0
+        self._cache_ttl: float = 30.0  # Cache TTL in seconds
+        self._cache_lock = threading.RLock()
+        
+        # Background sync settings
+        self._sync_interval: float = 60.0  # Background sync every 60 seconds
+        self._sync_thread: Optional[threading.Thread] = None
+        self._sync_stop_event = threading.Event()
+        self._sync_enabled = os.getenv("MCP_CACHE_SYNC_ENABLED", "true").lower() == "true"
+        
+        # File modification tracking for cache invalidation
+        self._config_files = [
+            Path.home() / ".config" / "claude-code" / "mcp-servers.json",
+            Path.cwd() / ".mcp.json",
+            self.get_config_path()
+        ]
+        self._last_modified_times: Dict[str, float] = {}
+        
+        if self._sync_enabled:
+            self._start_background_sync()
+        
+        logger.debug("ClaudeInterface initialized with caching", extra={
+            "cache_ttl": self._cache_ttl,
+            "sync_interval": self._sync_interval,
+            "sync_enabled": self._sync_enabled
+        })
+    
+    def __del__(self):
+        """Cleanup background sync thread."""
+        self._stop_background_sync()
+    
+    def _start_background_sync(self):
+        """Start background sync thread."""
+        if self._sync_thread and self._sync_thread.is_alive():
+            return
+        
+        self._sync_stop_event.clear()
+        self._sync_thread = threading.Thread(target=self._background_sync_worker, daemon=True)
+        self._sync_thread.start()
+        logger.debug("Background sync thread started")
+    
+    def _stop_background_sync(self):
+        """Stop background sync thread."""
+        if self._sync_thread and self._sync_thread.is_alive():
+            self._sync_stop_event.set()
+            self._sync_thread.join(timeout=5.0)
+            logger.debug("Background sync thread stopped")
+    
+    def _background_sync_worker(self):
+        """Background worker that syncs cache with database."""
+        while not self._sync_stop_event.wait(self._sync_interval):
+            try:
+                if self._should_refresh_cache():
+                    self._refresh_cache()
+                    
+                # Async database sync (run in thread pool to avoid blocking)
+                asyncio.run_coroutine_threadsafe(
+                    self._sync_to_database(), 
+                    asyncio.get_event_loop() if asyncio.get_event_loop().is_running() else asyncio.new_event_loop()
+                )
+            except Exception as e:
+                logger.warning(f"Background sync error: {e}")
+    
+    def _should_refresh_cache(self) -> bool:
+        """Check if cache should be refreshed based on file modifications."""
+        for config_file in self._config_files:
+            if not config_file.exists():
+                continue
+                
+            try:
+                current_mtime = config_file.stat().st_mtime
+                last_mtime = self._last_modified_times.get(str(config_file), 0)
+                
+                if current_mtime > last_mtime:
+                    self._last_modified_times[str(config_file)] = current_mtime
+                    return True
+            except Exception as e:
+                logger.debug(f"Error checking file modification time for {config_file}: {e}")
+        
+        return False
+    
+    def _refresh_cache(self):
+        """Refresh the server cache."""
+        with self._cache_lock:
+            try:
+                self._server_cache = self._load_servers_from_config()
+                self._cache_timestamp = time.time()
+                logger.debug(f"Cache refreshed with {len(self._server_cache)} servers")
+            except Exception as e:
+                logger.warning(f"Failed to refresh cache: {e}")
+    
+    async def _sync_to_database(self):
+        """Async sync server list to database."""
+        try:
+            # Import here to avoid circular imports
+            from mcp_manager.core.tool_registry import ToolRegistryService
+            
+            with self._cache_lock:
+                servers = self._server_cache.copy() if self._server_cache else []
+            
+            if not servers:
+                return
+            
+            # Update database with current server list
+            registry = ToolRegistryService()
+            for server in servers:
+                # Update server availability in database
+                registry.update_tool_availability(server.name, True)  # Assume enabled if in config
+            
+            logger.debug(f"Synced {len(servers)} servers to database")
+            
+        except Exception as e:
+            logger.warning(f"Database sync failed: {e}")
     
     def get_config_path(self) -> Path:
         """Get the path to Claude's configuration file."""
@@ -103,6 +222,212 @@ class ClaudeInterface:
         
         env["PATH"] = current_path
         return env
+    
+    def list_servers_cached(self) -> List[Server]:
+        """
+        Get servers from memory cache (ultra-fast).
+        
+        Returns:
+            Cached list of servers, refreshed if expired or invalid
+        """
+        with self._cache_lock:
+            current_time = time.time()
+            
+            # Check if cache is valid
+            if (self._server_cache is not None and 
+                current_time - self._cache_timestamp < self._cache_ttl):
+                return self._server_cache.copy()
+            
+            # Cache expired or invalid, refresh
+            self._server_cache = self._load_servers_from_config()
+            self._cache_timestamp = current_time
+            
+            logger.debug(f"Cache miss - loaded {len(self._server_cache)} servers")
+            return self._server_cache.copy()
+    
+    def invalidate_cache(self):
+        """Manually invalidate the cache."""
+        with self._cache_lock:
+            self._server_cache = None
+            self._cache_timestamp = 0
+            logger.debug("Cache manually invalidated")
+    
+    def _load_servers_from_config(self) -> List[Server]:
+        """
+        Fast server listing by reading config files directly.
+        
+        Returns:
+            List of servers from config files without health checks
+        """
+        servers = []
+        
+        # Read user-level config
+        user_config_path = Path.home() / ".config" / "claude-code" / "mcp-servers.json"
+        if user_config_path.exists():
+            try:
+                with open(user_config_path, 'r') as f:
+                    user_config = json.load(f)
+                    mcp_servers = user_config.get("mcpServers", {})
+                    
+                    for name, config in mcp_servers.items():
+                        server = Server(
+                            name=name,
+                            command=config.get("command", ""),
+                            args=config.get("args", []),
+                            env=config.get("env", {}),
+                            server_type=self._infer_server_type(config.get("command", "")),
+                            scope=ServerScope.USER,
+                            description=config.get("description", f"User-level server: {name}")
+                        )
+                        servers.append(server)
+                        
+            except Exception as e:
+                logger.warning(f"Failed to read user config: {e}")
+        
+        # Read project-level config
+        project_config_path = Path.cwd() / ".mcp.json"
+        if project_config_path.exists():
+            try:
+                with open(project_config_path, 'r') as f:
+                    project_config = json.load(f)
+                    mcp_servers = project_config.get("mcpServers", {})
+                    
+                    for name, config in mcp_servers.items():
+                        server = Server(
+                            name=name,
+                            command=config.get("command", ""),
+                            args=config.get("args", []),
+                            env=config.get("env", {}),
+                            server_type=self._infer_server_type(config.get("command", "")),
+                            scope=ServerScope.PROJECT,
+                            description=config.get("description", f"Project-level server: {name}")
+                        )
+                        servers.append(server)
+                        
+            except Exception as e:
+                logger.warning(f"Failed to read project config: {e}")
+        
+        # Read internal state from ~/.claude.json (only MCP sections)
+        claude_config_path = self.get_config_path()
+        if claude_config_path.exists():
+            try:
+                with open(claude_config_path, 'r') as f:
+                    claude_config = json.load(f)
+                    
+                # Look for both project-specific and global MCP servers in internal state
+                current_project = str(Path.cwd())
+                project_configs = claude_config.get("projectConfigs", {})
+                
+                # Check project-specific servers
+                if current_project in project_configs:
+                    project_mcp = project_configs[current_project].get("mcpServers", {})
+                    for name, config in project_mcp.items():
+                        # Skip if already found in config files
+                        if any(s.name == name for s in servers):
+                            continue
+                        
+                        # Handle docker-gateway expansion
+                        if name == "docker-gateway":
+                            docker_servers = self._expand_docker_gateway_from_config(config)
+                            servers.extend(docker_servers)
+                        else:
+                            server = Server(
+                                name=name,
+                                command=config.get("command", ""),
+                                args=config.get("args", []),
+                                env=config.get("env", {}),
+                                server_type=self._infer_server_type(config.get("command", "")),
+                                scope=ServerScope.PROJECT,
+                                description=config.get("description", f"Internal state server: {name}")
+                            )
+                            servers.append(server)
+                
+                # Also check for global user-level servers in internal state
+                global_mcp = claude_config.get("mcpServers", {})
+                for name, config in global_mcp.items():
+                    # Skip if already found
+                    if any(s.name == name for s in servers):
+                        continue
+                    
+                    # Handle docker-gateway expansion
+                    if name == "docker-gateway":
+                        docker_servers = self._expand_docker_gateway_from_config(config)
+                        servers.extend(docker_servers)
+                    else:
+                        server = Server(
+                            name=name,
+                            command=config.get("command", ""),
+                            args=config.get("args", []),
+                            env=config.get("env", {}),
+                            server_type=self._infer_server_type(config.get("command", "")),
+                            scope=ServerScope.USER,
+                            description=config.get("description", f"Global server: {name}")
+                        )
+                        servers.append(server)
+                        
+            except Exception as e:
+                logger.warning(f"Failed to read internal Claude config: {e}")
+        
+        logger.debug(f"Found {len(servers)} servers from config files")
+        return servers
+    
+    def _expand_docker_gateway_from_config(self, gateway_config: Dict) -> List[Server]:
+        """Expand docker-gateway configuration into individual Docker Desktop servers."""
+        servers = []
+        
+        try:
+            command = gateway_config.get("command", "")
+            args = gateway_config.get("args", [])
+            
+            # Look for --servers argument in command or args
+            servers_list = None
+            
+            # Check if servers are in the command string
+            if "--servers" in command:
+                parts = command.split("--servers")
+                if len(parts) > 1:
+                    servers_part = parts[1].strip().split()[0]
+                    servers_list = servers_part.split(",")
+            
+            # Check if servers are in args list
+            elif args and "--servers" in args:
+                servers_idx = args.index("--servers")
+                if servers_idx + 1 < len(args):
+                    servers_list = args[servers_idx + 1].split(",")
+            
+            if servers_list:
+                for server_name in servers_list:
+                    server_name = server_name.strip()
+                    if server_name:
+                        server = Server(
+                            name=server_name,
+                            command="docker",
+                            args=["mcp", "gateway", "run", "--servers", server_name],
+                            env=gateway_config.get("env", {}),
+                            server_type=ServerType.DOCKER_DESKTOP,
+                            scope=ServerScope.USER,
+                            description=f"Docker Desktop MCP server: {server_name}"
+                        )
+                        servers.append(server)
+            
+        except Exception as e:
+            logger.warning(f"Failed to expand docker-gateway: {e}")
+        
+        return servers
+    
+    def _infer_server_type(self, command: str) -> ServerType:
+        """Infer server type from command."""
+        if not command:
+            return ServerType.CUSTOM
+        
+        if command.startswith("npx"):
+            return ServerType.NPM
+        elif command.startswith("docker"):
+            return ServerType.DOCKER
+        elif "docker" in command.lower():
+            return ServerType.DOCKER_DESKTOP
+        else:
+            return ServerType.CUSTOM
     
     def list_servers(self) -> List[Server]:
         """

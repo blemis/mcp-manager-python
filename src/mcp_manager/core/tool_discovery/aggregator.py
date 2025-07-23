@@ -317,3 +317,15 @@ class ToolDiscoveryAggregator:
             "tools_by_server_type": tools_by_type,
             "tools_by_category": category_counts
         }
+    
+    async def discover_from_server(self, server: Server) -> DiscoveryResult:
+        """
+        Discover tools from a single server (public API).
+        
+        Args:
+            server: Server to discover tools from
+            
+        Returns:
+            DiscoveryResult with discovered tools
+        """
+        return await self._discover_server_tools(server)

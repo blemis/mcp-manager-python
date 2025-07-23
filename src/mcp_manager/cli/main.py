@@ -462,8 +462,8 @@ def list_cmd(scope: Optional[str], output_format: str):
     # Parse scope
     scope_filter = ServerScope(scope) if scope else None
     
-    # Get servers
-    servers = asyncio.run(manager.list_servers())
+    # Get servers (use fast method for basic listing)
+    servers = manager.list_servers_fast()
     
     if output_format == "json":
         import json
