@@ -269,6 +269,32 @@ def down(db_path: Path) -> bool:
         return False
 
 
+def run_migration(db_path: Path) -> bool:
+    """
+    Run the analytics tables migration (compatibility function).
+    
+    Args:
+        db_path: Path to SQLite database
+        
+    Returns:
+        True if migration succeeded, False otherwise
+    """
+    return up(db_path)
+
+
+def rollback_migration(db_path: Path) -> bool:
+    """
+    Rollback the analytics tables migration (compatibility function).
+    
+    Args:
+        db_path: Path to SQLite database
+        
+    Returns:
+        True if rollback succeeded, False otherwise
+    """
+    return down(db_path)
+
+
 def get_migration_info() -> Dict[str, Any]:
     """Get migration metadata."""
     return {
