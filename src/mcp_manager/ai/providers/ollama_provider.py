@@ -7,7 +7,7 @@ like Llama 2, Code Llama, Mistral, and other open-source models.
 
 import asyncio
 import json
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import aiohttp
 
