@@ -199,3 +199,73 @@ class SystemInfo(BaseModel):
     def all_dependencies_met(self) -> bool:
         """Check if all required dependencies are available."""
         return self.claude_cli_available
+
+
+class ToolRegistry(BaseModel):
+    """Registry entry for discovered MCP tools."""
+    
+    id: Optional[int] = Field(default=None, description="Database ID")
+    name: str = Field(description="Tool name")
+    canonical_name: str = Field(description="Canonical name (server_name/tool_name)")
+    description: str = Field(default="", description="Tool description")
+    server_name: str = Field(description="Source server name")
+    server_type: ServerType = Field(description="Server type")
+    input_schema: Dict[str, Any] = Field(default_factory=dict, description="Tool input schema")
+    output_schema: Dict[str, Any] = Field(default_factory=dict, description="Tool output schema")
+    categories: List[str] = Field(default_factory=list, description="Tool categories")
+    tags: List[str] = Field(default_factory=list, description="Tool tags")
+    last_discovered: datetime = Field(default_factory=datetime.utcnow, description="Last discovery time")
+    is_available: bool = Field(default=True, description="Tool availability status")
+    usage_count: int = Field(default=0, description="Usage count")
+    success_rate: float = Field(default=0.0, description="Success rate (0.0-1.0)")
+    average_response_time: float = Field(default=0.0, description="Average response time in seconds")
+    created_at: datetime = Field(default_factory=datetime.utcnow, description="Creation timestamp")
+    updated_at: datetime = Field(default_factory=datetime.utcnow, description="Last update timestamp")
+    discovered_by: str = Field(default="manual", description="Discovery method/version")
+    
+    @field_validator('canonical_name')
+    @classmethod
+    def validate_canonical_name(cls, v: str) -> str:
+        """Validate canonical name format."""
+        if '/' not in v:
+            raise ValueError("Canonical name must include server_name/tool_name format")
+        return v
+    
+    @field_validator('success_rate')
+    @classmethod
+    def validate_success_rate(cls, v: float) -> float:
+        """Validate success rate is between 0.0 and 1.0."""
+        if not 0.0 <= v <= 1.0:
+            raise ValueError("Success rate must be between 0.0 and 1.0")
+        return v
+
+
+class ToolUsageAnalytics(BaseModel):
+    """Analytics entry for tool usage tracking."""
+    
+    id: Optional[int] = Field(default=None, description="Database ID") 
+    tool_canonical_name: str = Field(description="Tool canonical name")
+    user_query: str = Field(default="", description="Original user query")
+    selected: bool = Field(description="Whether tool was selected")
+    success: bool = Field(default=False, description="Whether execution was successful")
+    timestamp: datetime = Field(default_factory=datetime.utcnow, description="Usage timestamp")
+    context: Dict[str, Any] = Field(default_factory=dict, description="Usage context")
+    response_time_ms: int = Field(default=0, description="Response time in milliseconds")
+    error_details: Optional[str] = Field(default=None, description="Error details if failed")
+    session_id: Optional[str] = Field(default=None, description="User session identifier")
+    
+    @field_validator('tool_canonical_name')
+    @classmethod
+    def validate_canonical_name(cls, v: str) -> str:
+        """Validate tool canonical name format."""
+        if '/' not in v:
+            raise ValueError("Tool canonical name must include server_name/tool_name format")
+        return v
+    
+    @field_validator('response_time_ms')
+    @classmethod
+    def validate_response_time(cls, v: int) -> int:
+        """Validate response time is non-negative."""
+        if v < 0:
+            raise ValueError("Response time must be non-negative")
+        return v
