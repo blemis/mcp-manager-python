@@ -57,13 +57,27 @@ class SimpleMCPManager:
         self.tool_registry = ToolRegistryService()
         self.tool_discovery = ToolDiscoveryAggregator()
         
+        # Initialize AI-powered tool recommender (optional)
+        self.tool_recommender = None
+        self.ai_recommendations_enabled = os.getenv("MCP_AI_RECOMMENDATIONS", "true").lower() == "true"
+        
+        if self.ai_recommendations_enabled:
+            try:
+                from mcp_manager.ai.tool_recommender import ToolRecommendationService
+                self.tool_recommender = ToolRecommendationService(self.tool_registry)
+                logger.info("AI-powered tool recommendations enabled")
+            except Exception as e:
+                logger.warning(f"Failed to initialize AI tool recommender: {e}")
+                self.ai_recommendations_enabled = False
+        
         # Configuration from environment
         self.auto_discover_tools = os.getenv("MCP_AUTO_DISCOVER_TOOLS", "true").lower() == "true"
         self.background_discovery = os.getenv("MCP_BACKGROUND_DISCOVERY", "false").lower() == "true"
         
         logger.info("SimpleMCPManager initialized with tool registry", extra={
             "auto_discover_tools": self.auto_discover_tools,
-            "background_discovery": self.background_discovery
+            "background_discovery": self.background_discovery,
+            "ai_recommendations": self.ai_recommendations_enabled
         })
     
     @classmethod
@@ -3673,6 +3687,185 @@ class SimpleMCPManager:
             })
         
         return results
+    
+    async def get_ai_tool_recommendations(self, query: str, max_recommendations: int = 5,
+                                        server_filter: Optional[str] = None,
+                                        include_unavailable: bool = False,
+                                        context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Get AI-powered tool recommendations for a user query.
+        
+        Args:
+            query: User query describing what they want to do
+            max_recommendations: Maximum number of recommendations to return
+            server_filter: Optional server name filter
+            include_unavailable: Include unavailable tools in recommendations
+            context: Additional context information
+            
+        Returns:
+            Dictionary with AI-generated tool recommendations
+        """
+        if not self.ai_recommendations_enabled or not self.tool_recommender:
+            return {
+                "status": "disabled",
+                "message": "AI-powered tool recommendations are not available. Check MCP_AI_RECOMMENDATIONS and LLM configuration.",
+                "query": query,
+                "recommendations": []
+            }
+        
+        try:
+            from mcp_manager.ai.tool_recommender import RecommendationRequest
+            
+            request = RecommendationRequest(
+                query=query,
+                context=context,
+                max_recommendations=max_recommendations,
+                include_unavailable=include_unavailable,
+                server_filter=server_filter
+            )
+            
+            response = await self.tool_recommender.get_recommendations(request)
+            
+            # Convert to dictionary format for easier consumption
+            return {
+                "status": "success",
+                "query": response.query,
+                "recommendations": [
+                    {
+                        "canonical_name": rec.canonical_name,
+                        "name": rec.name,
+                        "server_name": rec.server_name,
+                        "server_type": rec.server_type,
+                        "description": rec.description,
+                        "categories": rec.categories,
+                        "tags": rec.tags,
+                        "relevance_score": rec.relevance_score,
+                        "reasoning": rec.reasoning,
+                        "confidence": rec.confidence,
+                        "usage_context": rec.usage_context,
+                        "is_available": rec.is_available,
+                        "usage_count": rec.usage_count,
+                        "success_rate": rec.success_rate
+                    }
+                    for rec in response.recommendations
+                ],
+                "total_tools_analyzed": response.total_tools_analyzed,
+                "processing_time_ms": response.processing_time_ms,
+                "llm_provider": response.llm_provider,
+                "model_used": response.model_used,
+                "metadata": response.metadata
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to get AI tool recommendations: {e}")
+            return {
+                "status": "error",
+                "message": f"Failed to generate recommendations: {e}",
+                "query": query,
+                "recommendations": []
+            }
+    
+    async def suggest_tools_for_task(self, task_description: str, 
+                                   workflow_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Suggest tools for a specific task with workflow context.
+        
+        Args:
+            task_description: Description of the task to accomplish
+            workflow_context: Additional workflow context (current directory, file types, etc.)
+            
+        Returns:
+            Dictionary with contextual tool suggestions
+        """
+        if not self.ai_recommendations_enabled or not self.tool_recommender:
+            return {
+                "status": "disabled",
+                "message": "AI-powered tool suggestions are not available.",
+                "suggestions": []
+            }
+        
+        # Enhance the query with workflow context
+        enhanced_query = task_description
+        if workflow_context:
+            context_parts = []
+            
+            if workflow_context.get("working_directory"):
+                context_parts.append(f"Working in directory: {workflow_context['working_directory']}")
+            
+            if workflow_context.get("file_types"):
+                file_types = ", ".join(workflow_context["file_types"])
+                context_parts.append(f"Working with file types: {file_types}")
+            
+            if workflow_context.get("current_project"):
+                context_parts.append(f"Project context: {workflow_context['current_project']}")
+            
+            if context_parts:
+                enhanced_query = f"{task_description}\n\nContext: {' | '.join(context_parts)}"
+        
+        try:
+            recommendations = await self.get_ai_tool_recommendations(
+                query=enhanced_query,
+                max_recommendations=8,  # More suggestions for workflow planning
+                include_unavailable=False,  # Only suggest available tools
+                context=workflow_context
+            )
+            
+            if recommendations["status"] == "success":
+                # Group recommendations by category for better workflow planning
+                categorized_suggestions = {}
+                for rec in recommendations["recommendations"]:
+                    for category in rec["categories"]:
+                        if category not in categorized_suggestions:
+                            categorized_suggestions[category] = []
+                        categorized_suggestions[category].append(rec)
+                
+                return {
+                    "status": "success",
+                    "task": task_description,
+                    "suggestions_by_category": categorized_suggestions,
+                    "all_suggestions": recommendations["recommendations"],
+                    "workflow_tips": self._generate_workflow_tips(recommendations["recommendations"]),
+                    "metadata": recommendations["metadata"]
+                }
+            else:
+                return recommendations
+                
+        except Exception as e:
+            logger.error(f"Failed to suggest tools for task: {e}")
+            return {
+                "status": "error",
+                "message": f"Failed to generate task suggestions: {e}",
+                "suggestions": []
+            }
+    
+    def _generate_workflow_tips(self, recommendations: List[Dict[str, Any]]) -> List[str]:
+        """Generate workflow tips based on recommended tools."""
+        tips = []
+        
+        # Group tools by server type
+        server_types = {}
+        for rec in recommendations:
+            server_type = rec["server_type"]
+            if server_type not in server_types:
+                server_types[server_type] = []
+            server_types[server_type].append(rec)
+        
+        # Generate tips based on tool combinations
+        if "filesystem" in [rec["name"].lower() for rec in recommendations]:
+            tips.append("💡 Start by using filesystem tools to set up your working directory structure")
+        
+        if "search" in str(recommendations).lower():
+            tips.append("🔍 Use search tools to find relevant files or information before making changes")
+        
+        if len(server_types) > 1:
+            types_list = ", ".join(server_types.keys())
+            tips.append(f"⚡ You can combine tools from different servers: {types_list}")
+        
+        if any(rec["success_rate"] > 0.8 for rec in recommendations):
+            reliable_tools = [rec["name"] for rec in recommendations if rec["success_rate"] > 0.8]
+            tips.append(f"✅ These tools have high success rates: {', '.join(reliable_tools[:3])}")
+        
+        return tips
 
     async def _update_server_status(self, server_name: str, enabled: bool):
         """Update the enabled status of a server in the catalog."""
