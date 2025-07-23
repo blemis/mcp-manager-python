@@ -971,8 +971,10 @@ def install_test_suite(category: List[str], force: bool, dry_run: bool):
                     # Tag server with suite information
                     try:
                         await _tag_server_with_suite(server_name, cat_name, server_info["priority"], install_id)
+                        console.print(f"   🏷️  [dim]Tagged with suite: test-suite-{cat_name}[/dim]")
                     except Exception as e:
-                        logger.debug(f"Failed to tag server {server_name} with suite info: {e}")
+                        console.print(f"   ⚠️  [yellow]Warning: Failed to tag with suite info: {e}[/yellow]")
+                        logger.error(f"Failed to tag server {server_name} with suite info: {e}")
                     
                 except Exception as e:
                     console.print(f"   ❌ [red]Failed[/red]: {server_name} - {e}")
