@@ -873,6 +873,57 @@ class ServerDiscovery:
                 name = name[len(prefix):]
                 break
         
+        # Handle complex names like 'playwright-mcp-ta', 'sqlite-database-server'
+        # Extract the first meaningful component that likely represents the core functionality
+        if '-' in name:
+            parts = name.split('-')
+            # Look for known functionality keywords in the first few parts
+            functionality_keywords = [
+                'playwright', 'sqlite', 'database', 'filesystem', 'file', 'github', 'git',
+                'web', 'browser', 'search', 'notification', 'docker', 'aws', 'cloud',
+                'terraform', 'kubernetes', 'k8s', 'http', 'api', 'oauth', 'auth',
+                'slack', 'discord', 'email', 'calendar', 'pdf', 'image', 'video'
+            ]
+            
+            # Check if the first part is a known functionality
+            if parts[0] in functionality_keywords:
+                name = parts[0]
+            else:
+                # Check if any of the first 2-3 parts match known functionalities
+                for i in range(min(3, len(parts))):
+                    if parts[i] in functionality_keywords:
+                        name = parts[i]
+                        break
+                else:
+                    # If no known functionality found, check for common patterns
+                    # like "mcp-X-Y" where X is likely the core functionality
+                    if len(parts) >= 2 and parts[0] != 'mcp':
+                        name = parts[0]
+        
+        # Handle underscore-separated names similarly
+        if '_' in name and '-' not in name:
+            parts = name.split('_')
+            functionality_keywords = [
+                'playwright', 'sqlite', 'database', 'filesystem', 'file', 'github', 'git',
+                'web', 'browser', 'search', 'notification', 'docker', 'aws', 'cloud',
+                'terraform', 'kubernetes', 'k8s', 'http', 'api', 'oauth', 'auth',
+                'slack', 'discord', 'email', 'calendar', 'pdf', 'image', 'video'
+            ]
+            
+            # Check if the first part is a known functionality
+            if parts[0] in functionality_keywords:
+                name = parts[0]
+            else:
+                # Check if any of the first 2-3 parts match known functionalities
+                for i in range(min(3, len(parts))):
+                    if parts[i] in functionality_keywords:
+                        name = parts[i]
+                        break
+                else:
+                    # If no known functionality found, use the first meaningful part
+                    if len(parts) >= 2 and parts[0] != 'mcp':
+                        name = parts[0]
+        
         return name
     
     def _extract_server_functionality(self, server: DiscoveryResult) -> set:
