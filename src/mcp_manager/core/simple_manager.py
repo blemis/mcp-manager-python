@@ -17,6 +17,8 @@ import time
 from mcp_manager.core.claude_interface import ClaudeInterface
 from mcp_manager.core.exceptions import MCPManagerError
 from mcp_manager.core.models import Server, ServerType, ServerScope, SystemInfo
+from mcp_manager.core.tool_registry import ToolRegistryService
+from mcp_manager.core.tool_discovery import ToolDiscoveryAggregator
 from mcp_manager.utils.config import get_config
 from mcp_manager.utils.logging import get_logger
 
@@ -50,6 +52,19 @@ class SimpleMCPManager:
     def __init__(self):
         """Initialize the manager."""
         self.claude = ClaudeInterface()
+        
+        # Initialize tool registry and discovery services
+        self.tool_registry = ToolRegistryService()
+        self.tool_discovery = ToolDiscoveryAggregator()
+        
+        # Configuration from environment
+        self.auto_discover_tools = os.getenv("MCP_AUTO_DISCOVER_TOOLS", "true").lower() == "true"
+        self.background_discovery = os.getenv("MCP_BACKGROUND_DISCOVERY", "false").lower() == "true"
+        
+        logger.info("SimpleMCPManager initialized with tool registry", extra={
+            "auto_discover_tools": self.auto_discover_tools,
+            "background_discovery": self.background_discovery
+        })
     
     @classmethod
     def _mark_operation_start(cls):
@@ -220,6 +235,10 @@ class SimpleMCPManager:
             env=env or {},
         )
         
+        # Discover and register tools if enabled
+        if self.auto_discover_tools:
+            await self._discover_and_register_server_tools(server)
+        
         return server
     
     async def check_for_similar_servers(
@@ -328,6 +347,11 @@ class SimpleMCPManager:
         # Remove from our catalog if removal was successful
         if success:
             await self._remove_server_from_catalog(name)
+            
+            # Remove tools from registry if enabled
+            if self.auto_discover_tools:
+                removed_count = self.tool_registry.remove_server_tools(name)
+                logger.info(f"Removed {removed_count} tools from registry for server '{name}'")
         
         return success
     
@@ -376,7 +400,7 @@ class SimpleMCPManager:
                     )
                 # Return a mock server object for Docker Desktop servers
                 from .models import Server, ServerScope, ServerType
-                return Server(
+                server = Server(
                     name=name,
                     command="docker",
                     args=["mcp", "run", name],
@@ -385,6 +409,12 @@ class SimpleMCPManager:
                     scope=ServerScope.USER,
                     server_type=ServerType.DOCKER_DESKTOP
                 )
+                
+                # Discover and register tools if enabled
+                if self.auto_discover_tools:
+                    await self._discover_and_register_server_tools(server)
+                
+                return server
             else:
                 raise MCPManagerError(f"Failed to enable Docker Desktop server '{name}'")
         
@@ -417,6 +447,12 @@ class SimpleMCPManager:
             if success:
                 # Mark as disabled in catalog
                 await self._update_server_in_catalog(name, enabled=False)
+                
+                # Update tool availability if enabled
+                if self.auto_discover_tools:
+                    updated_count = self.tool_registry.update_tool_availability(name, False)
+                    logger.info(f"Marked {updated_count} tools as unavailable for server '{name}'")
+                
                 # Return a mock server object for Docker Desktop servers
                 from .models import Server, ServerScope, ServerType
                 return Server(
@@ -440,6 +476,11 @@ class SimpleMCPManager:
         success = self.claude.remove_server(name)
         if not success:
             raise MCPManagerError(f"Failed to disable server '{name}'")
+        
+        # Update tool availability if enabled
+        if self.auto_discover_tools:
+            updated_count = self.tool_registry.update_tool_availability(name, False)
+            logger.info(f"Marked {updated_count} tools as unavailable for server '{name}'")
         
         # Return the server object with enabled=False
         server.enabled = False
@@ -3488,6 +3529,150 @@ class SimpleMCPManager:
                 "failed_servers": [],
                 "total_tools": 0
             }
+
+    async def _discover_and_register_server_tools(self, server: Server) -> None:
+        """
+        Discover and register tools from a server in the tool registry.
+        
+        Args:
+            server: Server to discover tools from
+        """
+        try:
+            logger.debug(f"Starting tool discovery for server: {server.name}")
+            
+            # Discover tools using the aggregator
+            result = await self.tool_discovery.discover_from_server(server)
+            
+            if result.success and result.tools_discovered:
+                # Register each discovered tool
+                registered_count = 0
+                for tool in result.tools_discovered:
+                    if self.tool_registry.register_tool(tool):
+                        registered_count += 1
+                
+                logger.info(f"Registered {registered_count} tools for server '{server.name}'", extra={
+                    "server_name": server.name,
+                    "server_type": server.server_type.value,
+                    "tools_discovered": len(result.tools_discovered),
+                    "tools_registered": registered_count,
+                    "discovery_duration": result.discovery_duration_seconds
+                })
+                
+            elif result.success and not result.tools_discovered:
+                logger.debug(f"No tools discovered for server '{server.name}' (server may not support tool discovery)")
+                
+            else:
+                logger.warning(f"Tool discovery failed for server '{server.name}': {', '.join(result.errors)}")
+                
+        except Exception as e:
+            logger.error(f"Failed to discover tools for server '{server.name}': {e}", extra={
+                "server_name": server.name,
+                "error": str(e),
+                "error_type": type(e).__name__
+            })
+    
+    async def discover_all_tools(self) -> Dict[str, Any]:
+        """
+        Discover and register tools from all enabled servers.
+        
+        Returns:
+            Dictionary with discovery results and statistics
+        """
+        if not self.auto_discover_tools:
+            return {
+                "status": "disabled",
+                "message": "Tool discovery is disabled. Set MCP_AUTO_DISCOVER_TOOLS=true to enable.",
+                "servers_processed": 0,
+                "tools_discovered": 0
+            }
+        
+        try:
+            # Get all enabled servers
+            servers = await self.list_servers()
+            enabled_servers = [s for s in servers if s.enabled]
+            
+            logger.info(f"Starting tool discovery for {len(enabled_servers)} enabled servers")
+            
+            # Discover tools from all servers
+            aggregated_result = await self.tool_discovery.discover_all_tools(enabled_servers)
+            
+            # Register all discovered tools
+            total_registered = 0
+            for server_result in aggregated_result.server_results:
+                for tool in server_result.tools_discovered:
+                    if self.tool_registry.register_tool(tool):
+                        total_registered += 1
+            
+            # Update tool availability for all servers
+            for server in enabled_servers:
+                self.tool_registry.update_tool_availability(server.name, True)
+            
+            return {
+                "status": "success",
+                "servers_processed": len(enabled_servers),
+                "successful_servers": aggregated_result.successful_servers,
+                "failed_servers": aggregated_result.failed_servers,
+                "tools_discovered": aggregated_result.total_tools_discovered,
+                "tools_registered": total_registered,
+                "discovery_duration_seconds": aggregated_result.total_discovery_duration_seconds,
+                "conflicts_detected": len(aggregated_result.conflicts_detected),
+                "warnings": aggregated_result.warnings
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to discover tools from all servers: {e}")
+            return {
+                "status": "error",
+                "error": str(e),
+                "servers_processed": 0,
+                "tools_discovered": 0
+            }
+    
+    def get_tool_registry_stats(self) -> Dict[str, Any]:
+        """
+        Get tool registry statistics.
+        
+        Returns:
+            Dictionary with registry statistics
+        """
+        return self.tool_registry.get_registry_stats()
+    
+    def search_tools(self, query: str, server_name: Optional[str] = None, 
+                    limit: int = 50) -> List[Dict[str, Any]]:
+        """
+        Search for tools in the registry.
+        
+        Args:
+            query: Search query
+            server_name: Optional server name filter
+            limit: Maximum number of results
+            
+        Returns:
+            List of tool information dictionaries
+        """
+        from mcp_manager.core.tool_registry import SearchFilters
+        
+        filters = SearchFilters(server_name=server_name) if server_name else None
+        tool_infos = self.tool_registry.search_tools(query, filters, limit)
+        
+        # Convert to dictionaries for easier consumption
+        results = []
+        for tool_info in tool_infos:
+            results.append({
+                "canonical_name": tool_info.canonical_name,
+                "name": tool_info.name,
+                "description": tool_info.description,
+                "server_name": tool_info.server_name,
+                "server_type": tool_info.server_type.value,
+                "categories": tool_info.categories,
+                "tags": tool_info.tags,
+                "usage_count": tool_info.usage_count,
+                "success_rate": tool_info.success_rate,
+                "is_available": tool_info.is_available,
+                "last_discovered": tool_info.last_discovered.isoformat() if tool_info.last_discovered else None
+            })
+        
+        return results
 
     async def _update_server_status(self, server_name: str, enabled: bool):
         """Update the enabled status of a server in the catalog."""
