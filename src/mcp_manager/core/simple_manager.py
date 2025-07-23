@@ -1745,24 +1745,58 @@ class SimpleMCPManager:
     def _get_docker_server_tools(self, server: 'Server') -> Dict[str, Any]:
         """Get tool information for Docker-based MCP servers."""
         try:
-            # Try to discover tools by running the container with introspection
-            tools = self._discover_mcp_tools_via_stdio(server)
-            
-            # For Docker containers, provide better fallback information
+            # Extract Docker image for reference
             docker_image = self._extract_docker_image_from_args(server.args or [])
             
-            result = {
-                "tool_count": len(tools) if tools else "Unknown",
-                "tools": tools or [],
-                "source": "docker_discovered" if tools else "docker_container_introspection_failed",
+            # Try multiple methods to discover Docker container tools
+            tools = []
+            
+            # Method 1: MCP protocol communication
+            try:
+                tools = self._discover_docker_tools_via_mcp_protocol(server, docker_image)
+                if tools:
+                    return {
+                        "tool_count": len(tools),
+                        "tools": tools,
+                        "source": "docker_mcp_protocol",
+                        "docker_image": docker_image
+                    }
+            except Exception as e:
+                logger.debug(f"Docker MCP protocol discovery failed for {docker_image}: {e}")
+            
+            # Method 2: Legacy stdio discovery (fallback)
+            try:
+                tools = self._discover_mcp_tools_via_stdio(server)
+                if tools:
+                    return {
+                        "tool_count": len(tools),
+                        "tools": tools,
+                        "source": "docker_stdio_discovery",
+                        "docker_image": docker_image
+                    }
+            except Exception as e:
+                logger.debug(f"Docker stdio discovery failed for {docker_image}: {e}")
+            
+            # Method 3: Container inspection (informational fallback)
+            try:
+                fallback_info = self._get_docker_fallback_info(docker_image, server)
+                if fallback_info:
+                    return {
+                        "tool_count": "Unknown",
+                        "tools": [],
+                        "source": "docker_container_inspection_failed",
+                        "docker_image": docker_image,
+                        "fallback_info": fallback_info
+                    }
+            except Exception as e:
+                logger.debug(f"Docker container inspection failed for {docker_image}: {e}")
+            
+            return {
+                "tool_count": "Unknown",
+                "tools": [],
+                "source": "docker_all_methods_failed",
                 "docker_image": docker_image
             }
-            
-            # If tool discovery failed, provide helpful fallback info
-            if not tools:
-                result["fallback_info"] = self._get_docker_fallback_info(docker_image, server)
-            
-            return result
             
         except Exception as e:
             logger.debug(f"Failed to get Docker server tools: {e}")
@@ -2004,6 +2038,98 @@ class SimpleMCPManager:
         except Exception as e:
             logger.debug(f"Failed to get NPM package metadata for {package_name}: {e}")
             return None
+    
+    def _discover_docker_tools_via_mcp_protocol(self, server: 'Server', docker_image: str) -> List[Dict[str, Any]]:
+        """Discover Docker server tools using MCP protocol communication."""
+        import subprocess
+        import json
+        import os
+        
+        try:
+            # Build the command to run the Docker MCP server
+            cmd = ["docker"] + (server.args or [])
+            
+            logger.debug(f"Attempting MCP protocol discovery for Docker server {docker_image}")
+            
+            # MCP initialization handshake
+            init_request = {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": "2024-11-05",
+                    "capabilities": {
+                        "tools": {}
+                    },
+                    "clientInfo": {
+                        "name": "mcp-manager",
+                        "version": "1.0.0"
+                    }
+                }
+            }
+            
+            tools_request = {
+                "jsonrpc": "2.0",
+                "id": 2,
+                "method": "tools/list",
+                "params": {}
+            }
+            
+            # Send both initialization and tools request
+            requests = json.dumps(init_request) + "\n" + json.dumps(tools_request) + "\n"
+            
+            # Run the Docker container with a timeout
+            result = subprocess.run(
+                cmd,
+                input=requests,
+                capture_output=True,
+                text=True,
+                timeout=30,
+                cwd=server.working_dir,
+                env={**os.environ, **(server.env or {})}
+            )
+            
+            if result.returncode != 0:
+                logger.debug(f"Docker MCP server {docker_image} exited with code {result.returncode}: {result.stderr}")
+                return []
+            
+            # Parse responses line by line
+            lines = result.stdout.strip().split('\n')
+            for line in lines:
+                if line.strip():
+                    try:
+                        response = json.loads(line)
+                        # Look for tools/list response
+                        if (response.get("id") == 2 and 
+                            "result" in response and 
+                            "tools" in response["result"]):
+                            
+                            tools_data = response["result"]["tools"]
+                            parsed_tools = []
+                            
+                            for tool in tools_data:
+                                parsed_tools.append({
+                                    "name": tool.get("name", "unknown"),
+                                    "description": tool.get("description", ""),
+                                    "parameters": self._parse_mcp_tool_parameters(tool.get("inputSchema", {})),
+                                    "source": "docker_mcp_protocol"
+                                })
+                            
+                            logger.debug(f"Successfully discovered {len(parsed_tools)} tools for Docker server {docker_image}")
+                            return parsed_tools
+                            
+                    except json.JSONDecodeError:
+                        continue
+            
+            logger.debug(f"No valid MCP tools response found for Docker server {docker_image}")
+            return []
+            
+        except subprocess.TimeoutExpired:
+            logger.debug(f"Timeout while discovering tools for Docker server {docker_image}")
+            return []
+        except Exception as e:
+            logger.debug(f"Failed to discover Docker tools via MCP protocol for {docker_image}: {e}")
+            return []
     
     async def _enable_docker_desktop_server_simple(self, name: str) -> bool:
         """Enable a Docker Desktop MCP server (simplified version for enable_server)."""
