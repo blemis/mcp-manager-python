@@ -280,17 +280,350 @@ class AIToolAdvisor:
 - `src/mcp_manager/api/middleware/logging.py` - Request/response logging
 - `src/mcp_manager/api/middleware/auth.py` - Authentication middleware
 
-### Phase 4: MCP Proxy Mode (Future Enhancement)
+### Phase 4: Optional MCP Proxy Mode (Configurable Enhancement)
 **Timeline: 4-6 weeks (Future Release)**
 
-#### 4.1 MCP Proxy Server (Modular Proxy)
+**Core Principle**: Proxy mode is completely optional and configurable. Users can operate in:
+1. **Direct Mode** (Default): Current behavior - Claude Code connects directly to individual MCP servers
+2. **Proxy Mode** (Optional): Claude Code connects to MCP Manager's unified proxy endpoint
+
+#### 4.1 Proxy Mode Configuration System
 **Files to Create:**
-- `src/mcp_manager/proxy/` - Proxy module directory
-- `src/mcp_manager/proxy/server.py` - MCP proxy server
-- `src/mcp_manager/proxy/router.py` - Request routing logic
-- `src/mcp_manager/proxy/auth.py` - Proxy authentication
-- `src/mcp_manager/proxy/load_balancer.py` - Load balancing logic
-- `src/mcp_manager/proxy/cache.py` - Response caching
+- `src/mcp_manager/core/config/proxy_config.py` - Proxy-specific configuration
+- `src/mcp_manager/core/modes.py` - Operation mode management
+
+**Proxy Configuration Structure:**
+```python
+class ProxyModeConfig(BaseModel):
+    # Core proxy settings
+    enabled: bool = Field(default_factory=lambda: os.getenv("MCP_PROXY_MODE", "false").lower() == "true")
+    port: int = Field(default_factory=lambda: int(os.getenv("MCP_PROXY_PORT", "3000")))
+    host: str = Field(default_factory=lambda: os.getenv("MCP_PROXY_HOST", "localhost"))
+    
+    # Authentication
+    enable_auth: bool = Field(default_factory=lambda: os.getenv("MCP_PROXY_AUTH", "false").lower() == "true")
+    auth_token: Optional[str] = Field(default_factory=lambda: os.getenv("MCP_PROXY_TOKEN"))
+    allowed_clients: List[str] = Field(default_factory=list)
+    
+    # Performance settings
+    enable_caching: bool = Field(default_factory=lambda: os.getenv("MCP_PROXY_CACHE", "true").lower() == "true")
+    cache_ttl_seconds: int = Field(default_factory=lambda: int(os.getenv("MCP_PROXY_CACHE_TTL", "300")))
+    max_concurrent_requests: int = Field(default_factory=lambda: int(os.getenv("MCP_PROXY_MAX_CONCURRENT", "50")))
+    request_timeout_seconds: int = Field(default_factory=lambda: int(os.getenv("MCP_PROXY_TIMEOUT", "30")))
+    
+    # Load balancing for identical servers
+    enable_load_balancing: bool = Field(default_factory=lambda: os.getenv("MCP_PROXY_LOAD_BALANCE", "false").lower() == "true")
+    load_balance_strategy: str = Field(default_factory=lambda: os.getenv("MCP_PROXY_LB_STRATEGY", "round_robin"))
+    
+    # Analytics integration
+    enable_proxy_analytics: bool = Field(default_factory=lambda: os.getenv("MCP_PROXY_ANALYTICS", "true").lower() == "true")
+    log_all_requests: bool = Field(default_factory=lambda: os.getenv("MCP_PROXY_LOG_REQUESTS", "false").lower() == "true")
+
+class OperationMode(str, Enum):
+    """MCP Manager operation modes."""
+    DIRECT = "direct"     # Traditional mode - manage individual servers
+    PROXY = "proxy"       # Proxy mode - unified endpoint
+    HYBRID = "hybrid"     # Both modes simultaneously
+
+class ModeManager:
+    """Manages operation mode transitions and validation."""
+    
+    def __init__(self, config: Config):
+        self.config = config
+        self.logger = get_logger(__name__)
+        self._validate_mode_configuration()
+    
+    def get_current_mode(self) -> OperationMode:
+        """Get current operation mode based on configuration."""
+        if self.config.proxy.enabled and self.config.enable_direct_mode:
+            return OperationMode.HYBRID
+        elif self.config.proxy.enabled:
+            return OperationMode.PROXY
+        else:
+            return OperationMode.DIRECT
+    
+    def is_proxy_available(self) -> bool:
+        """Check if proxy mode is available and properly configured."""
+        return (self.config.proxy.enabled and 
+                self._validate_proxy_requirements())
+    
+    def switch_mode(self, target_mode: OperationMode) -> bool:
+        """Safely switch between operation modes."""
+        # Validation and switching logic
+        pass
+```
+
+#### 4.2 Dual-Mode Architecture Design
+**Files to Create:**
+- `src/mcp_manager/proxy/` - Proxy module directory  
+- `src/mcp_manager/proxy/server.py` - MCP proxy server implementation
+- `src/mcp_manager/proxy/protocol.py` - MCP protocol handling and translation
+- `src/mcp_manager/proxy/router.py` - Request routing and server selection
+- `src/mcp_manager/proxy/middleware/` - Proxy middleware directory
+- `src/mcp_manager/proxy/middleware/auth.py` - Authentication middleware
+- `src/mcp_manager/proxy/middleware/cache.py` - Caching middleware  
+- `src/mcp_manager/proxy/middleware/analytics.py` - Analytics middleware
+- `src/mcp_manager/proxy/middleware/rate_limit.py` - Rate limiting
+- `src/mcp_manager/core/dual_manager.py` - Unified manager supporting both modes
+
+**Dual-Mode Manager Architecture:**
+```python
+class DualModeManager(SimpleMCPManager):
+    """Enhanced MCP Manager supporting both direct and proxy modes."""
+    
+    def __init__(self, config: Config):
+        super().__init__(config)
+        self.mode_manager = ModeManager(config)
+        self.proxy_server: Optional[MCPProxyServer] = None
+        
+        # Initialize proxy if enabled
+        if self.mode_manager.is_proxy_available():
+            self.proxy_server = MCPProxyServer(config.proxy, self)
+    
+    async def start(self) -> None:
+        """Start MCP Manager in configured mode(s)."""
+        current_mode = self.mode_manager.get_current_mode()
+        
+        logger.info("Starting MCP Manager", extra={
+            "mode": current_mode.value,
+            "proxy_enabled": self.proxy_server is not None,
+            "direct_mode_available": current_mode in [OperationMode.DIRECT, OperationMode.HYBRID]
+        })
+        
+        # Always start direct mode functionality
+        await super().start()
+        
+        # Start proxy server if enabled
+        if self.proxy_server and current_mode in [OperationMode.PROXY, OperationMode.HYBRID]:
+            await self.proxy_server.start()
+            
+            # Generate Claude configuration for proxy mode
+            if current_mode == OperationMode.PROXY:
+                await self._generate_proxy_claude_config()
+    
+    async def _generate_proxy_claude_config(self) -> None:
+        """Generate Claude configuration file for proxy mode."""
+        proxy_config = {
+            "mcpServers": {
+                "mcp-manager-proxy": {
+                    "command": "curl",
+                    "args": [
+                        "-X", "POST",
+                        f"http://{self.config.proxy.host}:{self.config.proxy.port}/mcp/v1/rpc",
+                        "-H", "Content-Type: application/json",
+                        "-d", "@-"
+                    ],
+                    "description": "MCP Manager Unified Proxy - Access all tools through single endpoint"
+                }
+            }
+        }
+        
+        # Write to Claude configuration
+        claude_config_path = Path.home() / ".config" / "claude-code" / "mcp-servers.json"  
+        await self._backup_claude_config(claude_config_path)
+        
+        with open(claude_config_path, 'w') as f:
+            json.dump(proxy_config, f, indent=2)
+            
+        logger.info("Claude configuration updated for proxy mode", extra={
+            "config_path": str(claude_config_path),
+            "proxy_endpoint": f"http://{self.config.proxy.host}:{self.config.proxy.port}"
+        })
+```
+
+#### 4.3 MCP Proxy Server Implementation  
+**Files to Create:**
+- `src/mcp_manager/proxy/server.py` - Core proxy server
+- `src/mcp_manager/proxy/handlers/` - Protocol handlers directory
+- `src/mcp_manager/proxy/handlers/initialize.py` - Initialize handler
+- `src/mcp_manager/proxy/handlers/tools.py` - Tools handlers
+- `src/mcp_manager/proxy/handlers/resources.py` - Resources handlers
+
+**MCP Proxy Server Structure:**
+```python
+class MCPProxyServer:
+    """MCP protocol-compliant proxy server."""
+    
+    def __init__(self, config: ProxyModeConfig, manager: SimpleMCPManager):
+        self.config = config
+        self.manager = manager
+        self.logger = get_logger(__name__)
+        self.analytics = UsageAnalyticsService() if config.enable_proxy_analytics else None
+        
+        # Initialize middleware stack
+        self.middleware_stack = self._build_middleware_stack()
+        
+        # Protocol handlers
+        self.handlers = {
+            "initialize": InitializeHandler(manager),
+            "tools/list": ToolsListHandler(manager),
+            "tools/call": ToolsCallHandler(manager),
+            "resources/list": ResourcesListHandler(manager),
+            "resources/read": ResourcesReadHandler(manager),
+        }
+    
+    def _build_middleware_stack(self) -> List[ProxyMiddleware]:
+        """Build middleware stack based on configuration."""
+        middleware = []
+        
+        # Authentication (if enabled)
+        if self.config.enable_auth:
+            middleware.append(AuthenticationMiddleware(self.config))
+            
+        # Rate limiting
+        middleware.append(RateLimitMiddleware(self.config))
+        
+        # Caching (if enabled)
+        if self.config.enable_caching:
+            middleware.append(CacheMiddleware(self.config))
+            
+        # Analytics (if enabled)
+        if self.config.enable_proxy_analytics:
+            middleware.append(AnalyticsMiddleware(self.analytics))
+            
+        return middleware
+    
+    async def handle_request(self, request: MCPRequest) -> MCPResponse:
+        """Handle incoming MCP request through middleware stack."""
+        context = RequestContext(
+            request=request,
+            timestamp=datetime.utcnow(),
+            client_info=self._extract_client_info(request)
+        )
+        
+        # Process through middleware stack
+        for middleware in self.middleware_stack:
+            if await middleware.should_handle(context):
+                response = await middleware.process(context)
+                if response:  # Middleware handled the request
+                    return response
+        
+        # Route to appropriate handler
+        handler_name = self._determine_handler(request.method)
+        if handler_name not in self.handlers:
+            return MCPError(
+                code=-32601,
+                message=f"Method not found: {request.method}"
+            )
+        
+        handler = self.handlers[handler_name]
+        return await handler.handle(context)
+```
+
+#### 4.4 Backward Compatibility & Testing Infrastructure
+**Files to Create:**
+- `src/mcp_manager/testing/` - Testing utilities directory
+- `src/mcp_manager/testing/mode_tester.py` - Mode compatibility testing
+- `src/mcp_manager/testing/proxy_client.py` - Proxy testing client
+- `src/mcp_manager/cli/proxy/` - Proxy-specific CLI commands
+- `src/mcp_manager/cli/proxy/start.py` - Start/stop proxy commands
+- `src/mcp_manager/cli/proxy/status.py` - Proxy status commands
+- `src/mcp_manager/cli/proxy/config.py` - Proxy configuration commands
+
+**CLI Commands for Proxy Mode:**
+```python
+# mcp-manager proxy start
+@click.command()
+@click.option('--port', default=3000, help='Proxy server port')
+@click.option('--host', default='localhost', help='Proxy server host')
+@click.option('--daemon', is_flag=True, help='Run as daemon')
+def start_proxy(port: int, host: str, daemon: bool):
+    """Start MCP proxy server."""
+    # Implementation
+    
+# mcp-manager proxy stop  
+@click.command()
+def stop_proxy():
+    """Stop MCP proxy server."""
+    # Implementation
+    
+# mcp-manager proxy status
+@click.command()
+def proxy_status():
+    """Show proxy server status and statistics."""
+    # Implementation
+    
+# mcp-manager proxy test
+@click.command()
+@click.option('--client', default='claude', help='Test with specific client')
+def test_proxy(client: str):
+    """Test proxy functionality with various MCP clients."""
+    # Implementation
+    
+# mcp-manager mode switch
+@click.command()
+@click.argument('mode', type=click.Choice(['direct', 'proxy', 'hybrid']))
+@click.option('--force', is_flag=True, help='Force mode switch without validation')
+def switch_mode(mode: str, force: bool):
+    """Switch between operation modes."""
+    # Implementation with safety checks
+    
+# mcp-manager mode status
+@click.command() 
+def mode_status():
+    """Show current operation mode and configuration."""
+    # Implementation
+```
+
+#### 4.5 Comprehensive Testing Strategy
+**Testing Files to Create:**
+- `tests/test_proxy_mode.py` - Proxy mode functionality tests
+- `tests/test_mode_switching.py` - Mode switching validation tests  
+- `tests/test_backward_compatibility.py` - Compatibility validation tests
+- `tests/integration/test_claude_integration.py` - Claude Code integration tests
+- `tests/performance/test_proxy_performance.py` - Proxy performance benchmarks
+
+**Testing Requirements:**
+1. **Direct Mode Preservation**: Ensure all existing functionality works unchanged
+2. **Proxy Mode Validation**: Test all MCP protocol methods through proxy
+3. **Mode Switching**: Test safe transitions between modes
+4. **Client Compatibility**: Test with Claude Code, Cursor, and other MCP clients
+5. **Performance Benchmarks**: Measure proxy overhead vs direct connections
+6. **Error Handling**: Test proxy error scenarios and failover
+7. **Authentication**: Test various auth configurations
+8. **Load Testing**: Test proxy under high concurrent load
+
+**Configuration Validation System:**
+```python
+class ProxyModeValidator:
+    """Validates proxy mode configuration and requirements."""
+    
+    def validate_requirements(self, config: ProxyModeConfig) -> ValidationResult:
+        """Validate all proxy mode requirements are met."""
+        issues = []
+        
+        # Port availability
+        if not self._is_port_available(config.host, config.port):
+            issues.append(f"Port {config.port} is not available on {config.host}")
+        
+        # Authentication setup
+        if config.enable_auth and not config.auth_token:
+            issues.append("Authentication enabled but no auth token provided")
+        
+        # Performance validation
+        if config.max_concurrent_requests < 1:
+            issues.append("max_concurrent_requests must be positive")
+            
+        # Server availability
+        available_servers = self._check_server_availability()
+        if not available_servers:
+            issues.append("No MCP servers available for proxying")
+        
+        return ValidationResult(
+            valid=len(issues) == 0,
+            issues=issues,
+            warnings=self._check_performance_warnings(config)
+        )
+```
+
+**Migration and Deployment Strategy:**
+1. **Phase 4.1**: Implement proxy infrastructure with disabled-by-default configuration
+2. **Phase 4.2**: Add comprehensive testing and validation tools
+3. **Phase 4.3**: Beta testing with opt-in proxy mode
+4. **Phase 4.4**: Documentation and user migration guides
+5. **Phase 4.5**: Production deployment with monitoring and rollback capability
+
+This design ensures that proxy mode is a completely optional enhancement that doesn't disrupt existing workflows while providing a clear path for users who want unified MCP access through a single endpoint.
 
 ## Implementation Guidelines
 
