@@ -20,6 +20,18 @@ from mcp_manager.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
+# Import proxy config with lazy loading to avoid circular imports
+def _get_proxy_config_class():
+    """Lazy import of ProxyModeConfig to avoid circular imports."""
+    try:
+        from mcp_manager.core.config.proxy_config import ProxyModeConfig
+        return ProxyModeConfig
+    except ImportError:
+        # Return a dummy class if proxy config is not available
+        class DummyProxyConfig(BaseModel):
+            enabled: bool = False
+        return DummyProxyConfig
+
 
 class LoggingConfig(BaseModel):
     """Logging configuration."""
@@ -140,6 +152,32 @@ class Config(BaseSettings):
     discovery: DiscoveryConfig = Field(default_factory=DiscoveryConfig)
     ui: UIConfig = Field(default_factory=UIConfig)
     change_detection: ChangeDetectionConfig = Field(default_factory=ChangeDetectionConfig)
+    
+    # Proxy configuration (initialized lazily)
+    _proxy: Optional[Any] = None
+    
+    def __init__(self, **data):
+        # Initialize proxy config lazily
+        super().__init__(**data)
+        self._init_proxy_config()
+    
+    def _init_proxy_config(self):
+        """Initialize proxy configuration."""
+        if self._proxy is None:
+            ProxyConfig = _get_proxy_config_class()
+            self._proxy = ProxyConfig()
+    
+    @property
+    def proxy(self):
+        """Get proxy configuration with lazy loading."""
+        if self._proxy is None:
+            self._init_proxy_config()
+        return self._proxy
+    
+    @proxy.setter
+    def proxy(self, value):
+        """Set proxy configuration."""
+        self._proxy = value
     
     model_config = {
         "env_prefix": "MCP_MANAGER_",
