@@ -167,6 +167,45 @@ class SimpleMCPManager:
         """Check if a server exists."""
         return self.server_manager.server_exists(name)
     
+    async def get_server_details(self, server_name: str) -> Optional[Dict[str, Any]]:
+        """Get detailed information about a specific server including its tools."""
+        try:
+            servers = self.list_servers()
+            server = next((s for s in servers if s.name == server_name), None)
+            
+            if not server:
+                return None
+            
+            details = {
+                "name": server.name,
+                "type": server.server_type.value,
+                "scope": server.scope.value if server.scope else "unknown",
+                "status": "enabled" if server.enabled else "disabled",
+                "command": server.command,
+                "args": server.args,
+                "env": server.env,
+                "tools": [],
+                "description": getattr(server, 'description', ''),
+            }
+            
+            # Try to get tool information
+            try:
+                tool_count = await self.discover_and_register_server_tools(server)
+                details["tool_count"] = tool_count
+                
+                # Get tools from registry
+                tools = self.search_tools(server_name=server_name)
+                details["tools"] = tools[:10]  # Limit to first 10 tools for display
+            except Exception as e:
+                logger.debug(f"Failed to get tools for {server_name}: {e}")
+                details["tool_count"] = 0
+            
+            return details
+            
+        except Exception as e:
+            logger.warning(f"Failed to get server details for {server_name}: {e}")
+            return None
+    
     # Discovery Methods (delegate to DiscoveryManager)
     async def discover_and_register_server_tools(self, server: Server) -> int:
         """Discover and register tools from a server."""

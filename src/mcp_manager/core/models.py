@@ -53,6 +53,7 @@ class Server(BaseModel):
     working_dir: Optional[str] = Field(default=None, description="Working directory")
     timeout: int = Field(default=30, description="Timeout in seconds")
     auto_restart: bool = Field(default=True, description="Auto-restart on failure")
+    suites: List[str] = Field(default_factory=list, description="Suite tags this server belongs to")
     created_at: datetime = Field(default_factory=datetime.now, description="Creation time")
     updated_at: datetime = Field(default_factory=datetime.now, description="Last update time")
     

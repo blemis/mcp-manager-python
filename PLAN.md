@@ -32,8 +32,9 @@ Transform MCP Manager from a simple server manager into an intelligent MCP platf
 ### 🚧 **OUTSTANDING TODOs**
 1. ❌ **Analytics dashboard data endpoints** (Phase 3)
 2. ❌ **API authentication and rate limiting** (Phase 3)
-3. ❌ **MCP proxy server with protocol translation** (Phase 4)
-4. ❌ **Proxy mode testing and validation** (Phase 4)
+3. ❌ **AI-driven MCP suite curation and management** (Phase 3) - NEW
+4. ❌ **MCP proxy server with protocol translation** (Phase 4)
+5. ❌ **Proxy mode testing and validation** (Phase 4)
 
 ---
 

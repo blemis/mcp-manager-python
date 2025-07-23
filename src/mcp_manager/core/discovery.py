@@ -277,7 +277,7 @@ class ServerDiscovery:
                                     keywords=keywords,
                                     server_type=ServerType.NPM,
                                     install_command="npx",
-                                    install_args=["-y", name],
+                                    install_args=["-y", name, "--"],
                                     downloads=package.get("score", {}).get("detail", {}).get("popularity"),
                                     last_updated=self._parse_date(pkg_info.get("date")),
                                 )
