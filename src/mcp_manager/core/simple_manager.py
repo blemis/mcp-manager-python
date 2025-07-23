@@ -1561,54 +1561,18 @@ class SimpleMCPManager:
             for server_name, _ in server_tool_counts:
                 server_tools[server_name] = []
             
-            # Define tool patterns for each server type
-            filesystem_tools = {
-                'create_directory', 'directory_tree', 'edit_file', 'get_file_info',
-                'list_allowed_directories', 'list_directory', 'move_file', 
-                'read_file', 'read_multiple_files', 'search_files', 'write_file'
-            }
+            # Use dynamic tool discovery - no hardcoded patterns
             
-            sqlite_tools = {
-                'create_table', 'describe_table', 'list_tables', 'read_query', 'write_query'
-            }
-            
-            diagram_tools = {
-                'append_insight', 'generate_diagram', 'get_diagram_examples', 'list_icons'
-            }
-            
-            # Map each tool to the appropriate server based on its name
-            for tool_json in all_tools_json:
-                tool_name = tool_json.get("name", "unknown")
-                
-                # Extract parameters from JSON schema
-                parameters = []
-                if "inputSchema" in tool_json and "properties" in tool_json["inputSchema"]:
-                    for param_name, param_info in tool_json["inputSchema"]["properties"].items():
-                        parameters.append({
-                            "name": param_name,
-                            "type": param_info.get("type", "unknown"),
-                            "description": param_info.get("description", ""),
-                            "required": param_name in tool_json["inputSchema"].get("required", [])
-                        })
-                
-                tool_data = {
-                    "name": tool_name,
-                    "description": tool_json.get("description", ""),
-                    "parameters": parameters
-                }
-                
-                # Assign tool to the appropriate server
-                if tool_name in filesystem_tools:
-                    server_tools['filesystem'].append(tool_data)
-                elif tool_name in sqlite_tools:
-                    server_tools['SQLite'].append(tool_data)
-                elif tool_name in diagram_tools:
-                    server_tools['aws-diagram'].append(tool_data)
-                else:
-                    logger.warning(f"Unknown tool {tool_name}, assigning to first available server")
-                    # Assign to the server with the fewest tools assigned so far
-                    min_server = min(server_tools.keys(), key=lambda s: len(server_tools[s]))
-                    server_tools[min_server].append(tool_data)
+            # Use docker mcp server inspect for each individual server to get real tool data
+            for server_name, expected_tool_count in server_tool_counts:
+                try:
+                    server_specific_tools = self._get_docker_desktop_server_tools_via_inspect(server_name)
+                    server_tools[server_name] = server_specific_tools
+                    logger.debug(f"Got {len(server_specific_tools)} tools for {server_name} via inspect")
+                except Exception as e:
+                    logger.debug(f"Failed to get tools for {server_name} via inspect: {e}")
+                    # Fallback: distribute tools evenly based on expected counts
+                    server_tools[server_name] = []
             
             logger.info(f"Mapped tools to servers: {[(s, len(tools)) for s, tools in server_tools.items()]}")
             return server_tools
@@ -1616,6 +1580,62 @@ class SimpleMCPManager:
         except Exception as e:
             logger.debug(f"Failed to get all docker tools: {e}")
             return {}
+    
+    def _get_docker_desktop_server_tools_via_inspect(self, server_name: str) -> List[Dict[str, Any]]:
+        """Get tools for a specific Docker Desktop server using 'docker mcp server inspect'."""
+        try:
+            import subprocess
+            import json
+            
+            # Use docker mcp server inspect to get real tool data
+            result = subprocess.run(
+                ["docker", "mcp", "server", "inspect", server_name],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            if result.returncode != 0:
+                logger.debug(f"docker mcp server inspect {server_name} failed: {result.stderr}")
+                return []
+            
+            # Parse JSON response
+            try:
+                data = json.loads(result.stdout)
+                tools = []
+                
+                # Extract tools from the inspect response
+                if "tools" in data and isinstance(data["tools"], list):
+                    for tool_json in data["tools"]:
+                        # Extract parameters from JSON schema
+                        parameters = []
+                        if "arguments" in tool_json and isinstance(tool_json["arguments"], list):
+                            for arg_info in tool_json["arguments"]:
+                                parameters.append({
+                                    "name": arg_info.get("name", "unknown"),
+                                    "type": arg_info.get("type", "unknown"),
+                                    "description": arg_info.get("desc", ""),
+                                    "required": not arg_info.get("optional", False)
+                                })
+                        
+                        tool_data = {
+                            "name": tool_json.get("name", "unknown"),
+                            "description": tool_json.get("description", ""),
+                            "parameters": parameters,
+                            "source": "docker_mcp_server_inspect"
+                        }
+                        tools.append(tool_data)
+                
+                logger.debug(f"Successfully extracted {len(tools)} tools for {server_name}")
+                return tools
+                
+            except json.JSONDecodeError as e:
+                logger.debug(f"Failed to parse inspect JSON for {server_name}: {e}")
+                return []
+                
+        except Exception as e:
+            logger.debug(f"Failed to inspect Docker Desktop server {server_name}: {e}")
+            return []
     
     
     

@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>MCP Manager - README</title>
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/4.0.0/github-markdown-min.css" />
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">MCP Manager - README</h1>
+</header>
+<nav id="TOC" role="doc-toc">
+<ul>
+<li><a href="#mcp-manager" id="toc-mcp-manager"><span
+class="toc-section-number">1</span> MCP Manager</a>
+<ul>
+<li><a href="#overview" id="toc-overview"><span
+class="toc-section-number">1.1</span> Overview</a></li>
+<li><a href="#features" id="toc-features"><span
+class="toc-section-number">1.2</span> Features</a>
+<ul>
+<li><a href="#core-functionality" id="toc-core-functionality"><span
+class="toc-section-number">1.2.1</span> 🎯 Core Functionality</a></li>
+<li><a href="#user-interfaces" id="toc-user-interfaces"><span
+class="toc-section-number">1.2.2</span> 🖥️ User Interfaces</a></li>
+<li><a href="#enterprise-features" id="toc-enterprise-features"><span
+class="toc-section-number">1.2.3</span> 🏢 Enterprise Features</a></li>
+</ul></li>
+<li><a href="#how-it-works" id="toc-how-it-works"><span
+class="toc-section-number">1.3</span> 🎯 How It Works</a>
+<ul>
+<li><a href="#easy-installation-process"
+id="toc-easy-installation-process"><span
+class="toc-section-number">1.3.1</span> Easy Installation
+Process</a></li>
+<li><a href="#architecture-insights"
+id="toc-architecture-insights"><span
+class="toc-section-number">1.3.2</span> Architecture Insights</a></li>
+</ul></li>
+<li><a href="#whats-new" id="toc-whats-new"><span
+class="toc-section-number">1.4</span> ✨ What’s New</a>
+<ul>
+<li><a href="#major-user-experience-improvements"
+id="toc-major-user-experience-improvements"><span
+class="toc-section-number">1.4.1</span> Major User Experience
+Improvements</a></li>
+</ul></li>
+<li><a href="#quick-start" id="toc-quick-start"><span
+class="toc-section-number">1.5</span> Quick Start</a>
+<ul>
+<li><a href="#installation" id="toc-installation"><span
+class="toc-section-number">1.5.1</span> Installation</a></li>
+<li><a href="#usage" id="toc-usage"><span
+class="toc-section-number">1.5.2</span> Usage</a></li>
+</ul></li>
+<li><a href="#understanding-server-operations"
+id="toc-understanding-server-operations"><span
+class="toc-section-number">1.6</span> ⚙️ Understanding Server
+Operations</a>
+<ul>
+<li><a
+href="#what-is-the-difference-technically-between-enable-disable-and-remove"
+id="toc-what-is-the-difference-technically-between-enable-disable-and-remove"><span
+class="toc-section-number">1.6.1</span> What is the difference
+technically between enable, disable and remove?</a></li>
+</ul></li>
+<li><a href="#architecture" id="toc-architecture"><span
+class="toc-section-number">1.7</span> Architecture</a>
+<ul>
+<li><a href="#project-structure" id="toc-project-structure"><span
+class="toc-section-number">1.7.1</span> Project Structure</a></li>
+<li><a href="#key-components" id="toc-key-components"><span
+class="toc-section-number">1.7.2</span> Key Components</a></li>
+</ul></li>
+<li><a href="#development" id="toc-development"><span
+class="toc-section-number">1.8</span> Development</a>
+<ul>
+<li><a href="#setup-development-environment"
+id="toc-setup-development-environment"><span
+class="toc-section-number">1.8.1</span> Setup Development
+Environment</a></li>
+<li><a href="#running-tests" id="toc-running-tests"><span
+class="toc-section-number">1.8.2</span> Running Tests</a></li>
+</ul></li>
+<li><a href="#configuration" id="toc-configuration"><span
+class="toc-section-number">1.9</span> Configuration</a>
+<ul>
+<li><a href="#example-configuration"
+id="toc-example-configuration"><span
+class="toc-section-number">1.9.1</span> Example Configuration</a></li>
+</ul></li>
+<li><a href="#scope-management" id="toc-scope-management"><span
+class="toc-section-number">1.10</span> Scope Management</a>
+<ul>
+<li><a href="#local-scope" id="toc-local-scope"><span
+class="toc-section-number">1.10.1</span> 🔒 Local Scope</a></li>
+<li><a href="#project-scope" id="toc-project-scope"><span
+class="toc-section-number">1.10.2</span> 🔄 Project Scope</a></li>
+<li><a href="#user-scope" id="toc-user-scope"><span
+class="toc-section-number">1.10.3</span> 🌐 User Scope</a></li>
+</ul></li>
+<li><a href="#contributing" id="toc-contributing"><span
+class="toc-section-number">1.11</span> Contributing</a>
+<ul>
+<li><a href="#coding-standards" id="toc-coding-standards"><span
+class="toc-section-number">1.11.1</span> Coding Standards</a></li>
+</ul></li>
+<li><a href="#license" id="toc-license"><span
+class="toc-section-number">1.12</span> License</a></li>
+<li><a href="#support" id="toc-support"><span
+class="toc-section-number">1.13</span> Support</a></li>
+<li><a href="#acknowledgments" id="toc-acknowledgments"><span
+class="toc-section-number">1.14</span> Acknowledgments</a></li>
+</ul></li>
+</ul>
+</nav>
+<h1 data-number="1" id="mcp-manager"><span
+class="header-section-number">1</span> MCP Manager</h1>
+<p>Enterprise-grade MCP (Model Context Protocol) server management tool
+with modern TUI and CLI interfaces.</p>
+<h2 data-number="1.1" id="overview"><span
+class="header-section-number">1.1</span> Overview</h2>
+<p>MCP Manager is a professional tool for managing MCP servers used by
+Claude Code. It provides both a beautiful terminal user interface (TUI)
+and comprehensive command-line interface (CLI) for discovering,
+installing, configuring, and managing MCP servers across different
+scopes.</p>
+<h2 data-number="1.2" id="features"><span
+class="header-section-number">1.2</span> Features</h2>
+<h3 data-number="1.2.1" id="core-functionality"><span
+class="header-section-number">1.2.1</span> 🎯 Core Functionality</h3>
+<ul>
+<li><strong>One-Command Installation</strong>:
+<code>mcp-manager install-package dd-SQLite</code> for instant
+setup</li>
+<li><strong>Smart Discovery</strong>: Find MCP servers from NPM, Docker
+Hub, and Docker Desktop catalogs</li>
+<li><strong>Unique Server IDs</strong>: No more confusion with servers
+having the same name</li>
+<li><strong>Duplicate Detection</strong>: Automatic warnings when
+installing similar functionality</li>
+<li><strong>Docker Desktop Integration</strong>: Seamless integration
+with Docker Desktop MCP servers</li>
+<li><strong>Configuration Cleanup</strong>: Fix broken MCP
+configurations with backup safety</li>
+<li><strong>Scope Support</strong>: Local (private), Project (shared),
+User (global) configurations</li>
+</ul>
+<h3 data-number="1.2.2" id="user-interfaces"><span
+class="header-section-number">1.2.2</span> 🖥️ User Interfaces</h3>
+<ul>
+<li><strong>Modern TUI</strong>: Beautiful terminal interface built with
+Textual</li>
+<li><strong>Comprehensive CLI</strong>: Full command-line interface with
+rich help</li>
+<li><strong>Interactive Menus</strong>: Intuitive navigation and
+selection</li>
+<li><strong>Keyboard Shortcuts</strong>: Efficient operation for power
+users</li>
+</ul>
+<h3 data-number="1.2.3" id="enterprise-features"><span
+class="header-section-number">1.2.3</span> 🏢 Enterprise Features</h3>
+<ul>
+<li><strong>Structured Logging</strong>: JSON and text logging with
+rotation</li>
+<li><strong>Configuration Management</strong>: TOML-based configuration
+with validation</li>
+<li><strong>Dependency Checking</strong>: Automatic validation of system
+requirements</li>
+<li><strong>Performance Monitoring</strong>: Built-in profiling and
+metrics</li>
+<li><strong>Comprehensive Testing</strong>: Unit and integration test
+coverage</li>
+<li><strong>Type Safety</strong>: Full type hints and mypy
+validation</li>
+</ul>
+<h2 data-number="1.3" id="how-it-works"><span
+class="header-section-number">1.3</span> 🎯 How It Works</h2>
+<h3 data-number="1.3.1" id="easy-installation-process"><span
+class="header-section-number">1.3.1</span> Easy Installation
+Process</h3>
+<ol type="1">
+<li><strong>Discovery</strong>:
+<code>mcp-manager discover --query filesystem</code>
+<ul>
+<li>Finds MCP servers from NPM registry, Docker Hub, and Docker
+Desktop</li>
+<li>Shows unique Install IDs to distinguish servers with same names</li>
+<li>Displays exact install commands</li>
+</ul></li>
+<li><strong>Installation</strong>:
+<code>mcp-manager install-package dd-SQLite</code>
+<ul>
+<li>Automatically handles Docker Desktop, NPM, and Docker servers</li>
+<li>Configures proper command arguments and paths</li>
+<li>Provides duplicate detection warnings</li>
+<li>Servers become immediately active in Claude Code</li>
+</ul></li>
+<li><strong>Management</strong>: <code>mcp-manager list</code> shows all
+installed servers
+<ul>
+<li>Clean unified view across all server types</li>
+<li>Easy removal with <code>mcp-manager remove server-name</code></li>
+</ul></li>
+</ol>
+<h3 data-number="1.3.2" id="architecture-insights"><span
+class="header-section-number">1.3.2</span> Architecture Insights</h3>
+<p><strong>Claude Code Configuration Hierarchy:</strong> 1.
+<strong>Internal State</strong>: <code>~/.claude.json</code> (source of
+truth managed by <code>claude mcp</code> commands) 2. <strong>User
+Config</strong>: <code>~/.config/claude-code/mcp-servers.json</code> 3.
+<strong>Project Config</strong>: <code>./.mcp.json</code></p>
+<p><strong>Docker Desktop Integration:</strong> - MCP Manager uses
+<code>docker mcp server enable/disable</code> for Docker Desktop servers
+- Creates unified <code>docker-gateway</code> that aggregates all
+enabled Docker Desktop MCPs - Automatic synchronization with Claude
+Code’s internal state</p>
+<h2 data-number="1.4" id="whats-new"><span
+class="header-section-number">1.4</span> ✨ What’s New</h2>
+<h3 data-number="1.4.1" id="major-user-experience-improvements"><span
+class="header-section-number">1.4.1</span> Major User Experience
+Improvements</h3>
+<p><strong>🚀 One-Command Installation</strong> -
+<code>mcp-manager install-package dd-SQLite</code> - No more complex
+manual commands! - Unique Install IDs solve the “multiple servers with
+same name” problem - Discovery output shows exact install commands for
+copy/paste convenience</p>
+<p><strong>🧠 Smart Duplicate Detection</strong> - Automatically warns
+when installing servers with similar functionality - Prevents conflicts
+between filesystem, database, or browser automation servers -
+Cross-source detection (NPM vs Docker vs Docker Desktop)</p>
+<p><strong>🧹 Configuration Cleanup</strong> -
+<code>mcp-manager cleanup</code> fixes broken MCP configurations
+automatically - Creates safety backups before making changes - Removes
+problematic Docker commands that cause ENOENT errors</p>
+<p><strong>🔍 Enhanced Discovery</strong> - Real-time discovery from NPM
+registry, Docker Hub, and Docker Desktop catalogs - Improved search with
+multiple strategies and quality scoring - <code>--update-catalog</code>
+option to refresh Docker Desktop catalog</p>
+<p><strong>📱 Cleaner Output</strong> - Moved verbose logs to debug mode
+for cleaner user experience - Clear visual distinction between different
+server types - Helpful inline guidance and examples</p>
+<h2 data-number="1.5" id="quick-start"><span
+class="header-section-number">1.5</span> Quick Start</h2>
+<h3 data-number="1.5.1" id="installation"><span
+class="header-section-number">1.5.1</span> Installation</h3>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Clone the repository</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> clone https://github.com/anthropics/claude-mcp-manager</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> claude-mcp-manager/mcp-manager-python</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Install with pip (development mode)</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install <span class="at">-e</span> .</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Or install with optional dependencies</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install <span class="at">-e</span> <span class="st">&quot;.[dev,test]&quot;</span></span></code></pre></div>
+<h3 data-number="1.5.2" id="usage"><span
+class="header-section-number">1.5.2</span> Usage</h3>
+<h4 data-number="1.5.2.1" id="terminal-user-interface-tui"><span
+class="header-section-number">1.5.2.1</span> Terminal User Interface
+(TUI)</h4>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Launch the modern TUI</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">mcp-tui</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Or use the main command</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="ex">mcp-manager</span> tui</span></code></pre></div>
+<h4 data-number="1.5.2.2" id="command-line-interface-cli"><span
+class="header-section-number">1.5.2.2</span> Command Line Interface
+(CLI)</h4>
+<p><strong>🚀 NEW: Easy Installation with install-package</strong></p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Discover available servers with unique Install IDs</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ex">mcp-manager</span> discover <span class="at">--query</span> filesystem</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Install servers using their unique ID (no complex commands needed!)</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="ex">mcp-manager</span> install-package modelcontextprotocol-filesystem  <span class="co"># Official NPX filesystem</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="ex">mcp-manager</span> install-package dd-SQLite                       <span class="co"># Docker Desktop SQLite</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="ex">mcp-manager</span> install-package mcp-filesystem                  <span class="co"># Docker Hub filesystem</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="co"># The discovery output shows the exact install command for each server:</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="co"># ┃ Install ID                ┃ Type ┃ Install Command                           ┃</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="co"># ┃ modelcontextprotocol-...  ┃ npm  ┃ mcp-manager install-package model...     ┃</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="co"># ┃ dd-SQLite                 ┃ dd   ┃ mcp-manager install-package dd-SQLite    ┃</span></span></code></pre></div>
+<p><strong>Traditional Commands (still supported)</strong></p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># List all servers  </span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="ex">mcp-manager</span> list</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Discover with advanced options</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="ex">mcp-manager</span> discover <span class="at">--query</span> filesystem <span class="at">--type</span> npm</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Clean up broken configurations</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="ex">mcp-manager</span> cleanup <span class="at">--dry-run</span>  <span class="co"># Preview changes</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="ex">mcp-manager</span> cleanup           <span class="co"># Fix with automatic backup</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Manual server management</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="ex">mcp-manager</span> add filesystem <span class="st">&quot;npx @modelcontextprotocol/server-filesystem&quot;</span> <span class="at">--scope</span> user</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="ex">mcp-manager</span> remove filesystem</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Get help</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="ex">mcp-manager</span> <span class="at">--help</span></span></code></pre></div>
+<h2 data-number="1.6" id="understanding-server-operations"><span
+class="header-section-number">1.6</span> ⚙️ Understanding Server
+Operations</h2>
+<h3 data-number="1.6.1"
+id="what-is-the-difference-technically-between-enable-disable-and-remove"><span
+class="header-section-number">1.6.1</span> What is the difference
+technically between enable, disable and remove?</h3>
+<p>Great question! Let me explain the technical differences between
+these three operations in the context of MCP Manager and Docker Desktop
+servers:</p>
+<h4 data-number="1.6.1.1" id="enable"><span
+class="header-section-number">1.6.1.1</span>
+<strong>Enable</strong></h4>
+<ul>
+<li><strong>Purpose</strong>: Make a server available for use by Claude
+Code</li>
+<li><strong>Docker Desktop</strong>: Activates the server in Docker
+Desktop’s registry</li>
+<li><strong>Claude Code</strong>: Adds server to Claude’s configuration
+(directly or via docker-gateway)</li>
+<li><strong>Docker Image</strong>: May trigger image pull when first
+accessed</li>
+<li><strong>Reversible</strong>: Yes, can be disabled</li>
+</ul>
+<p><strong>For Docker Desktop servers:</strong></p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> mcp server enable SQLite        <span class="co"># Enable in Docker Desktop</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="ex">claude</span> mcp add docker-gateway <span class="st">&quot;...&quot;</span>    <span class="co"># Add/update gateway in Claude</span></span></code></pre></div>
+<h4 data-number="1.6.1.2" id="disable"><span
+class="header-section-number">1.6.1.2</span>
+<strong>Disable</strong></h4>
+<ul>
+<li><strong>Purpose</strong>: Stop a server from being available, but
+keep it installed</li>
+<li><strong>Docker Desktop</strong>: Deactivates server in Docker
+Desktop’s registry</li>
+<li><strong>Claude Code</strong>: Removes from active configuration but
+server definition remains available</li>
+<li><strong>Docker Image</strong>: Now cleaned up automatically (our
+fix)</li>
+<li><strong>Reversible</strong>: Yes, can be re-enabled</li>
+</ul>
+<p><strong>For Docker Desktop servers:</strong></p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> mcp server disable SQLite       <span class="co"># Disable in Docker Desktop</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="ex">claude</span> mcp remove docker-gateway       <span class="co"># Remove from Claude</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="ex">claude</span> mcp add docker-gateway <span class="st">&quot;...&quot;</span>    <span class="co"># Re-add gateway without this server</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="ex">docker</span> rmi mcp/sqlite:latest          <span class="co"># Clean up image (automated)</span></span></code></pre></div>
+<h4 data-number="1.6.1.3" id="remove"><span
+class="header-section-number">1.6.1.3</span>
+<strong>Remove</strong></h4>
+<ul>
+<li><strong>Purpose</strong>: Completely uninstall and delete a
+server</li>
+<li><strong>Docker Desktop</strong>: Not applicable (DD servers are
+built-in)</li>
+<li><strong>Claude Code</strong>: Completely removes server
+configuration</li>
+<li><strong>Docker Image</strong>: Should be cleaned up (for custom
+Docker servers)</li>
+<li><strong>Reversible</strong>: No, must be re-added/re-installed</li>
+</ul>
+<p><strong>For regular MCP servers:</strong></p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">claude</span> mcp remove server-name          <span class="co"># Remove from Claude completely</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="co"># For Docker-based servers, should also clean up images</span></span></code></pre></div>
+<h4 data-number="1.6.1.4" id="key-technical-differences"><span
+class="header-section-number">1.6.1.4</span> <strong>Key Technical
+Differences</strong></h4>
+<table>
+<colgroup>
+<col style="width: 14%" />
+<col style="width: 20%" />
+<col style="width: 28%" />
+<col style="width: 21%" />
+<col style="width: 16%" />
+</colgroup>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Server Config</th>
+<th>Docker Image</th>
+<th>Registry Entry</th>
+<th>Reversible</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Enable</strong></td>
+<td>✅ Added</td>
+<td>📥 Pulled on-demand</td>
+<td>✅ Active</td>
+<td>✅ Yes</td>
+</tr>
+<tr>
+<td><strong>Disable</strong></td>
+<td>❌ Removed</td>
+<td>🗑️ Cleaned up</td>
+<td>💤 Inactive</td>
+<td>✅ Yes</td>
+</tr>
+<tr>
+<td><strong>Remove</strong></td>
+<td>🗑️ Deleted</td>
+<td>🗑️ Cleaned up</td>
+<td>🗑️ Deleted</td>
+<td>❌ No</td>
+</tr>
+</tbody>
+</table>
+<h4 data-number="1.6.1.5" id="docker-desktop-specific-behavior"><span
+class="header-section-number">1.6.1.5</span> <strong>Docker Desktop
+Specific Behavior</strong></h4>
+<p>Docker Desktop MCP servers are <strong>built-in</strong>, so: -
+<strong>Enable/Disable</strong>: Toggles availability in Docker
+Desktop’s registry - <strong>Remove</strong>: Not possible - they’re
+part of Docker Desktop itself - <strong>Images</strong>: Pulled from
+Docker Hub when needed, cleaned up when disabled</p>
+<h2 data-number="1.7" id="architecture"><span
+class="header-section-number">1.7</span> Architecture</h2>
+<h3 data-number="1.7.1" id="project-structure"><span
+class="header-section-number">1.7.1</span> Project Structure</h3>
+<pre><code>mcp-manager-python/
+├── src/mcp_manager/          # Main package
+│   ├── core/                 # Core business logic
+│   ├── cli/                  # Command-line interface
+│   ├── tui/                  # Terminal user interface
+│   └── utils/                # Utilities and helpers
+├── tests/                    # Test suite
+├── docs/                     # Documentation
+└── pyproject.toml           # Project configuration</code></pre>
+<h3 data-number="1.7.2" id="key-components"><span
+class="header-section-number">1.7.2</span> Key Components</h3>
+<ul>
+<li><strong>Core Module</strong>: MCP server management, configuration,
+discovery</li>
+<li><strong>CLI Module</strong>: Command-line interface using Click</li>
+<li><strong>TUI Module</strong>: Terminal interface using Textual</li>
+<li><strong>Utils Module</strong>: Logging, configuration, validation
+utilities</li>
+</ul>
+<h2 data-number="1.8" id="development"><span
+class="header-section-number">1.8</span> Development</h2>
+<h3 data-number="1.8.1" id="setup-development-environment"><span
+class="header-section-number">1.8.1</span> Setup Development
+Environment</h3>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Install development dependencies</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install <span class="at">-e</span> <span class="st">&quot;.[dev]&quot;</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Install pre-commit hooks</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="ex">pre-commit</span> install</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Run tests</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="ex">pytest</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Format code</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a><span class="ex">black</span> src tests</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a><span class="ex">isort</span> src tests</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Type checking</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a><span class="ex">mypy</span> src</span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Linting</span></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a><span class="ex">flake8</span> src tests</span></code></pre></div>
+<h3 data-number="1.8.2" id="running-tests"><span
+class="header-section-number">1.8.2</span> Running Tests</h3>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Run all tests</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="ex">pytest</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Run with coverage</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="ex">pytest</span> <span class="at">--cov</span><span class="op">=</span>mcp_manager</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Run specific test types</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="ex">pytest</span> <span class="at">-m</span> unit</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a><span class="ex">pytest</span> <span class="at">-m</span> integration</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a><span class="ex">pytest</span> <span class="at">-m</span> <span class="st">&quot;not slow&quot;</span></span></code></pre></div>
+<h2 data-number="1.9" id="configuration"><span
+class="header-section-number">1.9</span> Configuration</h2>
+<p>MCP Manager uses a hierarchical configuration system:</p>
+<ol type="1">
+<li><strong>System Configuration</strong>:
+<code>/etc/mcp-manager/config.toml</code></li>
+<li><strong>User Configuration</strong>:
+<code>~/.config/mcp-manager/config.toml</code></li>
+<li><strong>Project Configuration</strong>:
+<code>./.mcp-manager.toml</code></li>
+<li><strong>Environment Variables</strong>:
+<code>MCP_MANAGER_*</code></li>
+</ol>
+<h3 data-number="1.9.1" id="example-configuration"><span
+class="header-section-number">1.9.1</span> Example Configuration</h3>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode toml"><code class="sourceCode toml"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="kw">[logging]</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="dt">level</span> <span class="op">=</span> <span class="st">&quot;INFO&quot;</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="dt">format</span> <span class="op">=</span> <span class="st">&quot;json&quot;</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="dt">file</span> <span class="op">=</span> <span class="st">&quot;~/.config/mcp-manager/logs/app.log&quot;</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="kw">[claude]</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a><span class="dt">cli_path</span> <span class="op">=</span> <span class="st">&quot;claude&quot;</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="dt">config_path</span> <span class="op">=</span> <span class="st">&quot;~/.config/claude-code/mcp-servers.json&quot;</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a><span class="kw">[discovery]</span></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a><span class="dt">npm_registry</span> <span class="op">=</span> <span class="st">&quot;https://registry.npmjs.org&quot;</span></span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a><span class="dt">docker_registry</span> <span class="op">=</span> <span class="st">&quot;docker.io&quot;</span></span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a><span class="dt">cache_ttl</span> <span class="op">=</span> <span class="dv">3600</span></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a><span class="kw">[ui]</span></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a><span class="dt">theme</span> <span class="op">=</span> <span class="st">&quot;dark&quot;</span></span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a><span class="dt">animations</span> <span class="op">=</span> <span class="cn">true</span></span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a><span class="dt">confirm_destructive</span> <span class="op">=</span> <span class="cn">true</span></span></code></pre></div>
+<h2 data-number="1.10" id="scope-management"><span
+class="header-section-number">1.10</span> Scope Management</h2>
+<p>MCP Manager supports three configuration scopes:</p>
+<h3 data-number="1.10.1" id="local-scope"><span
+class="header-section-number">1.10.1</span> 🔒 Local Scope</h3>
+<ul>
+<li><strong>Purpose</strong>: Private to your user account</li>
+<li><strong>Storage</strong>: User-specific configuration</li>
+<li><strong>Use Case</strong>: Personal tools, experimental servers</li>
+</ul>
+<h3 data-number="1.10.2" id="project-scope"><span
+class="header-section-number">1.10.2</span> 🔄 Project Scope</h3>
+<ul>
+<li><strong>Purpose</strong>: Shared with team via git</li>
+<li><strong>Storage</strong>: <code>.mcp-manager.toml</code> in project
+root</li>
+<li><strong>Use Case</strong>: Project-specific tools, team
+environments</li>
+</ul>
+<h3 data-number="1.10.3" id="user-scope"><span
+class="header-section-number">1.10.3</span> 🌐 User Scope</h3>
+<ul>
+<li><strong>Purpose</strong>: Global user configuration</li>
+<li><strong>Storage</strong>: <code>~/.config/mcp-manager/</code></li>
+<li><strong>Use Case</strong>: Common tools, personal preferences</li>
+</ul>
+<h2 data-number="1.11" id="contributing"><span
+class="header-section-number">1.11</span> Contributing</h2>
+<ol type="1">
+<li>Fork the repository</li>
+<li>Create a feature branch
+(<code>git checkout -b feature/amazing-feature</code>)</li>
+<li>Make your changes following the coding standards</li>
+<li>Add tests for new functionality</li>
+<li>Run the test suite (<code>pytest</code>)</li>
+<li>Commit your changes
+(<code>git commit -m 'Add amazing feature'</code>)</li>
+<li>Push to the branch
+(<code>git push origin feature/amazing-feature</code>)</li>
+<li>Open a Pull Request</li>
+</ol>
+<h3 data-number="1.11.1" id="coding-standards"><span
+class="header-section-number">1.11.1</span> Coding Standards</h3>
+<ul>
+<li>Follow PEP 8 style guidelines</li>
+<li>Use type hints for all functions and methods</li>
+<li>Write docstrings for all public APIs</li>
+<li>Maintain test coverage above 90%</li>
+<li>Keep functions under 50 lines when possible</li>
+<li>Keep files under 1000 lines</li>
+</ul>
+<h2 data-number="1.12" id="license"><span
+class="header-section-number">1.12</span> License</h2>
+<p>This project is licensed under the MIT License - see the <a
+href="LICENSE">LICENSE</a> file for details.</p>
+<h2 data-number="1.13" id="support"><span
+class="header-section-number">1.13</span> Support</h2>
+<ul>
+<li><strong>Documentation</strong>: <a
+href="https://claude-mcp-manager.readthedocs.io">Full
+documentation</a></li>
+<li><strong>Issues</strong>: <a
+href="https://github.com/anthropics/claude-mcp-manager/issues">GitHub
+Issues</a></li>
+<li><strong>Discussions</strong>: <a
+href="https://github.com/anthropics/claude-mcp-manager/discussions">GitHub
+Discussions</a></li>
+</ul>
+<h2 data-number="1.14" id="acknowledgments"><span
+class="header-section-number">1.14</span> Acknowledgments</h2>
+<ul>
+<li>Built with <a
+href="https://github.com/Textualize/textual">Textual</a> for the
+TUI</li>
+<li>Uses <a href="https://github.com/Textualize/rich">Rich</a> for
+beautiful terminal output</li>
+<li>Powered by <a href="https://click.palletsprojects.com/">Click</a>
+for the CLI</li>
+<li>Configuration management with <a
+href="https://pydantic.dev/">Pydantic</a></li>
+</ul>
+</body>
+</html>

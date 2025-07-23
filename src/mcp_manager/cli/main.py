@@ -25,7 +25,7 @@ from mcp_manager.core.background_monitor import BackgroundMonitor
 from mcp_manager.utils.config import get_config
 from mcp_manager.utils.logging import setup_logging
 from mcp_manager.utils.logging import get_logger
-from mcp_manager.cli import enhanced_commands
+# from mcp_manager.cli import enhanced_commands  # TODO: Add enhanced commands module
 
 console = Console()
 logger = get_logger(__name__)
@@ -553,17 +553,22 @@ def add(
     """Add a new MCP server."""
     manager = cli_context.get_manager()
     
-    # Use enhanced validation
-    enhanced_commands.validate_and_add_server(
-        manager=manager,
-        name=name,
-        command=command,
-        scope=scope,
-        server_type=server_type,
-        description=description,
-        env=env,
-        args=args,
-    )
+    # Add server using simple manager
+    try:
+        if server_type:
+            manager.add_server(name, command, args, server_type)
+        else:
+            # Auto-detect server type based on command
+            if command == 'npx':
+                server_type = ServerType.NPM
+            elif command.endswith('/docker') or command == 'docker':
+                server_type = ServerType.CUSTOM
+            else:
+                server_type = ServerType.CUSTOM
+            manager.add_server(name, command, args, server_type)
+        console.print(f"✅ Successfully added server: {name}")
+    except Exception as e:
+        console.print(f"❌ Failed to add server {name}: {e}")
 
 
 @cli.command()
@@ -583,13 +588,12 @@ def remove(name: str, scope: Optional[str], force: bool):
     """Remove an MCP server."""
     manager = cli_context.get_manager()
     
-    # Use enhanced validation and confirmation
-    enhanced_commands.validate_and_remove_server(
-        manager=manager,
-        name=name,
-        scope=scope,
-        force=force,
-    )
+    # Remove server using simple manager
+    try:
+        manager.remove_server(name)
+        console.print(f"✅ Successfully removed server: {name}")
+    except Exception as e:
+        console.print(f"❌ Failed to remove server {name}: {e}")
 
 
 @cli.command()
@@ -599,11 +603,12 @@ def enable(name: str):
     """Enable an MCP server."""
     manager = cli_context.get_manager()
     
-    # Use enhanced validation
-    enhanced_commands.validate_and_enable_server(
-        manager=manager,
-        name=name,
-    )
+    # Enable server using simple manager
+    try:
+        manager.enable_server(name)
+        console.print(f"✅ Successfully enabled server: {name}")
+    except Exception as e:
+        console.print(f"❌ Failed to enable server {name}: {e}")
 
 
 @cli.command()
@@ -613,11 +618,12 @@ def disable(name: str):
     """Disable an MCP server."""
     manager = cli_context.get_manager()
     
-    # Use enhanced validation
-    enhanced_commands.validate_and_disable_server(
-        manager=manager,
-        name=name,
-    )
+    # Disable server using simple manager
+    try:
+        manager.disable_server(name)
+        console.print(f"✅ Successfully disabled server: {name}")
+    except Exception as e:
+        console.print(f"❌ Failed to disable server {name}: {e}")
 
 
 @cli.command()
@@ -775,9 +781,9 @@ def install_package(install_id: str):
                 console.print("[dim]Installation cancelled[/dim]")
                 return
         
-        # Check for similar servers that might provide the same functionality
-        from mcp_manager.cli.enhanced_commands import _find_similar_servers
-        similar_servers = _find_similar_servers(server_name, target_result.server_type.value, existing_servers)
+        # TODO: Add similar server detection
+        # Check for similar servers that might provide the same functionality  
+        similar_servers = []  # Placeholder for now
         if similar_servers:
             console.print(f"[yellow]⚠[/yellow] Found similar servers that might provide the same functionality:")
             for similar in similar_servers:
