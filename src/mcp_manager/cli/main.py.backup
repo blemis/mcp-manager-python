@@ -968,6 +968,212 @@ def install_suite(suite_name: str, force: bool, dry_run: bool):
     
     asyncio.run(install_suite())
 
+
+    test_suite_categories = {
+        "filesystem": {
+            "description": "File operations and management",
+            "servers": [
+                {"id": "dd-filesystem", "name": "docker-desktop-filesystem", "priority": "high"},
+                {"id": "modelcontextprotocol-filesystem", "name": "official-filesystem", "priority": "medium"},
+            ]
+        },
+        "database": {
+            "description": "Database access and management", 
+            "servers": [
+                {"id": "modelcontextprotocol-sqlite", "name": "official-sqlite", "priority": "high"},
+                {"id": "mcp-postgres", "name": "postgres-server", "priority": "medium"},
+            ]
+        },
+        "web": {
+            "description": "HTTP requests and web operations",
+            "servers": [
+                {"id": "mcp-fetch", "name": "official-fetch", "priority": "high"},
+                {"id": "dd-github", "name": "github-integration", "priority": "medium"},
+            ]
+        },
+        "development": {
+            "description": "Development tools and workflows",
+            "servers": [
+                {"id": "modelcontextprotocol-git", "name": "git-operations", "priority": "high"},
+                {"id": "dd-github", "name": "github-integration", "priority": "medium"},
+            ]
+        },
+        "cloud": {
+            "description": "Cloud service integrations",
+            "servers": [
+                {"id": "dd-aws-diagram", "name": "aws-diagrams", "priority": "medium"},
+                {"id": "mcp-aws-s3", "name": "aws-s3-access", "priority": "low"},
+            ]
+        },
+        "ai": {
+            "description": "AI and LLM integrations", 
+            "servers": [
+                {"id": "modelcontextprotocol-memory", "name": "memory-storage", "priority": "medium"},
+                {"id": "mcp-openai", "name": "openai-integration", "priority": "low"},
+            ]
+        },
+        "productivity": {
+            "description": "Productivity and workflow tools",
+            "servers": [
+                {"id": "modelcontextprotocol-slack", "name": "slack-integration", "priority": "low"},
+                {"id": "mcp-calendar", "name": "calendar-access", "priority": "low"},
+            ]
+        }
+    }
+    
+    # Filter categories if specified
+    if category:
+        categories_to_install = {k: v for k, v in test_suite_categories.items() if k in category}
+        if not categories_to_install:
+            console.print(f"[red]❌ No valid categories found. Available: {', '.join(test_suite_categories.keys())}[/red]")
+            return
+    else:
+        categories_to_install = test_suite_categories
+    
+    # Calculate total servers
+    total_servers = sum(len(cat["servers"]) for cat in categories_to_install.values())
+    
+    console.print("🧪 [bold blue]MCP Test Suite Installation[/bold blue]")
+    console.print(f"📦 Installing {total_servers} servers across {len(categories_to_install)} categories")
+    console.print()
+    
+    # Show what will be installed
+    for cat_name, cat_info in categories_to_install.items():
+        console.print(f"📁 [cyan bold]{cat_name.title()}[/cyan bold]: {cat_info['description']}")
+        for server in cat_info["servers"]:
+            priority_color = {"high": "green", "medium": "yellow", "low": "dim"}.get(server["priority"], "white")
+            console.print(f"   • [{priority_color}]{server['name']}[/{priority_color}] ({server['id']}) - {server['priority']} priority")
+        console.print()
+    
+    if dry_run:
+        console.print("[dim]🔍 Dry run complete - no servers were installed[/dim]")
+        return
+    
+    # Confirmation prompt unless --force is used
+    if not force:
+        from rich.prompt import Confirm
+        try:
+            if not Confirm.ask(f"\n[cyan]Install {total_servers} MCP servers for comprehensive testing?[/cyan]", default=True):
+                console.print("[dim]Test suite installation cancelled[/dim]")
+                return
+        except (EOFError, KeyboardInterrupt):
+            console.print("\n[dim]Test suite installation cancelled[/dim]")
+            return
+    
+    # Install servers
+    console.print(f"\n🚀 [green]Installing MCP test suite...[/green]")
+    
+    manager = cli_context.get_manager()
+    discovery = cli_context.get_discovery()
+    
+    installed_count = 0
+    failed_count = 0
+    skipped_count = 0
+    
+    async def install_test_suite():
+        nonlocal installed_count, failed_count, skipped_count
+        
+        for cat_name, cat_info in categories_to_install.items():
+            console.print(f"\n📁 [cyan bold]Installing {cat_name.title()} servers...[/cyan bold]")
+            
+            for server_info in cat_info["servers"]:
+                install_id = server_info["id"]
+                server_name = server_info["name"]
+                
+                try:
+                    console.print(f"   🔄 Installing [cyan]{server_name}[/cyan] ({install_id})...")
+                    
+                    # Check if server already exists
+                    existing_servers = manager.list_servers()
+                    if any(s.name == server_name for s in existing_servers):
+                        console.print(f"   ⏭️  [yellow]Skipped[/yellow]: {server_name} already exists")
+                        skipped_count += 1
+                        continue
+                    
+                    # Find the server in discovery results
+                    results = await discovery.discover_servers(limit=200)
+                    target_result = None
+                    
+                    for result in results:
+                        if _generate_install_id(result) == install_id:
+                            target_result = result
+                            break
+                    
+                    if not target_result:
+                        console.print(f"   ❌ [red]Failed[/red]: {server_name} not found in discovery")
+                        failed_count += 1
+                        continue
+                    
+                    if target_result.server_type == ServerType.DOCKER_DESKTOP:
+                        import subprocess
+                        enable_result = subprocess.run(
+                            ["docker", "mcp", "server", "enable", server_name.replace("docker-desktop-", "").replace("dd-", "")],
+                            capture_output=True, text=True
+                        )
+                        
+                        if enable_result.returncode == 0:
+                            server = await manager.add_server(
+                                name=server_name,
+                                server_type=target_result.server_type,
+                                command=target_result.install_command,
+                                description=target_result.description,
+                                args=target_result.install_args or []
+                            )
+                        else:
+                            raise Exception(f"Failed to enable in Docker Desktop: {enable_result.stderr}")
+                    else:
+                        additional_config = _prompt_for_server_configuration(
+                            server_name=server_name,
+                            server_type=target_result.server_type,
+                            package=target_result.package,
+                            test_mode=True
+                        )
+                        
+                        install_args = target_result.install_args or []
+                        if additional_config:
+                            install_args.extend(additional_config.get('args', []))
+                        
+                        server = await manager.add_server(
+                            name=server_name,
+                            server_type=target_result.server_type,
+                            command=target_result.install_command,
+                            description=target_result.description,
+                            args=install_args
+                        )
+                    
+                    console.print(f"   ✅ [green]Installed[/green]: {server_name}")
+                    installed_count += 1
+                    
+                    # Tag server with suite information
+                    try:
+                        await _tag_server_with_suite(server_name, cat_name, server_info["priority"], install_id)
+                        console.print(f"   🏷️  [dim]Tagged with suite: test-suite-{cat_name}[/dim]")
+                    except Exception as e:
+                        console.print(f"   ⚠️  [yellow]Warning: Failed to tag with suite info: {e}[/yellow]")
+                        logger.error(f"Failed to tag server {server_name} with suite info: {e}")
+                    
+                except Exception as e:
+                    console.print(f"   ❌ [red]Failed[/red]: {server_name} - {e}")
+                    failed_count += 1
+    
+    # Run installation
+    import asyncio
+    asyncio.run(install_test_suite())
+    
+    # Summary
+    console.print(f"\n🎯 [green bold]Test Suite Installation Complete![/green bold]")
+    console.print(f"   ✅ Installed: {installed_count} servers")
+    console.print(f"   ⏭️  Skipped: {skipped_count} servers (already existed)")
+    console.print(f"   ❌ Failed: {failed_count} servers")
+    
+    if installed_count > 0:
+        console.print(f"\n💡 [dim]Next steps:[/dim]")
+        console.print(f"   • [cyan]claude mcp list[/cyan] - View all installed servers")
+        console.print(f"   • [cyan]mcp-manager list[/cyan] - Detailed server information")
+        console.print(f"   • Create task-specific configs for web development, data analysis, etc.")
+        console.print(f"\n🔧 [dim]Future: Use these servers in task configs like 'web-dev-suite' or 'data-analysis-stack'[/dim]")
+
+
 @cli.command()
 @click.argument("name")
 @handle_errors

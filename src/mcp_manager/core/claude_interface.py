@@ -628,5 +628,52 @@ class ClaudeInterface:
             return ServerType.DOCKER
         else:
             return ServerType.CUSTOM
+    
+    def is_claude_cli_available(self) -> bool:
+        """Check if Claude CLI is available and working."""
+        try:
+            # Just check if the claude binary exists and is executable
+            # Don't actually run it to avoid timeouts
+            if not self.claude_path or not shutil.which(self.claude_path):
+                return False
+            
+            # Quick version check with very short timeout
+            result = subprocess.run(
+                [self.claude_path, "--version"],
+                capture_output=True,
+                timeout=2,  # Very short timeout
+                env=self._get_env(),
+            )
+            return result.returncode == 0
+        except subprocess.TimeoutExpired:
+            # If version check times out, assume it's available but slow
+            logger.debug("Claude CLI version check timed out, assuming available")
+            return True
+        except Exception as e:
+            logger.debug(f"Claude CLI availability check failed: {e}")
+            return False
+    
+    def is_docker_available(self) -> bool:
+        """Check if Docker is available and working."""
+        try:
+            # Just check if the docker binary exists and is executable
+            if not self.docker_path or not shutil.which(self.docker_path):
+                return False
+            
+            # Quick version check with very short timeout
+            result = subprocess.run(
+                [self.docker_path, "--version"],
+                capture_output=True,
+                timeout=2,  # Very short timeout
+                env=self._get_env(),
+            )
+            return result.returncode == 0
+        except subprocess.TimeoutExpired:
+            # If version check times out, assume it's available but slow
+            logger.debug("Docker version check timed out, assuming available")
+            return True
+        except Exception as e:
+            logger.debug(f"Docker availability check failed: {e}")
+            return False
 
 

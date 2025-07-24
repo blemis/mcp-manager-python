@@ -6,9 +6,14 @@ This document provides **complete step-by-step instructions** for testing MCP Ma
 
 **What we're testing:**
 - ✅ Direct Mode (current behavior) - unchanged functionality
+- ✅ Analytics CLI commands - comprehensive usage analytics
+- ✅ Tools CLI commands - tool registry search and management
+- ✅ Docker Desktop tool discovery - 35+ tools from unified gateway
+- ✅ Workflow management - task-specific MCP configurations
 - ✅ Proxy Mode (new feature) - unified MCP endpoint
 - ✅ Mode switching between Direct/Proxy/Hybrid modes
 - ✅ Backward compatibility (existing workflows still work)
+- ✅ DEBUG mode setup and logging
 
 ---
 
@@ -38,6 +43,14 @@ This document provides **complete step-by-step instructions** for testing MCP Ma
    ```
    - Expected output: Version number
    - If not installed: Visit https://docs.anthropic.com/claude/docs/claude-code
+
+4. **Docker Desktop (optional, for Docker MCP servers)**
+   ```bash
+   docker --version
+   docker mcp --help
+   ```
+   - Expected output: Docker version and MCP help text
+   - If not installed: Visit https://www.docker.com/products/docker-desktop/
 
 ### Step 2: Install MCP Manager
 
@@ -74,6 +87,15 @@ This document provides **complete step-by-step instructions** for testing MCP Ma
    - **Expected output**: Version number
    - **If command not found**: Add to PATH or use `python -m mcp_manager` instead
 
+6. **Enable DEBUG mode (optional but recommended for testing)**
+   ```bash
+   export MCP_MANAGER_LOG_LEVEL=DEBUG
+   export MCP_MANAGER_DEBUG=true
+   ```
+   - **Enable detailed logging**: All operations will be logged in detail
+   - **Check debug status**: `mcp-manager config` should show debug settings
+   - **View debug logs**: `tail -f ~/.config/mcp-manager/logs/mcp-manager.log`
+
 ### Step 3: Backup Existing Configuration
 
 **IMPORTANT: Backup your current Claude Code configuration**
@@ -92,6 +114,25 @@ This document provides **complete step-by-step instructions** for testing MCP Ma
    ```bash
    cp ~/.claude.json ~/.claude.json.backup.$(date +%Y%m%d_%H%M%S)
    ```
+
+4. **Setup DEBUG environment (recommended)**
+   ```bash
+   # Create debug configuration directory
+   mkdir -p ~/.config/mcp-manager/logs
+   
+   # Enable comprehensive debug logging
+   export MCP_MANAGER_LOG_LEVEL=DEBUG
+   export MCP_MANAGER_DEBUG=true
+   export MCP_MANAGER_LOG_FILE=~/.config/mcp-manager/logs/test-session.log
+   
+   # Optional: Enable database query logging
+   export MCP_MANAGER_DB_DEBUG=true
+   
+   # Verify debug setup
+   mcp-manager config | grep -i debug
+   ```
+   - **Expected output**: Should show debug settings are enabled
+   - **Log file**: Debug logs will be written to the specified file
 
 ---
 
@@ -123,8 +164,9 @@ This document provides **complete step-by-step instructions** for testing MCP Ma
    ```bash
    mcp-manager status
    ```
-   - **Expected**: System information and health status
-   - **Record any errors**: Write them down for later comparison
+   - **Expected**: Comprehensive system status with 6 panels (Server Status, Tools Registry, Workflow Status, Analytics, System Health, Configuration)
+   - **Record**: Server counts, tool counts, workflow status, and any health issues
+   - **Note**: This is the new status command we just added
 
 4. **Test server discovery**
    ```bash
@@ -535,6 +577,321 @@ This document provides **complete step-by-step instructions** for testing MCP Ma
 
 ---
 
+## Category H: Analytics CLI Testing
+
+### Test H1: Analytics Summary Command
+
+**Purpose**: Test comprehensive usage analytics functionality
+
+**Steps:**
+
+1. **Test basic analytics summary**
+   ```bash
+   mcp-manager analytics summary
+   ```
+   - **Expected**: Rich formatted summary with usage statistics
+   - **Record**: Number of servers, tools, and usage patterns shown
+
+2. **Test analytics with custom time range**
+   ```bash
+   mcp-manager analytics summary --days 30
+   ```
+   - **Expected**: 30-day analytics summary
+   - **Compare**: Should show more historical data than default 7-day view
+
+3. **Test analytics with no data**
+   ```bash
+   # On fresh installation
+   mcp-manager analytics summary
+   ```
+   - **Expected**: Graceful handling of empty analytics
+   - **Should show**: "No usage data available" or similar message
+
+### Test H2: Analytics Query Command
+
+**Steps:**
+
+1. **Test query analytics**
+   ```bash
+   mcp-manager analytics query --query "filesystem operations" --limit 10
+   ```
+   - **Expected**: Analytics for filesystem-related queries
+   - **Record**: Number of results and relevance
+
+2. **Test analytics export**
+   ```bash
+   mcp-manager analytics query --export analytics-export.json
+   ```
+   - **Expected**: JSON export file created
+   - **Verify**: `ls -la analytics-export.json`
+
+---
+
+## Category I: Tools CLI Testing
+
+### Test I1: Tools Search Command
+
+**Purpose**: Test tool discovery and search functionality
+
+**Steps:**
+
+1. **Test basic tool search**
+   ```bash
+   mcp-manager tools search "file read"
+   ```
+   - **Expected**: List of file reading tools from all servers
+   - **Record**: Number of tools found and server sources
+
+2. **Test search with server filter**
+   ```bash
+   mcp-manager tools search "database" --server sqlite
+   ```
+   - **Expected**: Database tools only from SQLite server
+   - **Verify**: All results should be from SQLite server
+
+3. **Test search with category filter**
+   ```bash
+   mcp-manager tools search "*" --category filesystem
+   ```
+   - **Expected**: All filesystem-related tools
+   - **Record**: Tool count and categories shown
+
+### Test I2: Tools List Command
+
+**Steps:**
+
+1. **Test list all tools**
+   ```bash
+   mcp-manager tools list
+   ```
+   - **Expected**: Rich table of all available tools
+   - **Record**: Total tool count and number of servers
+
+2. **Test list with server filter**
+   ```bash
+   mcp-manager tools list --server filesystem
+   ```
+   - **Expected**: Tools only from filesystem server
+   - **Verify**: Server column should show only "filesystem"
+
+3. **Test list with limit**
+   ```bash
+   mcp-manager tools list --limit 5
+   ```
+   - **Expected**: Only 5 tools shown
+   - **Verify**: Table should have exactly 5 rows
+
+---
+
+## Category J: Docker Desktop Tool Discovery Testing
+
+### Test J1: Docker Desktop Integration
+
+**Purpose**: Test the fixed Docker Desktop tool discovery (35+ tools)
+
+**Prerequisites:**
+- Docker Desktop installed and running
+- At least one MCP server enabled in Docker Desktop
+
+**Steps:**
+
+1. **Enable Docker Desktop MCP servers**
+   ```bash
+   docker mcp server enable sqlite
+   docker mcp server enable filesystem
+   docker mcp server list
+   ```
+   - **Expected**: Shows enabled servers
+   - **Record**: Which servers are enabled
+
+2. **Test Docker Desktop tool discovery**
+   ```bash
+   mcp-manager tools list --server docker-gateway
+   ```
+   - **Expected**: 35+ tools from Docker Desktop servers
+   - **Critical**: Should NOT show 0 tools (this was the bug we fixed)
+   - **Record**: Exact tool count and server breakdown
+
+3. **Test specific Docker Desktop server tools**
+   ```bash
+   mcp-manager discover --type docker-desktop --update-catalog
+   ```
+   - **Expected**: Discovery of Docker Desktop servers and their tools
+   - **Record**: Discovery time and success rate
+
+### Test J2: Docker Desktop vs Regular Docker
+
+**Steps:**
+
+1. **Compare Docker discovery types**
+   ```bash
+   # Regular Docker containers
+   mcp-manager discover --type docker --limit 5
+   
+   # Docker Desktop unified gateway
+   mcp-manager discover --type docker-desktop --limit 5
+   ```
+   - **Expected**: Different results showing the two discovery types
+   - **Record**: Architecture differences as documented in PLAN.md
+
+2. **Test docker-gateway integration**
+   ```bash
+   claude mcp add-from-claude-desktop docker-gateway
+   claude mcp list | grep docker-gateway
+   ```
+   - **Expected**: docker-gateway appears as unified proxy
+   - **Verify**: Shows as single entry representing all enabled DD servers
+
+---
+
+## Category K: Workflow Management Testing
+
+### Test K1: Workflow Templates
+
+**Purpose**: Test the comprehensive workflow management system
+
+**Steps:**
+
+1. **List available workflow templates**
+   ```bash
+   mcp-manager workflow templates
+   ```
+   - **Expected**: Rich table showing 12+ predefined templates
+   - **Record**: Template categories and required servers
+
+2. **Install a workflow template**
+   ```bash
+   mcp-manager workflow install-template "Web Development Suite"
+   ```
+   - **Expected**: Template installation with suite creation
+   - **Verify**: `mcp-manager workflow list` should show new workflow
+
+3. **Install all viable templates**
+   ```bash
+   mcp-manager workflow install-all-templates
+   ```
+   - **Expected**: Installation of all templates with available servers
+   - **Record**: How many were installed vs skipped
+
+### Test K2: Workflow Activation and Switching
+
+**Steps:**
+
+1. **Activate a workflow**
+   ```bash
+   mcp-manager workflow activate "Web Development Suite"
+   ```
+   - **Expected**: Workflow activation with server configuration changes
+   - **Verify**: `mcp-manager workflow status` shows active workflow
+
+2. **Switch workflows by category**
+   ```bash
+   mcp-manager workflow switch data-analysis
+   ```
+   - **Expected**: Switches to best data analysis workflow
+   - **Record**: Which workflow was selected and why
+
+3. **Test workflow creation**
+   ```bash
+   mcp-manager workflow create "Custom Test" --description "Test workflow" --suites "suite-1,suite-2" --category automation
+   ```
+   - **Expected**: Custom workflow creation
+   - **Verify**: `mcp-manager workflow list` shows new workflow
+
+### Test K3: Workflow Status and Management
+
+**Steps:**
+
+1. **Check workflow status**
+   ```bash
+   mcp-manager workflow status
+   ```
+   - **Expected**: Detailed status with active workflow and suite information
+   - **Record**: Active workflow details and server counts
+
+2. **Deactivate workflow**
+   ```bash
+   mcp-manager workflow deactivate
+   ```
+   - **Expected**: Workflow deactivation with server cleanup
+   - **Verify**: Status should show no active workflow
+
+3. **Delete workflow**
+   ```bash
+   mcp-manager workflow delete "Custom Test" --force
+   ```
+   - **Expected**: Workflow deletion without confirmation
+   - **Verify**: Should not appear in workflow list
+
+---
+
+## Category L: DEBUG Mode and Logging Testing
+
+### Test L1: DEBUG Mode Setup
+
+**Purpose**: Test comprehensive debug logging and troubleshooting
+
+**Steps:**
+
+1. **Enable DEBUG mode**
+   ```bash
+   export MCP_MANAGER_LOG_LEVEL=DEBUG
+   export MCP_MANAGER_DEBUG=true
+   export MCP_MANAGER_LOG_FILE=~/.config/mcp-manager/logs/debug-test.log
+   ```
+   - **Expected**: Environment variables set
+   - **Verify**: `echo $MCP_MANAGER_LOG_LEVEL` should return "DEBUG"
+
+2. **Test debug logging**
+   ```bash
+   mcp-manager list
+   tail -20 ~/.config/mcp-manager/logs/debug-test.log
+   ```
+   - **Expected**: Detailed debug logs for the list command
+   - **Record**: Log detail level and database queries shown
+
+3. **Test database debug mode**
+   ```bash
+   export MCP_MANAGER_DB_DEBUG=true
+   mcp-manager tools search "test"
+   tail -30 ~/.config/mcp-manager/logs/debug-test.log | grep -i sql
+   ```
+   - **Expected**: SQL queries logged in debug output
+   - **Record**: Database query logging working
+
+### Test L2: Performance Debugging
+
+**Steps:**
+
+1. **Test timing information**
+   ```bash
+   time mcp-manager discover --limit 10
+   ```
+   - **Expected**: Command completion with timing
+   - **Record**: Execution time and any performance bottlenecks
+
+2. **Test error debugging**
+   ```bash
+   # Trigger an error intentionally
+   mcp-manager workflow activate "NonExistentWorkflow"
+   tail -10 ~/.config/mcp-manager/logs/debug-test.log
+   ```
+   - **Expected**: Detailed error logging with stack traces
+   - **Record**: Error detail level and troubleshooting information
+
+3. **Test concurrent operation debugging**
+   ```bash
+   # Run multiple commands simultaneously
+   mcp-manager tools list &
+   mcp-manager analytics summary &
+   wait
+   grep -i "concurrent\|thread\|async" ~/.config/mcp-manager/logs/debug-test.log
+   ```
+   - **Expected**: Debug logs showing concurrent operation handling
+   - **Record**: Thread safety and async operation logging
+
+---
+
 ## Category G: Edge Cases & Error Conditions
 
 ### Test G1: Configuration Edge Cases
@@ -599,6 +956,8 @@ This document provides **complete step-by-step instructions** for testing MCP Ma
 Date: _______________
 Tester: _______________
 MCP Manager Version: _______________
+DEBUG Mode Enabled: Yes/No
+Log File Location: _______________
 
 ## Category A: Direct Mode Testing
 [ ] Test A1: Basic Direct Mode Operation
@@ -681,16 +1040,98 @@ MCP Manager Version: _______________
     - No servers handled: Yes/No
     - Proxy stop handled: Yes/No
 
+## Category H: Analytics CLI Testing
+[ ] Test H1: Analytics Summary Command
+    - Basic summary works: Yes/No
+    - Custom time range works: Yes/No
+    - Empty data handled: Yes/No
+
+[ ] Test H2: Analytics Query Command
+    - Query analytics works: Yes/No
+    - Export functionality: Yes/No
+    - Results count: ___
+
+## Category I: Tools CLI Testing
+[ ] Test I1: Tools Search Command
+    - Basic search works: Yes/No
+    - Server filter works: Yes/No
+    - Category filter works: Yes/No
+    - Tools found: ___ count
+
+[ ] Test I2: Tools List Command
+    - List all tools works: Yes/No
+    - Server filter works: Yes/No
+    - Limit parameter works: Yes/No
+    - Total tools: ___ count
+
+## Category J: Docker Desktop Tool Discovery
+[ ] Test J1: Docker Desktop Integration
+    - Docker servers enabled: Yes/No
+    - Tool discovery works: Yes/No
+    - Tools found: ___ (should be 35+)
+    - Bug fixed (was showing 0): Yes/No
+
+[ ] Test J2: Docker vs Docker Desktop
+    - Architecture distinction clear: Yes/No
+    - docker-gateway integration: Yes/No
+
+## Category K: Workflow Management
+[ ] Test K1: Workflow Templates
+    - Templates list works: Yes/No
+    - Template installation works: Yes/No
+    - Install all templates works: Yes/No
+    - Templates installed: ___ count
+
+[ ] Test K2: Workflow Activation
+    - Workflow activation works: Yes/No
+    - Category switching works: Yes/No
+    - Custom workflow creation: Yes/No
+
+[ ] Test K3: Workflow Management
+    - Status display works: Yes/No
+    - Deactivation works: Yes/No
+    - Deletion works: Yes/No
+
+## Category L: DEBUG Mode and Logging
+[ ] Test L1: DEBUG Mode Setup
+    - DEBUG mode enabled: Yes/No
+    - Debug logging works: Yes/No
+    - Database debug works: Yes/No
+
+[ ] Test L2: Performance Debugging
+    - Timing information: Yes/No
+    - Error debugging: Yes/No
+    - Concurrent operations: Yes/No
+
 ## Overall Results
-Total Tests: ___
-Passed: ___
+Total Test Categories: 12
+Total Tests Passed: ___/48
 Failed: ___
 Critical Issues: ___
+
+## NEW FUNCTIONALITY VALIDATION
+✅ Analytics CLI Commands: Pass/Fail
+✅ Tools CLI Commands: Pass/Fail  
+✅ Docker Desktop Tool Discovery (35+ tools): Pass/Fail
+✅ Workflow Management System: Pass/Fail
+✅ DEBUG Mode and Logging: Pass/Fail
 
 ## Critical Issues Found
 1. _______________
 2. _______________
 3. _______________
+
+## Performance Benchmarks
+- Analytics summary time: ___ seconds
+- Tools search time: ___ seconds
+- Docker tool discovery time: ___ seconds
+- Workflow activation time: ___ seconds
+
+## DEBUG Log Analysis
+- Log file size: ___ MB
+- Database queries logged: Yes/No
+- Error stack traces complete: Yes/No
+- Performance bottlenecks identified: ___
 
 ## Recommendations
 1. _______________
@@ -743,6 +1184,40 @@ claude --version
 # Increase timeout
 export MCP_PROXY_TIMEOUT=60
 # Or test with smaller data sets
+```
+
+**Issue**: DEBUG logs not appearing
+**Solution**: 
+```bash
+# Ensure debug environment is set
+export MCP_MANAGER_LOG_LEVEL=DEBUG
+export MCP_MANAGER_DEBUG=true
+# Check log file permissions
+ls -la ~/.config/mcp-manager/logs/
+# Manually create log directory if needed
+mkdir -p ~/.config/mcp-manager/logs
+```
+
+**Issue**: Workflow templates not installing
+**Solution**: 
+```bash
+# Check available servers first
+mcp-manager list
+# Install required servers for templates
+mcp-manager install-package modelcontextprotocol-filesystem
+# Then retry template installation
+mcp-manager workflow install-all-templates
+```
+
+**Issue**: Docker Desktop tools showing 0 count
+**Solution**: 
+```bash
+# Ensure Docker Desktop is running
+docker --version
+# Enable at least one MCP server in Docker Desktop
+docker mcp server enable sqlite
+# Update tool discovery cache
+mcp-manager discover --type docker-desktop --update-catalog
 ```
 
 ---
