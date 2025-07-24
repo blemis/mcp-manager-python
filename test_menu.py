@@ -135,8 +135,9 @@ class TestMenu:
         print("2. 🎯 Individual Test Categories") 
         print("3. 🔧 Custom Test Selection")
         print("4. 📊 View Last Test Results")
-        print("5. ❓ Help & Documentation")
-        print("6. 🚪 Exit")
+        print("5. 📁 Show Output Files for Sharing")
+        print("6. ❓ Help & Documentation")
+        print("7. 🚪 Exit")
         print()
     
     def print_collections_menu(self):
@@ -237,6 +238,25 @@ class TestMenu:
                 print(f"⚠️  Test execution completed with issues in {duration:.1f}s")
                 print("📋 Check the detailed output above for specific failures")
             print("=" * 60)
+            
+            # Show output files
+            print(f"{self.colors['cyan']}📁 Output Files Generated:{self.colors['reset']}")
+            cwd = Path.cwd()
+            
+            # Summary file
+            summary_file = cwd / "test-results-summary.json"
+            if summary_file.exists():
+                print(f"   📊 Summary: {summary_file}")
+            
+            # XML files
+            xml_files = list(cwd.glob("test-results-*.xml"))
+            if xml_files:
+                for xml_file in sorted(xml_files):
+                    category = xml_file.stem.replace('test-results-', '').replace('-', ' ').title()
+                    print(f"   📄 {category}: {xml_file}")
+            
+            print(f"{self.colors['yellow']}💡 Share these files with your team or for debugging{self.colors['reset']}")
+            print("=" * 60)
             print(f"{self.colors['reset']}")
             
             return result.returncode == 0
@@ -294,6 +314,82 @@ class TestMenu:
             
         except Exception as e:
             print(f"{self.colors['red']}❌ Error reading test results: {e}{self.colors['reset']}")
+    
+    def show_output_files(self):
+        """Show test output files for sharing."""
+        print(f"{self.colors['bold']}📁 TEST OUTPUT FILES FOR SHARING{self.colors['reset']}")
+        print("-" * 60)
+        
+        cwd = Path.cwd()
+        
+        # Summary file
+        summary_file = cwd / "test-results-summary.json"
+        if summary_file.exists():
+            print(f"{self.colors['cyan']}📊 Summary Report:{self.colors['reset']}")
+            print(f"   {summary_file}")
+            
+            # Show quick stats from summary
+            try:
+                with open(summary_file, 'r') as f:
+                    data = json.load(f)
+                
+                total_categories = data.get('total_categories', 0)
+                passed_categories = data.get('passed_categories', 0)
+                failed_categories = data.get('failed_categories', 0)
+                success_rate = data.get('success_rate', 0)
+                total_time = data.get('total_time', 0)
+                
+                print(f"   └─ {passed_categories}/{total_categories} passed ({success_rate:.1f}%) in {total_time:.1f}s")
+                
+            except Exception:
+                print("   └─ (Unable to read summary)")
+            
+            print()
+        
+        # XML files
+        xml_files = list(cwd.glob("test-results-*.xml"))
+        if xml_files:
+            print(f"{self.colors['cyan']}📄 Individual Test Reports ({len(xml_files)} files):{self.colors['reset']}")
+            for xml_file in sorted(xml_files):
+                category = xml_file.stem.replace('test-results-', '').replace('-', ' ').title()
+                size_kb = xml_file.stat().st_size / 1024
+                print(f"   {xml_file}")
+                print(f"   └─ {category} ({size_kb:.1f} KB)")
+            print()
+        
+        # Recent log files (if any)
+        log_files = list(cwd.glob("test_failures.log")) + list(cwd.glob("*.log"))
+        if log_files:
+            print(f"{self.colors['cyan']}📋 Log Files:{self.colors['reset']}")
+            for log_file in sorted(log_files):
+                size_kb = log_file.stat().st_size / 1024
+                print(f"   {log_file} ({size_kb:.1f} KB)")
+            print()
+        
+        # Easy copy commands
+        all_files = []
+        if summary_file.exists():
+            all_files.append(str(summary_file))
+        all_files.extend([str(f) for f in xml_files])
+        
+        if all_files:
+            print(f"{self.colors['green']}🔗 Copy Commands for Sharing:{self.colors['reset']}")
+            print("# Copy individual files:")
+            for file in all_files:
+                print(f"cp '{file}' /destination/")
+            
+            print()
+            print("# Copy all test results:")
+            files_str = " ".join([f"'{f}'" for f in all_files])
+            print(f"cp {files_str} /destination/")
+            print()
+            
+            print(f"{self.colors['yellow']}💡 Tip: These files contain all test execution details{self.colors['reset']}")
+            print("   Summary JSON: Machine-readable results and statistics")
+            print("   XML files: JUnit format for CI/CD integration")
+        else:
+            print(f"{self.colors['red']}❌ No test output files found.{self.colors['reset']}")
+            print("   Run tests first to generate output files.")
     
     def show_help(self):
         """Show help and documentation."""
@@ -471,7 +567,7 @@ class TestMenu:
                 self.print_header()
                 self.print_main_menu()
                 
-                choice = self.get_user_input("Select option (1-6):")
+                choice = self.get_user_input("Select option (1-7):")
                 
                 if choice == '1':
                     self.handle_collections_menu()
@@ -487,14 +583,19 @@ class TestMenu:
                 elif choice == '5':
                     self.clear_screen()
                     self.print_header()
-                    self.show_help()
+                    self.show_output_files()
                     self.wait_for_continue()
                 elif choice == '6':
+                    self.clear_screen()
+                    self.print_header()
+                    self.show_help()
+                    self.wait_for_continue()
+                elif choice == '7':
                     print(f"\n{self.colors['cyan']}👋 Thanks for using MCP Manager Test Suite!{self.colors['reset']}")
                     print("🚀 Keep testing, keep improving! ✨")
                     break
                 else:
-                    print(f"{self.colors['red']}❌ Invalid selection. Please choose 1-6.{self.colors['reset']}")
+                    print(f"{self.colors['red']}❌ Invalid selection. Please choose 1-7.{self.colors['reset']}")
                     self.wait_for_continue()
                     
         except KeyboardInterrupt:
