@@ -43,46 +43,71 @@ class ProfessionalTestRunner:
         # Add files or default test pattern
         if files:
             cmd.extend(files)
+            print(f"📁 Test Files: {', '.join(files)}")
         else:
             cmd.append("tests/")
+            print(f"📁 Test Pattern: tests/")
         
         # Add markers
         if markers:
             for marker in markers:
                 cmd.extend(["-m", marker])
+            print(f"🏷️  Markers: {', '.join(markers)}")
         
         # Add reporting options
         cmd.extend([
             "--verbose",
             "--tb=short",
             "--durations=10",
-            f"--junitxml=test-results-{category.lower()}.xml",
-            "--color=yes"
+            f"--junitxml=test-results-{category.lower().replace(' ', '-')}.xml",
+            "--color=yes",
+            "-s"  # Don't capture output, show prints in real-time
         ])
         
-        # Run tests
+        print(f"🚀 Command: {' '.join(cmd)}")
+        print("-" * 60)
+        
+        # Run tests with live output
         start_time = time.time()
         try:
-            result = subprocess.run(
+            # Use Popen for real-time output streaming
+            import subprocess
+            process = subprocess.Popen(
                 cmd,
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
                 text=True,
-                timeout=1800  # 30 minute timeout for test categories
+                bufsize=1,
+                universal_newlines=True
             )
+            
+            stdout_lines = []
+            
+            # Stream output in real-time
+            for line in iter(process.stdout.readline, ''):
+                print(line, end='')  # Show live output
+                stdout_lines.append(line)
+            
+            process.wait(timeout=1800)  # 30 minute timeout
+            stdout = ''.join(stdout_lines)
             
             duration = time.time() - start_time
             
+            print(f"\n⏱️  {category} completed in {duration:.1f}s")
+            
             return {
                 'category': category,
-                'success': result.returncode == 0,
-                'returncode': result.returncode,
+                'success': process.returncode == 0,
+                'returncode': process.returncode,
                 'duration': duration,
-                'stdout': result.stdout,
-                'stderr': result.stderr,
+                'stdout': stdout,
+                'stderr': '',
                 'command': ' '.join(cmd)
             }
             
         except subprocess.TimeoutExpired:
+            if 'process' in locals():
+                process.kill()
             return {
                 'category': category,
                 'success': False,
@@ -196,18 +221,30 @@ class ProfessionalTestRunner:
             print(f"\n📋 [{i}/{total_categories}] {category_name}")
             print("-" * 60)
             
+            # Show progress and what we're about to test
+            remaining = total_categories - i
+            print(f"🎯 Progress: {i}/{total_categories} ({(i/total_categories)*100:.0f}%) | {remaining} remaining")
+            
             try:
+                print(f"🔄 Starting {category_name}...")
                 result = test_func()
                 results.append(result)
                 
-                # Show immediate results
+                # Show immediate results with more context
                 if result['success']:
-                    print(f"✅ {category_name}: PASSED ({result['duration']:.1f}s)")
+                    print(f"\n✅ {category_name}: PASSED ({result['duration']:.1f}s)")
+                    print(f"   All tests in this category completed successfully")
                 else:
-                    print(f"❌ {category_name}: FAILED ({result['duration']:.1f}s)")
+                    print(f"\n❌ {category_name}: FAILED ({result['duration']:.1f}s)")
                     print(f"   Return code: {result['returncode']}")
                     if 'error' in result:
                         print(f"   Error: {result['error']}")
+                    else:
+                        print(f"   Some tests failed - check detailed output above")
+                
+                # Show cumulative progress
+                passed_so_far = sum(1 for r in results if r['success'])
+                print(f"📊 Running Total: {passed_so_far}/{i} categories passed so far")
                 
             except Exception as e:
                 print(f"💥 {category_name}: CRASHED ({str(e)})")
@@ -217,6 +254,12 @@ class ProfessionalTestRunner:
                     'error': f'Test category crashed: {str(e)}',
                     'duration': 0
                 })
+            
+            # Add separator between categories for clarity
+            if i < total_categories:
+                print(f"\n{'='*80}")
+                print(f"🔄 Moving to next category...")
+                print(f"{'='*80}")
         
         return results
     
@@ -300,6 +343,15 @@ class ProfessionalTestRunner:
             }, f, indent=2)
         
         print("📁 Detailed results saved to: test-results-summary.json")
+        print("📄 Individual XML reports: test-results-*.xml")
+        print()
+        print("🔗 Share these files:")
+        print(f"   📊 Summary: {Path.cwd()}/test-results-summary.json")
+        for result in results:
+            category_safe = result['category'].lower().replace(' ', '-')
+            xml_file = f"test-results-{category_safe}.xml"
+            if Path(xml_file).exists():
+                print(f"   📄 {result['category']}: {Path.cwd()}/{xml_file}")
 
 
 def main():

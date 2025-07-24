@@ -220,10 +220,13 @@ class TestMenu:
         
         try:
             start_time = time.time()
+            print(f"{self.colors['cyan']}🚀 Executing: {' '.join(cmd)}{self.colors['reset']}")
+            print(f"{self.colors['yellow']}💡 Live output will be shown below...{self.colors['reset']}")
+            print("=" * 80)
+            
             result = subprocess.run(
                 cmd,
                 cwd=Path.cwd(),
-                capture_output=False,  # Show output in real-time
                 text=True
             )
             duration = time.time() - start_time
