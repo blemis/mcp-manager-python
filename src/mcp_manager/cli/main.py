@@ -3824,6 +3824,18 @@ def tools_list(server: Optional[str], type: Optional[str], available_only: bool,
     asyncio.run(list_tools())
 
 
+# =============================================================================
+# Workflow Commands
+# =============================================================================
+
+# Import and register workflow commands
+try:
+    from mcp_manager.cli.workflow_commands import workflow
+    cli.add_command(workflow)
+except ImportError as e:
+    logger.warning(f"Failed to import workflow commands: {e}")
+
+
 def main():
     """Main CLI entry point."""
     cli()

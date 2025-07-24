@@ -39,6 +39,18 @@ class ServerType(str, Enum):
     CUSTOM = "custom"
 
 
+class TaskCategory(str, Enum):
+    """Task categories for AI curation and workflow management."""
+    
+    WEB_DEVELOPMENT = "web-development"
+    DATA_ANALYSIS = "data-analysis"
+    SYSTEM_ADMINISTRATION = "system-administration"
+    RESEARCH = "research"
+    AUTOMATION = "automation"
+    TESTING = "testing"
+    GENERAL = "general"
+
+
 class Server(BaseModel):
     """MCP server configuration."""
     
