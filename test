@@ -1,0 +1,22 @@
+#!/bin/bash
+#
+# Quick Test Launcher for MCP Manager
+#
+# Usage:
+#   ./test                    # Interactive menu
+#   ./test smoke             # Quick smoke test
+#   ./test unit              # Unit tests  
+#   ./test quick             # Smoke + unit tests
+#   ./test all               # All tests
+#
+
+# If no arguments, launch interactive menu
+if [ $# -eq 0 ]; then
+    echo "🧪 Launching MCP Manager Interactive Test Menu..."
+    python test_menu.py
+    exit $?
+fi
+
+# Otherwise, run test_runner.py with arguments
+echo "🚀 Running MCP Manager Tests: $*"
+python tests/test_runner.py "$@"
