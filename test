@@ -8,12 +8,20 @@
 #   ./test unit              # Unit tests  
 #   ./test quick             # Smoke + unit tests
 #   ./test all               # All tests
+#   ./test files             # Show output files for sharing
 #
 
 # If no arguments, launch interactive menu
 if [ $# -eq 0 ]; then
     echo "🧪 Launching MCP Manager Interactive Test Menu..."
-    python test_menu.py
+    python tests/tools/test_menu.py
+    exit $?
+fi
+
+# Special case: show output files
+if [ "$1" = "files" ]; then
+    echo "📁 Showing MCP Manager Test Output Files..."
+    python tests/tools/show_test_files.py
     exit $?
 fi
 

@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="15" skipped="0" tests="26" time="127.159" timestamp="2025-07-24T17:06:04.154235-04:00" hostname="BlemisMac.local"><testcase classname="tests.test_server_management.TestServerAddition" name="test_add_server_by_type[npm-npx @test/server-args0]" time="0.177"><failure message="AssertionError: &#10;Test: Add npm server&#10;Command: python -m mcp_manager.cli.main add test-npm-server --type npm --command 'npx @test/server' --args '--directory' '/tmp'&#10;Expected: Success&#10;Actual: Failure (code 2)&#10;STDOUT: &#10;STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic">tests/test_server_management.py:34: in test_add_server_by_type
+    TestAssertions.assert_command_success(result, f"Add {server_type} server")
+tests/utils/validators.py:217: in assert_command_success
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Add npm server
+E   Command: python -m mcp_manager.cli.main add test-npm-server --type npm --command 'npx @test/server' --args '--directory' '/tmp'
+E   Expected: Success
+E   Actual: Failure (code 2)
+E   STDOUT: 
+E   STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic</failure></testcase><testcase classname="tests.test_server_management.TestServerAddition" name="test_add_server_by_type[docker-docker run test/server-args1]" time="0.922"><failure message="AssertionError: assert False&#10; +  where False = &lt;function OutputValidator.validate_success_message at 0x104519260&gt;('❌ Failed to add server: Failed to add server test-docker-server: Failed to add server: Failed to add server: MCP\nserver test-docker-server already exists in user config\n', 'add')&#10; +    where &lt;function OutputValidator.validate_success_message at 0x104519260&gt; = OutputValidator.validate_success_message">tests/test_server_management.py:35: in test_add_server_by_type
+    assert OutputValidator.validate_success_message(result['stdout'], "add")
+E   AssertionError: assert False
+E    +  where False = &lt;function OutputValidator.validate_success_message at 0x104519260&gt;('❌ Failed to add server: Failed to add server test-docker-server: Failed to add server: Failed to add server: MCP\nserver test-docker-server already exists in user config\n', 'add')
+E    +    where &lt;function OutputValidator.validate_success_message at 0x104519260&gt; = OutputValidator.validate_success_message</failure></testcase><testcase classname="tests.test_server_management.TestServerAddition" name="test_add_server_by_type[custom-python test_server.py-args2]" time="0.169"><failure message="AssertionError: &#10;Test: Add custom server&#10;Command: python -m mcp_manager.cli.main add test-custom-server --type custom --command 'python test_server.py' --args '--config' 'test.json'&#10;Expected: Success&#10;Actual: Failure (code 2)&#10;STDOUT: &#10;STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic">tests/test_server_management.py:34: in test_add_server_by_type
+    TestAssertions.assert_command_success(result, f"Add {server_type} server")
+tests/utils/validators.py:217: in assert_command_success
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Add custom server
+E   Command: python -m mcp_manager.cli.main add test-custom-server --type custom --command 'python test_server.py' --args '--config' 'test.json'
+E   Expected: Success
+E   Actual: Failure (code 2)
+E   STDOUT: 
+E   STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic</failure></testcase><testcase classname="tests.test_server_management.TestServerAddition" name="test_add_server_minimal_args" time="0.892" /><testcase classname="tests.test_server_management.TestServerAddition" name="test_add_server_duplicate_name" time="1.781"><failure message="AssertionError: &#10;Test: Duplicate server add&#10;Command: python -m mcp_manager.cli.main add test-duplicate-server --type custom --command 'echo duplicate'&#10;Expected: Failure&#10;Actual: Success (returncode 0)&#10;Output: ❌ Failed to add server: Failed to add server test-duplicate-server: Failed to add server: Failed to add server: &#10;MCP server test-duplicate-server already exists in user config">tests/test_server_management.py:79: in test_add_server_duplicate_name
+    TestAssertions.assert_command_failure(result2, "Duplicate server add")
+tests/utils/validators.py:248: in assert_command_failure
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Duplicate server add
+E   Command: python -m mcp_manager.cli.main add test-duplicate-server --type custom --command 'echo duplicate'
+E   Expected: Failure
+E   Actual: Success (returncode 0)
+E   Output: ❌ Failed to add server: Failed to add server test-duplicate-server: Failed to add server: Failed to add server: 
+E   MCP server test-duplicate-server already exists in user config</failure></testcase><testcase classname="tests.test_server_management.TestServerAddition" name="test_add_server_invalid_type" time="0.168" /><testcase classname="tests.test_server_management.TestServerAddition" name="test_add_server_missing_command" time="0.528"><failure message="AssertionError: &#10;Test: Missing command&#10;Command: python -m mcp_manager.cli.main add test-no-command --type custom&#10;Expected: Failure&#10;Actual: Success (returncode 0)&#10;Output: ❌ Failed to add server: Failed to add server test-no-command: 1 validation error for Server&#10;command&#10;  Value error, Server command cannot be empty &#10;    For further information visit https://errors.pyda">tests/test_server_management.py:102: in test_add_server_missing_command
+    TestAssertions.assert_command_failure(result, "Missing command")
+tests/utils/validators.py:248: in assert_command_failure
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Missing command
+E   Command: python -m mcp_manager.cli.main add test-no-command --type custom
+E   Expected: Failure
+E   Actual: Success (returncode 0)
+E   Output: ❌ Failed to add server: Failed to add server test-no-command: 1 validation error for Server
+E   command
+E     Value error, Server command cannot be empty 
+E       For further information visit https://errors.pyda</failure></testcase><testcase classname="tests.test_server_management.TestServerRemoval" name="test_remove_existing_server" time="30.912"><failure message="AssertionError: &#10;Test: Remove existing server&#10;Command: python -m mcp_manager.cli.main remove test-remove-server&#10;Expected: Success&#10;Actual: Failure (code -1)&#10;STDOUT: &#10;STDERR: Command timed out after 30s">tests/test_server_management.py:120: in test_remove_existing_server
+    TestAssertions.assert_command_success(remove_result, "Remove existing server")
+tests/utils/validators.py:217: in assert_command_success
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Remove existing server
+E   Command: python -m mcp_manager.cli.main remove test-remove-server
+E   Expected: Success
+E   Actual: Failure (code -1)
+E   STDOUT: 
+E   STDERR: Command timed out after 30s</failure></testcase><testcase classname="tests.test_server_management.TestServerRemoval" name="test_remove_nonexistent_server" time="30.010"><failure message="AssertionError: assert False&#10; +  where False = &lt;function OutputValidator.validate_error_message at 0x104519300&gt;('Command timed out after 30s', 'not found')&#10; +    where &lt;function OutputValidator.validate_error_message at 0x104519300&gt; = OutputValidator.validate_error_message">tests/test_server_management.py:137: in test_remove_nonexistent_server
+    assert OutputValidator.validate_error_message(result['stderr'], "not found")
+E   AssertionError: assert False
+E    +  where False = &lt;function OutputValidator.validate_error_message at 0x104519300&gt;('Command timed out after 30s', 'not found')
+E    +    where &lt;function OutputValidator.validate_error_message at 0x104519300&gt; = OutputValidator.validate_error_message</failure></testcase><testcase classname="tests.test_server_management.TestServerRemoval" name="test_remove_with_confirmation" time="1.800" /><testcase classname="tests.test_server_management.TestServerListing" name="test_list_empty_servers" time="1.504" /><testcase classname="tests.test_server_management.TestServerListing" name="test_list_with_servers" time="4.180" /><testcase classname="tests.test_server_management.TestServerListing" name="test_list_with_scope[user]" time="1.523" /><testcase classname="tests.test_server_management.TestServerListing" name="test_list_with_scope[project]" time="1.537" /><testcase classname="tests.test_server_management.TestServerListing" name="test_list_with_scope[global]" time="0.178"><failure message="AssertionError: &#10;Test: List with scope global&#10;Command: python -m mcp_manager.cli.main list --scope global&#10;Expected: Success&#10;Actual: Failure (code 2)&#10;STDOUT: &#10;STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic">tests/test_server_management.py:198: in test_list_with_scope
+    TestAssertions.assert_command_success(result, f"List with scope {scope}")
+tests/utils/validators.py:217: in assert_command_success
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: List with scope global
+E   Command: python -m mcp_manager.cli.main list --scope global
+E   Expected: Success
+E   Actual: Failure (code 2)
+E   STDOUT: 
+E   STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic</failure></testcase><testcase classname="tests.test_server_management.TestServerListing" name="test_list_with_filters" time="3.174" /><testcase classname="tests.test_server_management.TestServerEnableDisable" name="test_enable_server" time="2.384" /><testcase classname="tests.test_server_management.TestServerEnableDisable" name="test_disable_server" time="1.820" /><testcase classname="tests.test_server_management.TestServerEnableDisable" name="test_enable_disable_nonexistent" time="2.408"><failure message="assert False&#10; +  where False = &lt;function OutputValidator.validate_error_message at 0x104519300&gt;(&quot;&lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredictable behaviour\n[07/24/25 17:07:30] ERROR    Failed to remove server 'nonexistent-server': No user-scoped MCP server found with  \n                             name: nonexistent-server                                                            \n                    ERROR    Failed to remove server 'nonexistent-server': Failed to remove server: No           \n                             user-scoped MCP server found with name: nonexistent-server                          \n                    ERROR    Error disabling server nonexistent-server: Failed to remove server: Failed to remove\n                             server: No user-scoped MCP server found with name: nonexistent-server               \n&quot;, 'not found')&#10; +    where &lt;function OutputValidator.validate_error_message at 0x104519300&gt; = OutputValidator.validate_error_message">tests/test_server_management.py:264: in test_enable_disable_nonexistent
+    assert OutputValidator.validate_error_message(result2['stderr'], "not found")
+E   assert False
+E    +  where False = &lt;function OutputValidator.validate_error_message at 0x104519300&gt;("&lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredictable behaviour\n[07/24/25 17:07:30] ERROR    Failed to remove server 'nonexistent-server': No user-scoped MCP server found with  \n                             name: nonexistent-server                                                            \n                    ERROR    Failed to remove server 'nonexistent-server': Failed to remove server: No           \n                             user-scoped MCP server found with name: nonexistent-server                          \n                    ERROR    Error disabling server nonexistent-server: Failed to remove server: Failed to remove\n                             server: No user-scoped MCP server found with name: nonexistent-server               \n", 'not found')
+E    +    where &lt;function OutputValidator.validate_error_message at 0x104519300&gt; = OutputValidator.validate_error_message</failure></testcase><testcase classname="tests.test_server_management.TestPackageInstallation" name="test_install_package_basic" time="0.400" /><testcase classname="tests.test_server_management.TestPackageInstallation" name="test_install_nonexistent_package" time="0.581"><failure message="AssertionError: &#10;Test: Install nonexistent package&#10;Command: python -m mcp_manager.cli.main install-package nonexistent-package-xyz&#10;Expected: Failure&#10;Actual: Success (returncode 0)&#10;Output: #x1F50D Searching for server with ID: nonexistent-package-xyz&#10;❌ Server with install ID 'nonexistent-package-xyz' not found&#10;#x1F4A1 Try running 'mcp-manager discover' to see available servers">tests/test_server_management.py:292: in test_install_nonexistent_package
+    TestAssertions.assert_command_failure(result, "Install nonexistent package")
+tests/utils/validators.py:248: in assert_command_failure
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Install nonexistent package
+E   Command: python -m mcp_manager.cli.main install-package nonexistent-package-xyz
+E   Expected: Failure
+E   Actual: Success (returncode 0)
+E   Output: #x1F50D Searching for server with ID: nonexistent-package-xyz
+E   ❌ Server with install ID 'nonexistent-package-xyz' not found
+E   #x1F4A1 Try running 'mcp-manager discover' to see available servers</failure></testcase><testcase classname="tests.test_server_management.TestServerValidation" name="test_add_server_empty_name" time="0.533"><failure message="AssertionError: &#10;Test: Empty server name&#10;Command: python -m mcp_manager.cli.main add '' --type custom --command 'test'&#10;Expected: Failure&#10;Actual: Success (returncode 0)&#10;Output: ❌ Failed to add server: Failed to add server : 1 validation error for Server&#10;name&#10;  Value error, Server name cannot be empty &#10;    For further information visit https://errors.pydantic.dev/2.11/v/value">tests/test_server_management.py:306: in test_add_server_empty_name
+    TestAssertions.assert_command_failure(result, "Empty server name")
+tests/utils/validators.py:248: in assert_command_failure
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Empty server name
+E   Command: python -m mcp_manager.cli.main add '' --type custom --command 'test'
+E   Expected: Failure
+E   Actual: Success (returncode 0)
+E   Output: ❌ Failed to add server: Failed to add server : 1 validation error for Server
+E   name
+E     Value error, Server name cannot be empty 
+E       For further information visit https://errors.pydantic.dev/2.11/v/value</failure></testcase><testcase classname="tests.test_server_management.TestServerValidation" name="test_add_server_empty_command" time="0.531"><failure message="AssertionError: &#10;Test: Empty server command&#10;Command: python -m mcp_manager.cli.main add test-empty-cmd --type custom --command ''&#10;Expected: Failure&#10;Actual: Success (returncode 0)&#10;Output: ❌ Failed to add server: Failed to add server test-empty-cmd: 1 validation error for Server&#10;command&#10;  Value error, Server command cannot be empty &#10;    For further information visit https://errors.pydan">tests/test_server_management.py:315: in test_add_server_empty_command
+    TestAssertions.assert_command_failure(result, "Empty server command")
+tests/utils/validators.py:248: in assert_command_failure
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Empty server command
+E   Command: python -m mcp_manager.cli.main add test-empty-cmd --type custom --command ''
+E   Expected: Failure
+E   Actual: Success (returncode 0)
+E   Output: ❌ Failed to add server: Failed to add server test-empty-cmd: 1 validation error for Server
+E   command
+E     Value error, Server command cannot be empty 
+E       For further information visit https://errors.pydan</failure></testcase><testcase classname="tests.test_server_management.TestServerValidation" name="test_add_server_invalid_characters" time="0.529"><failure message="AssertionError: &#10;Test: Invalid name: test server&#10;Command: python -m mcp_manager.cli.main add 'test server' --type custom --command 'test'&#10;Expected: Failure&#10;Actual: Success (returncode 0)&#10;Output: ❌ Failed to add server: Failed to add server test server">tests/test_server_management.py:334: in test_add_server_invalid_characters
+    TestAssertions.assert_command_failure(result, f"Invalid name: {invalid_name}")
+tests/utils/validators.py:248: in assert_command_failure
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Invalid name: test server
+E   Command: python -m mcp_manager.cli.main add 'test server' --type custom --command 'test'
+E   Expected: Failure
+E   Actual: Success (returncode 0)
+E   Output: ❌ Failed to add server: Failed to add server test server</failure></testcase><testcase classname="tests.test_server_management.TestServerLifecycle" name="test_complete_server_lifecycle" time="2.404"><failure message="AssertionError: &#10;Test: Lifecycle: Server in list&#10;Missing items: ['test-lifecycle-server']&#10;In text: &#10;                                         MCP Servers (23 total)                                         &#10;┏━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓&#10;┃ Name                 ┃ Type         ┃ Scope    ┃ Status   ┃ Command">tests/test_server_management.py:354: in test_complete_server_lifecycle
+    TestAssertions.assert_contains_all(
+tests/utils/validators.py:290: in assert_contains_all
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Lifecycle: Server in list
+E   Missing items: ['test-lifecycle-server']
+E   In text: 
+E                                            MCP Servers (23 total)                                         
+E   ┏━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+E   ┃ Name                 ┃ Type         ┃ Scope    ┃ Status   ┃ Command</failure></testcase><testcase classname="tests.test_server_management.TestServerLifecycle" name="test_bulk_server_operations" time="36.016"><failure message="AssertionError: &#10;Test: Bulk remove: bulk-server-1&#10;Command: python -m mcp_manager.cli.main remove bulk-server-1&#10;Expected: Success&#10;Actual: Failure (code -1)&#10;STDOUT: &#10;STDERR: Command timed out after 30s">tests/test_server_management.py:403: in test_bulk_server_operations
+    TestAssertions.assert_command_success(remove_result, f"Bulk remove: {name}")
+tests/utils/validators.py:217: in assert_command_success
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Bulk remove: bulk-server-1
+E   Command: python -m mcp_manager.cli.main remove bulk-server-1
+E   Expected: Success
+E   Actual: Failure (code -1)
+E   STDOUT: 
+E   STDERR: Command timed out after 30s</failure></testcase></testsuite></testsuites>

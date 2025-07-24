@@ -54,12 +54,16 @@ class ProfessionalTestRunner:
                 cmd.extend(["-m", marker])
             print(f"🏷️  Markers: {', '.join(markers)}")
         
+        # Ensure results directory exists
+        results_dir = Path("tests/results")
+        results_dir.mkdir(parents=True, exist_ok=True)
+        
         # Add reporting options
         cmd.extend([
             "--verbose",
             "--tb=short",
             "--durations=10",
-            f"--junitxml=test-results-{category.lower().replace(' ', '-')}.xml",
+            f"--junitxml=tests/results/test-results-{category.lower().replace(' ', '-')}.xml",
             "--color=yes",
             "-s"  # Don't capture output, show prints in real-time
         ])
@@ -330,9 +334,14 @@ class ProfessionalTestRunner:
         
         print("=" * 80)
         
+        # Ensure results directory exists
+        results_dir = Path("tests/results")
+        results_dir.mkdir(parents=True, exist_ok=True)
+        
         # Save results to file
         import json
-        with open('test-results-summary.json', 'w') as f:
+        summary_file = results_dir / 'test-results-summary.json'
+        with open(summary_file, 'w') as f:
             json.dump({
                 'total_time': total_time,
                 'total_categories': total_categories,
@@ -342,15 +351,15 @@ class ProfessionalTestRunner:
                 'results': results
             }, f, indent=2)
         
-        print("📁 Detailed results saved to: test-results-summary.json")
-        print("📄 Individual XML reports: test-results-*.xml")
+        print(f"📁 Detailed results saved to: {summary_file}")
+        print("📄 Individual XML reports: tests/results/test-results-*.xml")
         print()
         print("🔗 Share these files:")
-        print(f"   📊 Summary: {Path.cwd()}/test-results-summary.json")
+        print(f"   📊 Summary: {Path.cwd()}/{summary_file}")
         for result in results:
             category_safe = result['category'].lower().replace(' ', '-')
-            xml_file = f"test-results-{category_safe}.xml"
-            if Path(xml_file).exists():
+            xml_file = results_dir / f"test-results-{category_safe}.xml"
+            if xml_file.exists():
                 print(f"   📄 {result['category']}: {Path.cwd()}/{xml_file}")
 
 
