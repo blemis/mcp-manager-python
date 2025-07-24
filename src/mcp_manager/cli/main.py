@@ -3521,6 +3521,309 @@ def suite_summary():
     asyncio.run(show_summary())
 
 
+# =============================================================================
+# Analytics Commands
+# =============================================================================
+
+@cli.group("analytics")
+def analytics():
+    """Analyze MCP usage patterns and performance."""
+    pass
+
+
+@analytics.command("summary")
+@click.option("--days", "-d", default=7, help="Number of days to analyze (default: 7)")
+@handle_errors
+def analytics_summary(days: int):
+    """Show usage analytics summary."""
+    import asyncio
+    from mcp_manager.analytics.usage_analytics import UsageAnalyticsService
+    from rich.panel import Panel
+    
+    async def show_summary():
+        try:
+            analytics = UsageAnalyticsService()
+            summary = analytics.get_usage_summary(days=days)
+            
+            if "error" in summary:
+                console.print(f"[red]❌ Failed to get analytics summary: {summary['error']}[/red]")
+                return
+            
+            # Display summary with rich formatting
+            console.print(f"\n[bold blue]📊 Usage Analytics Summary - Last {days} Days[/bold blue]")
+            console.print()
+            
+            # Tool Usage Section
+            tool_usage = summary.get("tool_usage", {})
+            tool_panel_content = [
+                f"Total Usage Events: {tool_usage.get('total_usage', 0)}",
+                f"Tools Selected: {tool_usage.get('tools_selected', 0)}",
+                f"Successful Operations: {tool_usage.get('successful_usage', 0)}",
+                f"Success Rate: {tool_usage.get('success_rate', 0):.1%}",
+                f"Average Response Time: {tool_usage.get('avg_response_time_ms', 0):.0f}ms",
+                f"Unique Tools Used: {tool_usage.get('unique_tools_used', 0)}",
+                f"Unique Sessions: {tool_usage.get('unique_sessions', 0)}"
+            ]
+            console.print(Panel("\n".join(tool_panel_content), title="[cyan]Tool Usage[/cyan]", border_style="cyan"))
+            
+            # Recommendations Section
+            recommendations = summary.get("recommendations", {})
+            rec_panel_content = [
+                f"Total Recommendations: {recommendations.get('total_recommendations', 0)}",
+                f"Avg Recommendations per Query: {recommendations.get('avg_recommendations_per_query', 0):.1f}",
+                f"Avg Processing Time: {recommendations.get('avg_processing_time_ms', 0):.0f}ms",
+                f"AI Providers Used: {recommendations.get('providers_used', 0)}",
+                f"Selection Rate: {recommendations.get('selection_rate', 0):.1%}"
+            ]
+            console.print(Panel("\n".join(rec_panel_content), title="[green]AI Recommendations[/green]", border_style="green"))
+            
+            # Server Performance Section
+            servers = summary.get("servers", {})
+            server_panel_content = [
+                f"Active Servers: {servers.get('active_servers', 0)}",
+                f"Average Uptime: {servers.get('avg_uptime_percentage', 1.0):.1%}",
+                f"Average Error Rate: {servers.get('avg_error_rate', 0.0):.1%}",
+                f"Total Server Requests: {servers.get('total_requests', 0)}"
+            ]
+            console.print(Panel("\n".join(server_panel_content), title="[yellow]Server Performance[/yellow]", border_style="yellow"))
+            
+            console.print(f"\n[green]✅ Analytics summary for last {days} days displayed successfully[/green]")
+            
+        except Exception as e:
+            console.print(f"[red]❌ Failed to get analytics summary: {e}[/red]")
+    
+    asyncio.run(show_summary())
+
+
+@analytics.command("query")
+@click.option("--pattern", "-p", help="Search pattern for queries")
+@click.option("--limit", "-l", default=10, help="Maximum number of results (default: 10)")
+@handle_errors
+def analytics_query(pattern: Optional[str], limit: int):
+    """Query usage patterns and trending searches."""
+    import asyncio
+    from mcp_manager.analytics.usage_analytics import UsageAnalyticsService
+    from rich.table import Table
+    
+    async def show_query_patterns():
+        try:
+            analytics = UsageAnalyticsService()
+            
+            # Get trending queries
+            trending = analytics.get_trending_queries(limit=limit)
+            
+            if not trending:
+                console.print("[yellow]⚠️ No trending query patterns found[/yellow]")
+                return
+            
+            console.print(f"\n[bold blue]🔍 Trending Query Patterns[/bold blue]")
+            console.print()
+            
+            # Create table for trending queries
+            table = Table(show_header=True, header_style="bold blue")
+            table.add_column("Category", style="cyan", width=15)
+            table.add_column("Frequency", style="green", width=10, justify="right")
+            table.add_column("Success Rate", style="yellow", width=12, justify="right")
+            table.add_column("Avg Recommendations", style="magenta", width=18, justify="right")
+            table.add_column("Popular Tools", style="white", width=30)
+            table.add_column("Trending Score", style="red", width=14, justify="right")
+            
+            for query_info in trending:
+                # Filter by pattern if provided
+                if pattern and pattern.lower() not in query_info.get("category", "").lower():
+                    continue
+                
+                popular_tools = query_info.get("popular_tools", [])
+                tools_display = ", ".join(popular_tools[:3]) if popular_tools else "None"
+                if len(popular_tools) > 3:
+                    tools_display += f" (+{len(popular_tools) - 3} more)"
+                
+                table.add_row(
+                    query_info.get("category", "Unknown"),
+                    str(query_info.get("frequency", 0)),
+                    f"{query_info.get('success_rate', 0):.1%}",
+                    f"{query_info.get('avg_recommendations', 0):.1f}",
+                    tools_display,
+                    f"{query_info.get('trending_score', 0):.2f}"
+                )
+            
+            console.print(table)
+            
+            if pattern:
+                console.print(f"\n[green]✅ Query patterns matching '{pattern}' displayed[/green]")
+            else:
+                console.print(f"\n[green]✅ Top {len(trending)} trending query patterns displayed[/green]")
+            
+        except Exception as e:
+            console.print(f"[red]❌ Failed to query usage patterns: {e}[/red]")
+    
+    asyncio.run(show_query_patterns())
+
+
+# =============================================================================
+# Tools Commands
+# =============================================================================
+
+@cli.group("tools")
+def tools():
+    """Search and manage MCP tools registry."""
+    pass
+
+
+@tools.command("search")
+@click.argument("query")
+@click.option("--server", "-s", help="Filter by server name")
+@click.option("--type", "-t", help="Filter by server type (npm, docker, docker_desktop, custom)")
+@click.option("--category", "-c", help="Filter by category")
+@click.option("--limit", "-l", default=20, help="Maximum number of results (default: 20)")
+@handle_errors
+def tools_search(query: str, server: Optional[str], type: Optional[str], category: Optional[str], limit: int):
+    """Search for tools in the registry."""
+    import asyncio
+    from mcp_manager.core.tool_registry import ToolRegistryService, SearchFilters
+    from mcp_manager.core.models import ServerType
+    from rich.table import Table
+    
+    async def search_tools():
+        try:
+            registry = ToolRegistryService()
+            
+            # Build search filters
+            filters = SearchFilters()
+            if server:
+                filters.server_name = server
+            if type:
+                try:
+                    filters.server_type = ServerType(type.upper())
+                except ValueError:
+                    console.print(f"[red]❌ Invalid server type: {type}. Valid types: npm, docker, docker_desktop, custom[/red]")
+                    return
+            if category:
+                filters.categories = [category]
+            
+            # Perform search
+            results = registry.search_tools(query, filters, limit)
+            
+            if not results:
+                console.print(f"[yellow]⚠️ No tools found matching '{query}'[/yellow]")
+                return
+            
+            console.print(f"\n[bold blue]🔍 Tool Search Results for '{query}'[/bold blue]")
+            console.print()
+            
+            # Create results table
+            table = Table(show_header=True, header_style="bold blue")
+            table.add_column("Tool Name", style="cyan", width=25)
+            table.add_column("Server", style="green", width=20)
+            table.add_column("Type", style="yellow", width=12)
+            table.add_column("Description", style="white", width=40)
+            table.add_column("Usage", style="magenta", width=8, justify="right")
+            table.add_column("Success Rate", style="red", width=12, justify="right")
+            
+            for tool in results:
+                # Truncate description if too long
+                description = tool.description[:37] + "..." if len(tool.description) > 40 else tool.description
+                
+                table.add_row(
+                    tool.name,
+                    tool.server_name,
+                    tool.server_type.value if hasattr(tool.server_type, 'value') else str(tool.server_type),
+                    description,
+                    str(tool.usage_count),
+                    f"{tool.success_rate:.1%}" if tool.success_rate is not None else "N/A"
+                )
+            
+            console.print(table)
+            console.print(f"\n[green]✅ Found {len(results)} tools matching '{query}'[/green]")
+            
+        except Exception as e:
+            console.print(f"[red]❌ Failed to search tools: {e}[/red]")
+    
+    asyncio.run(search_tools())
+
+
+@tools.command("list")
+@click.option("--server", "-s", help="Filter by server name")
+@click.option("--type", "-t", help="Filter by server type (npm, docker, docker_desktop, custom)")
+@click.option("--available-only", is_flag=True, default=True, help="Show only available tools")
+@click.option("--limit", "-l", default=50, help="Maximum number of results (default: 50)")
+@handle_errors
+def tools_list(server: Optional[str], type: Optional[str], available_only: bool, limit: int):
+    """List all tools in the registry."""
+    import asyncio
+    from mcp_manager.core.tool_registry import ToolRegistryService, SearchFilters
+    from mcp_manager.core.models import ServerType
+    from rich.table import Table
+    
+    async def list_tools():
+        try:
+            registry = ToolRegistryService()
+            
+            # Build search filters
+            filters = SearchFilters(available_only=available_only)
+            if server:
+                filters.server_name = server
+            if type:
+                try:
+                    filters.server_type = ServerType(type.upper())
+                except ValueError:
+                    console.print(f"[red]❌ Invalid server type: {type}. Valid types: npm, docker, docker_desktop, custom[/red]")
+                    return
+            
+            # Get all tools (empty query)
+            results = registry.search_tools("", filters, limit)
+            
+            if not results:
+                console.print("[yellow]⚠️ No tools found in registry[/yellow]")
+                return
+            
+            console.print(f"\n[bold blue]📋 MCP Tools Registry[/bold blue]")
+            console.print()
+            
+            # Create results table
+            table = Table(show_header=True, header_style="bold blue")
+            table.add_column("Tool Name", style="cyan", width=25)
+            table.add_column("Server", style="green", width=20)
+            table.add_column("Type", style="yellow", width=12)
+            table.add_column("Categories", style="magenta", width=20)
+            table.add_column("Available", style="white", width=10, justify="center")
+            table.add_column("Usage", style="red", width=8, justify="right")
+            
+            for tool in results:
+                # Format categories
+                categories = ", ".join(tool.categories[:2]) if tool.categories else "None"
+                if len(tool.categories) > 2:
+                    categories += f" (+{len(tool.categories) - 2})"
+                
+                # Format availability
+                available_icon = "✅" if tool.is_available else "❌"
+                
+                table.add_row(
+                    tool.name,
+                    tool.server_name,
+                    tool.server_type.value if hasattr(tool.server_type, 'value') else str(tool.server_type),
+                    categories,
+                    available_icon,
+                    str(tool.usage_count)
+                )
+            
+            console.print(table)
+            
+            # Show registry statistics
+            stats = registry.get_registry_stats()
+            console.print(f"\n[bold]Registry Statistics:[/bold]")
+            console.print(f"  Total Tools: {stats.get('total_tools', 0)}")
+            console.print(f"  Available Tools: {stats.get('available_tools', 0)}")
+            console.print(f"  Servers with Tools: {stats.get('servers_with_tools', 0)}")
+            
+            console.print(f"\n[green]✅ Listed {len(results)} tools from registry[/green]")
+            
+        except Exception as e:
+            console.print(f"[red]❌ Failed to list tools: {e}[/red]")
+    
+    asyncio.run(list_tools())
+
+
 def main():
     """Main CLI entry point."""
     cli()
