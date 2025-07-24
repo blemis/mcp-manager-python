@@ -353,14 +353,77 @@ class ProfessionalTestRunner:
         
         print(f"📁 Detailed results saved to: {summary_file}")
         print("📄 Individual XML reports: tests/results/test-results-*.xml")
-        print()
-        print("🔗 Share these files:")
-        print(f"   📊 Summary: {Path.cwd()}/{summary_file}")
-        for result in results:
+        
+        # Show intelligent file sharing information immediately
+        self._show_debugging_files(results, summary_file, results_dir)
+    
+    def _show_debugging_files(self, results: List[Dict[str, Any]], summary_file: Path, results_dir: Path):
+        """Show exactly which files to share for debugging, ready to copy-paste."""
+        print("\n" + "=" * 80)
+        print("📋 FILES TO SHARE FOR DEBUGGING")
+        print("=" * 80)
+        
+        # Analyze failures
+        failed_results = [r for r in results if not r['success']]
+        passed_results = [r for r in results if r['success']]
+        
+        if not failed_results:
+            print("🎉 ALL TESTS PASSED - No debugging files needed!")
+            print("   Everything is working correctly.")
+            print("=" * 80)
+            return
+        
+        print(f"🚨 {len(failed_results)} CATEGORIES FAILED - Share these files:")
+        print("-" * 60)
+        
+        # Essential files for debugging
+        print("📋 REQUIRED FILES (copy these paths):")
+        print(f"   {summary_file}")
+        print("   └─ Test summary with failure details")
+        
+        # Failed test XML files
+        failed_xml_files = []
+        for result in failed_results:
             category_safe = result['category'].lower().replace(' ', '-')
             xml_file = results_dir / f"test-results-{category_safe}.xml"
             if xml_file.exists():
-                print(f"   📄 {result['category']}: {Path.cwd()}/{xml_file}")
+                failed_xml_files.append((xml_file, result['category']))
+                print(f"   {xml_file}")
+                print(f"   └─ {result['category']} detailed failure info")
+        
+        # Copy commands ready to paste
+        print("\n🔗 COPY COMMANDS (ready to paste):")
+        essential_files = [str(summary_file)]
+        essential_files.extend([str(xml_file) for xml_file, _ in failed_xml_files])
+        
+        print("# Individual files:")
+        for file_path in essential_files:
+            print(f"cp '{file_path}' /destination/")
+        
+        print("\n# All essential files in one command:")
+        files_str = " ".join([f"'{f}'" for f in essential_files])
+        print(f"cp {files_str} /destination/")
+        
+        # Quick failure summary for context
+        print(f"\n💥 FAILURE SUMMARY:")
+        for result in failed_results:
+            category = result['category']
+            returncode = result.get('returncode', 'unknown')
+            duration = result.get('duration', 0)
+            error = result.get('error', '')
+            
+            print(f"   ❌ {category} (exit code: {returncode}, {duration:.1f}s)")
+            if error:
+                # Truncate long errors for readability
+                error_display = error[:100] + "..." if len(error) > 100 else error
+                print(f"      └─ {error_display}")
+        
+        print("\n💡 DEBUGGING WORKFLOW:")
+        print("   1. Share the files above using the copy commands")
+        print("   2. Summary JSON shows which tests failed and why")
+        print("   3. XML files contain detailed test output and stack traces")
+        print("   4. Look for patterns in error messages across failures")
+        print("=" * 80)
 
 
 def main():

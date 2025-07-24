@@ -242,24 +242,7 @@ class TestMenu:
                 print("📋 Check the detailed output above for specific failures")
             print("=" * 60)
             
-            # Show output files
-            print(f"{self.colors['cyan']}📁 Output Files Generated:{self.colors['reset']}")
-            cwd = Path.cwd()
-            results_dir = cwd / "tests" / "results"
-            
-            # Summary file
-            summary_file = results_dir / "test-results-summary.json"
-            if summary_file.exists():
-                print(f"   📊 Summary: {summary_file}")
-            
-            # XML files
-            xml_files = list(results_dir.glob("test-results-*.xml"))
-            if xml_files:
-                for xml_file in sorted(xml_files):
-                    category = xml_file.stem.replace('test-results-', '').replace('-', ' ').title()
-                    print(f"   📄 {category}: {xml_file}")
-            
-            print(f"{self.colors['yellow']}💡 Share these files with your team or for debugging{self.colors['reset']}")
+            print(f"{self.colors['yellow']}💡 Debugging files are shown above in the test output{self.colors['reset']}")
             print("=" * 60)
             print(f"{self.colors['reset']}")
             
