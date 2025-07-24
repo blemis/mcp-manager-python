@@ -3109,6 +3109,418 @@ def ai_remove(provider: str, force: bool):
         console.print(f"[red]Failed to remove {provider}: {e}[/red]")
 
 
+@ai.command("curate")
+@click.option("--task", help="Specific task description for curation")
+@click.option("--category", type=click.Choice([
+    "web_development", "data_analysis", "system_admin", "content_creation",
+    "api_development", "database_work", "file_management", "automation", 
+    "research", "testing"
+]), help="Task category for curation")
+@click.option("--update-database", is_flag=True, help="Update suite database with recommendations")
+@handle_errors
+def ai_curate(task: Optional[str], category: Optional[str], update_database: bool):
+    """Generate AI-powered MCP suite recommendations."""
+    import asyncio
+    from mcp_manager.core.ai_curation import ai_curation_engine, TaskCategory
+    from rich.panel import Panel
+    from rich.progress import Progress, SpinnerColumn, TextColumn
+    
+    try:
+        # Check if AI is configured
+        from mcp_manager.core.ai_config import ai_config_manager
+        config = ai_config_manager.load_config()
+        if not config.enabled:
+            console.print("[yellow]⚠️ AI curation is not enabled[/yellow]")
+            console.print("Run 'mcp-manager ai setup' to configure AI providers")
+            return
+        
+        async def run_curation():
+            if task and category:
+                # Generate recommendation for specific task and category
+                task_category = TaskCategory(category)
+                
+                with Progress(
+                    SpinnerColumn(),
+                    TextColumn("[progress.description]{task.description}"),
+                    console=console
+                ) as progress:
+                    progress.add_task("Analyzing servers and generating recommendation...", total=None)
+                    recommendation = await ai_curation_engine.recommend_suite(task, task_category)
+                
+                if recommendation:
+                    console.print(Panel.fit(
+                        f"[bold blue]AI Recommendation for {task_category.value.replace('_', ' ').title()}[/bold blue]\n"
+                        f"Task: {task}",
+                        title="🤖 AI Curation"
+                    ))
+                    
+                    # Display recommendation
+                    console.print(f"\n[bold]Primary Servers:[/bold]")
+                    for server in recommendation.primary_servers:
+                        console.print(f"  ✅ [cyan]{server}[/cyan]")
+                    
+                    if recommendation.optional_servers:
+                        console.print(f"\n[bold]Optional Servers:[/bold]")
+                        for server in recommendation.optional_servers:
+                            console.print(f"  ⚪ [dim]{server}[/dim]")
+                    
+                    if recommendation.alternative_servers:
+                        console.print(f"\n[bold]Alternative Servers:[/bold]")
+                        for primary, alternatives in recommendation.alternative_servers.items():
+                            console.print(f"  [cyan]{primary}[/cyan] → {', '.join(alternatives)}")
+                    
+                    console.print(f"\n[bold]Confidence Score:[/bold] {recommendation.confidence_score:.2f}")
+                    console.print(f"\n[bold]Reasoning:[/bold]")
+                    console.print(f"  {recommendation.reasoning}")
+                    
+                    if recommendation.configuration_hints:
+                        console.print(f"\n[bold]Configuration Hints:[/bold]")
+                        for server, hints in recommendation.configuration_hints.items():
+                            console.print(f"  [cyan]{server}[/cyan]:")
+                            for key, hint in hints.items():
+                                console.print(f"    • {key}: {hint}")
+                    
+                    if recommendation.expected_conflicts:
+                        console.print(f"\n[yellow]⚠️ Expected Conflicts:[/yellow]")
+                        for conflict in recommendation.expected_conflicts:
+                            console.print(f"  • {conflict}")
+                else:
+                    console.print("[red]Failed to generate recommendation[/red]")
+                    
+            elif task:
+                # Generate recommendation for task only
+                with Progress(
+                    SpinnerColumn(),
+                    TextColumn("[progress.description]{task.description}"),
+                    console=console
+                ) as progress:
+                    progress.add_task("Analyzing task and generating recommendation...", total=None)
+                    recommendation = await ai_curation_engine.recommend_suite(task)
+                
+                if recommendation:
+                    console.print(Panel.fit(
+                        f"[bold blue]AI Recommendation[/bold blue]\n"
+                        f"Task: {task}",
+                        title="🤖 AI Curation"
+                    ))
+                    
+                    # Display recommendation (same format as above)
+                    console.print(f"\n[bold]Primary Servers:[/bold]")
+                    for server in recommendation.primary_servers:
+                        console.print(f"  ✅ [cyan]{server}[/cyan]")
+                    
+                    console.print(f"\n[bold]Confidence Score:[/bold] {recommendation.confidence_score:.2f}")
+                    console.print(f"\n[bold]Reasoning:[/bold]")
+                    console.print(f"  {recommendation.reasoning}")
+                else:
+                    console.print("[red]Failed to generate recommendation[/red]")
+                    
+            else:
+                # Generate recommendations for all categories
+                console.print("[blue]🤖 Generating AI-powered suite recommendations for all categories...[/blue]")
+                
+                with Progress(
+                    SpinnerColumn(),
+                    TextColumn("[progress.description]{task.description}"),
+                    console=console
+                ) as progress:
+                    progress.add_task("Analyzing all servers and generating recommendations...", total=None)
+                    recommendations = await ai_curation_engine.curate_all_suites()
+                
+                if recommendations:
+                    console.print(f"\n[green]✅ Generated {len(recommendations)} suite recommendations[/green]")
+                    
+                    # Display summary
+                    summary_table = Table(show_header=True, header_style="bold blue")
+                    summary_table.add_column("Category", style="cyan")
+                    summary_table.add_column("Primary Servers", justify="center")
+                    summary_table.add_column("Optional Servers", justify="center")
+                    summary_table.add_column("Confidence", justify="center")
+                    
+                    for category, recommendation in recommendations.items():
+                        summary_table.add_row(
+                            category.value.replace('_', ' ').title(),
+                            str(len(recommendation.primary_servers)),
+                            str(len(recommendation.optional_servers)),
+                            f"{recommendation.confidence_score:.2f}"
+                        )
+                    
+                    console.print(summary_table)
+                    
+                    # Update database if requested
+                    if update_database:
+                        console.print(f"\n[blue]📝 Updating suite database...[/blue]")
+                        success = await ai_curation_engine.update_suite_database(recommendations)
+                        if success:
+                            console.print("[green]✅ Suite database updated successfully[/green]")
+                        else:
+                            console.print("[red]❌ Failed to update suite database[/red]")
+                    else:
+                        console.print(f"\n[dim]Use --update-database to save recommendations to database[/dim]")
+                        
+                else:
+                    console.print("[red]Failed to generate recommendations[/red]")
+        
+        # Run the curation
+        asyncio.run(run_curation())
+        
+    except Exception as e:
+        console.print(f"[red]AI curation failed: {e}[/red]")
+        logger.error(f"AI curation failed: {e}")
+
+
+@cli.group("suite")
+def suite():
+    """Manage MCP server suites for task-specific configurations."""
+    pass
+
+
+@suite.command("list")
+@click.option("--category", help="Filter by category")
+@handle_errors
+def suite_list(category: Optional[str]):
+    """List all MCP server suites."""
+    import asyncio
+    from mcp_manager.core.suite_manager import suite_manager
+    
+    async def list_suites():
+        try:
+            suites = await suite_manager.list_suites(category)
+            
+            if not suites:
+                if category:
+                    console.print(f"[yellow]No suites found in category '{category}'[/yellow]")
+                else:
+                    console.print("[yellow]No suites found[/yellow]")
+                return
+            
+            console.print(f"[blue]📦 MCP Server Suites[/blue]")
+            if category:
+                console.print(f"[dim]Category: {category}[/dim]")
+            console.print()
+            
+            for suite in suites:
+                # Suite header
+                console.print(f"[bold cyan]{suite.name}[/bold cyan] [dim]({suite.id})[/dim]")
+                if suite.description:
+                    console.print(f"  {suite.description}")
+                if suite.category:
+                    console.print(f"  [dim]Category: {suite.category}[/dim]")
+                
+                # Memberships
+                if suite.memberships:
+                    primary_servers = [m for m in suite.memberships if m.role == "primary"]
+                    optional_servers = [m for m in suite.memberships if m.role == "optional"]
+                    other_servers = [m for m in suite.memberships if m.role not in ["primary", "optional"]]
+                    
+                    if primary_servers:
+                        console.print("  [bold]Primary:[/bold]")
+                        for member in primary_servers:
+                            console.print(f"    ✅ [green]{member.server_name}[/green] (priority: {member.priority})")
+                    
+                    if optional_servers:
+                        console.print("  [bold]Optional:[/bold]")
+                        for member in optional_servers:
+                            console.print(f"    ⚪ [dim]{member.server_name}[/dim] (priority: {member.priority})")
+                    
+                    if other_servers:
+                        console.print("  [bold]Other:[/bold]")
+                        for member in other_servers:
+                            console.print(f"    • {member.server_name} ({member.role}, priority: {member.priority})")
+                else:
+                    console.print("  [dim]No servers in this suite[/dim]")
+                
+                # AI-generated info
+                if suite.config.get("ai_generated", False):
+                    confidence = suite.config.get("confidence_score", 0)
+                    console.print(f"  [blue]🤖 AI Generated (confidence: {confidence:.2f})[/blue]")
+                
+                console.print()
+        
+        except Exception as e:
+            console.print(f"[red]Failed to list suites: {e}[/red]")
+    
+    asyncio.run(list_suites())
+
+
+@suite.command("create")
+@click.argument("name")
+@click.option("--description", help="Suite description")
+@click.option("--category", help="Suite category")
+@click.option("--id", "suite_id", help="Custom suite ID (auto-generated if not provided)")
+@handle_errors
+def suite_create(name: str, description: Optional[str], category: Optional[str], suite_id: Optional[str]):
+    """Create a new MCP server suite."""
+    import asyncio
+    from mcp_manager.core.suite_manager import suite_manager
+    
+    async def create_suite():
+        try:
+            # Generate ID if not provided
+            if not suite_id:
+                import re
+                generated_id = re.sub(r'[^a-z0-9\-]', '-', name.lower().strip())
+                generated_id = re.sub(r'-+', '-', generated_id).strip('-')
+            else:
+                generated_id = suite_id
+            
+            console.print(f"[blue]📦 Creating suite '{name}'...[/blue]")
+            
+            success = await suite_manager.create_or_update_suite(
+                suite_id=generated_id,
+                name=name,
+                description=description or "",
+                category=category or "",
+                config={}
+            )
+            
+            if success:
+                console.print(f"[green]✅ Created suite '{name}' with ID '{generated_id}'[/green]")
+            else:
+                console.print(f"[red]❌ Failed to create suite '{name}'[/red]")
+        
+        except Exception as e:
+            console.print(f"[red]Failed to create suite: {e}[/red]")
+    
+    asyncio.run(create_suite())
+
+
+@suite.command("add")
+@click.argument("suite_id")
+@click.argument("server_name")
+@click.option("--role", default="member", type=click.Choice(["primary", "secondary", "optional", "member"]),
+              help="Server role in the suite")
+@click.option("--priority", default=50, type=int, help="Server priority (1-100)")
+@handle_errors
+def suite_add(suite_id: str, server_name: str, role: str, priority: int):
+    """Add a server to a suite."""
+    import asyncio
+    from mcp_manager.core.suite_manager import suite_manager
+    
+    async def add_to_suite():
+        try:
+            console.print(f"[blue]Adding {server_name} to suite {suite_id} as {role}...[/blue]")
+            
+            success = await suite_manager.add_server_to_suite(
+                suite_id=suite_id,
+                server_name=server_name,
+                role=role,
+                priority=priority
+            )
+            
+            if success:
+                console.print(f"[green]✅ Added {server_name} to suite {suite_id}[/green]")
+            else:
+                console.print(f"[red]❌ Failed to add {server_name} to suite {suite_id}[/red]")
+        
+        except Exception as e:
+            console.print(f"[red]Failed to add server to suite: {e}[/red]")
+    
+    asyncio.run(add_to_suite())
+
+
+@suite.command("remove")
+@click.argument("suite_id")
+@click.argument("server_name")
+@handle_errors
+def suite_remove_server(suite_id: str, server_name: str):
+    """Remove a server from a suite."""
+    import asyncio
+    from mcp_manager.core.suite_manager import suite_manager
+    
+    async def remove_from_suite():
+        try:
+            console.print(f"[blue]Removing {server_name} from suite {suite_id}...[/blue]")
+            
+            success = await suite_manager.remove_server_from_suite(suite_id, server_name)
+            
+            if success:
+                console.print(f"[green]✅ Removed {server_name} from suite {suite_id}[/green]")
+            else:
+                console.print(f"[red]❌ Failed to remove {server_name} from suite {suite_id}[/red]")
+        
+        except Exception as e:
+            console.print(f"[red]Failed to remove server from suite: {e}[/red]")
+    
+    asyncio.run(remove_from_suite())
+
+
+@suite.command("delete")
+@click.argument("suite_id")
+@click.option("--force", "-f", is_flag=True, help="Skip confirmation prompt")
+@handle_errors
+def suite_delete(suite_id: str, force: bool):
+    """Delete a suite and all its memberships."""
+    import asyncio
+    from mcp_manager.core.suite_manager import suite_manager
+    from rich.prompt import Confirm
+    
+    async def delete_suite():
+        try:
+            # Get suite info first
+            suite = await suite_manager.get_suite(suite_id)
+            if not suite:
+                console.print(f"[red]Suite '{suite_id}' not found[/red]")
+                return
+            
+            console.print(f"[blue]Suite: {suite.name}[/blue]")
+            console.print(f"Servers: {len(suite.memberships)}")
+            
+            # Confirmation
+            if not force:
+                if not Confirm.ask(f"Delete suite '{suite.name}' and all its memberships?", default=False):
+                    console.print("Cancelled")
+                    return
+            
+            success = await suite_manager.delete_suite(suite_id)
+            
+            if success:
+                console.print(f"[green]✅ Deleted suite '{suite.name}'[/green]")
+            else:
+                console.print(f"[red]❌ Failed to delete suite '{suite.name}'[/red]")
+        
+        except Exception as e:
+            console.print(f"[red]Failed to delete suite: {e}[/red]")
+    
+    asyncio.run(delete_suite())
+
+
+@suite.command("summary")
+@handle_errors
+def suite_summary():
+    """Show summary statistics about suites."""
+    import asyncio
+    from mcp_manager.core.suite_manager import suite_manager
+    
+    async def show_summary():
+        try:
+            summary = await suite_manager.get_suite_summary()
+            
+            console.print("[blue]📊 Suite Summary[/blue]")
+            console.print()
+            
+            console.print(f"Total Suites: {summary.get('total_suites', 0)}")
+            console.print(f"Suites with Servers: {summary.get('suites_with_servers', 0)}")
+            console.print(f"Servers in Suites: {summary.get('servers_in_suites', 0)}")
+            
+            categories = summary.get('categories', {})
+            if categories:
+                console.print(f"\nCategories:")
+                for category, count in categories.items():
+                    console.print(f"  {category}: {count}")
+            
+            roles = summary.get('roles', {})
+            if roles:
+                console.print(f"\nRoles:")
+                for role, count in roles.items():
+                    console.print(f"  {role}: {count}")
+        
+        except Exception as e:
+            console.print(f"[red]Failed to get suite summary: {e}[/red]")
+    
+    asyncio.run(show_summary())
+
+
 def main():
     """Main CLI entry point."""
     cli()

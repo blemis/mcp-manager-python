@@ -201,6 +201,16 @@ class Config(BaseSettings):
     def get_claude_config_path(self) -> Path:
         """Get Claude configuration path."""
         return Path(os.path.expanduser(self.claude.config_path))
+    
+    @property
+    def database_path(self) -> Path:
+        """Get database path."""
+        db_path = os.getenv("MCP_MANAGER_DB_PATH")
+        if db_path:
+            return Path(os.path.expanduser(db_path))
+        
+        config_dir = self.get_config_dir()
+        return config_dir / "mcp_manager.db"
 
 
 class ConfigManager:
