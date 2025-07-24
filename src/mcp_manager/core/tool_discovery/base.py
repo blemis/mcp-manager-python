@@ -6,6 +6,7 @@ Provides abstract interfaces and configuration for tool discovery implementation
 
 import os
 from abc import ABC, abstractmethod
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
@@ -54,6 +55,12 @@ class ToolInfo(BaseModel):
     categories: List[str] = Field(default_factory=list, description="Tool categories")
     tags: List[str] = Field(default_factory=list, description="Tool tags")
     is_available: bool = Field(default=True, description="Whether tool is currently available")
+    
+    # Additional fields for database compatibility
+    last_discovered: datetime = Field(default_factory=datetime.utcnow, description="Last discovery time")
+    usage_count: int = Field(default=0, description="Tool usage count")
+    success_rate: float = Field(default=1.0, description="Tool success rate")
+    average_response_time: float = Field(default=0.0, description="Average response time in ms")
 
 
 class DiscoveryResult(BaseModel):

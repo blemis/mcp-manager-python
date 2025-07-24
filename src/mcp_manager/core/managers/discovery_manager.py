@@ -65,18 +65,40 @@ class DiscoveryManager:
             
             if result.success and result.tools:
                 # Register discovered tools in the registry
+                registered_count = 0
                 for tool in result.tools:
-                    self.tool_registry.register_tool(
+                    # Convert ToolInfo to ToolRegistry model
+                    from mcp_manager.core.models import ToolRegistry
+                    from datetime import datetime
+                    
+                    tool_registry = ToolRegistry(
+                        id=0,  # Will be set by database
                         name=tool.name,
-                        server_name=server.name,
-                        server_type=server.server_type,
+                        canonical_name=tool.canonical_name,
                         description=tool.description,
+                        server_name=tool.server_name,
+                        server_type=tool.server_type,
                         input_schema=tool.input_schema,
-                        categories=tool.categories
+                        output_schema=tool.output_schema,
+                        categories=tool.categories,
+                        tags=tool.tags,
+                        last_discovered=tool.last_discovered,
+                        is_available=tool.is_available,
+                        usage_count=tool.usage_count,
+                        success_rate=tool.success_rate,
+                        average_response_time=tool.average_response_time,
+                        created_at=datetime.utcnow(),
+                        updated_at=datetime.utcnow(),
+                        discovered_by="mcp-manager-discovery"
                     )
+                    
+                    if self.tool_registry.register_tool(tool_registry):
+                        registered_count += 1
+                    else:
+                        logger.warning(f"Failed to register tool {tool.canonical_name}")
                 
-                logger.info(f"Discovered and registered {len(result.tools)} tools for {server.name}")
-                return len(result.tools)
+                logger.info(f"Discovered {len(result.tools)} tools and registered {registered_count} for {server.name}")
+                return registered_count
             else:
                 if result.error_message:
                     logger.warning(f"Tool discovery failed for {server.name}: {result.error_message}")
@@ -144,12 +166,33 @@ class DiscoveryManager:
             List of matching tools
         """
         try:
-            return self.tool_registry.search_tools(
-                query=query,
-                server_name=server_name,
-                category=category,
-                limit=limit
-            )
+            # Use the tool registry service for searching with correct signature
+            from mcp_manager.core.tool_registry import SearchFilters
+            
+            filters = SearchFilters()
+            if server_name:
+                filters.server_name = server_name
+            if category:
+                filters.categories = [category]
+                
+            results = self.tool_registry.search_tools(query or "", filters, limit)
+            
+            # Convert ToolInfo results to dictionaries 
+            return [
+                {
+                    "name": tool.name,
+                    "canonical_name": tool.canonical_name,  
+                    "description": tool.description,
+                    "server_name": tool.server_name,
+                    "server_type": tool.server_type.value if hasattr(tool.server_type, 'value') else str(tool.server_type),
+                    "categories": tool.categories,
+                    "tags": tool.tags,
+                    "is_available": tool.is_available,
+                    "usage_count": tool.usage_count
+                }
+                for tool in results
+            ]
+            
         except Exception as e:
             logger.error(f"Failed to search tools: {e}")
             return []

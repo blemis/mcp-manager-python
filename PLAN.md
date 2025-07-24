@@ -699,6 +699,42 @@ class ProxyModeValidator:
 
 This design ensures that proxy mode is a completely optional enhancement that doesn't disrupt existing workflows while providing a clear path for users who want unified MCP access through a single endpoint.
 
+## 🔧 **DOCKER ARCHITECTURE CLARIFICATION**
+
+### **Two Distinct Docker Discovery Types**
+
+It's critical to understand that there are **two separate Docker discovery mechanisms** with different architectures:
+
+#### **1. Regular Docker (D) - Individual Container Mode**
+- Each MCP server runs in its own Docker container
+- Direct connection from Claude Code to individual containers
+- Each server has its own endpoint and tool discovery
+- Standard Docker registry discovery applies
+
+#### **2. Docker Desktop (DD) - Gateway Mode**
+```
+Claude Code → docker-gateway → [SQLite, GitHub, filesystem, aws-diagram, ...]
+             (single server)    (multiple underlying servers)
+```
+
+**Key Architectural Points:**
+- **From Claude's perspective**: Only sees `docker-gateway` as the MCP server
+- **docker-gateway acts as**: A unified proxy/aggregator for multiple underlying MCP servers
+- **Individual servers**: SQLite, GitHub, filesystem, aws-diagram, etc. are behind the gateway
+- **Tool discovery**: Must parse out individual server tools from gateway's unified interface
+- **Current count**: Gateway exposes 35 tools from enabled servers (GitHub: 26, SQLite: 6, aws-diagram: 3)
+
+**Implementation Implications:**
+- Docker Desktop tool discovery should call `docker mcp tools list --format json` 
+- Parse the unified response to extract tools from multiple underlying servers
+- Do NOT attempt to connect to individual servers directly
+- The gateway handles all MCP protocol translation and routing internally
+
+**Why This Matters:**
+- The current "0 tools" issue is because `docker_desktop_discovery.py` has a placeholder implementation
+- The fix requires parsing tools from the gateway's unified interface, not individual server discovery
+- This architectural difference is fundamental to how Docker Desktop MCP integration works
+
 ---
 
 ## 📋 **CURRENT STATUS SUMMARY**
