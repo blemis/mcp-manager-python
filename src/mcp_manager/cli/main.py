@@ -32,6 +32,10 @@ from mcp_manager.cli.commands.tools import tools_commands
 from mcp_manager.cli.commands.system import system_commands
 from mcp_manager.cli.commands.monitoring import monitoring_commands
 from mcp_manager.cli.commands.ui import ui_commands
+from mcp_manager.cli.commands.workflow import workflow_commands
+from mcp_manager.cli.commands.api import api_commands
+from mcp_manager.cli.commands.proxy import proxy_commands
+from mcp_manager.cli.commands.quality import quality_commands
 
 console = Console()
 logger = get_logger(__name__)
@@ -486,6 +490,22 @@ def register_commands():
     
     # UI commands
     for cmd in ui_commands(cli_context):
+        cli.add_command(cmd)
+    
+    # Workflow commands
+    for cmd in workflow_commands(cli_context):
+        cli.add_command(cmd)
+    
+    # API commands
+    for cmd in api_commands(cli_context):
+        cli.add_command(cmd)
+    
+    # Proxy commands
+    for cmd in proxy_commands(cli_context):
+        cli.add_command(cmd)
+    
+    # Quality commands
+    for cmd in quality_commands(cli_context):
         cli.add_command(cmd)
 
 

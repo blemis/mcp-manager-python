@@ -1,1 +1,1 @@
-"""Test suite for MCP Manager."""
+"""Professional MCP Manager test suite."""

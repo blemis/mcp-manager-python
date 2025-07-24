@@ -71,9 +71,13 @@ def suite_commands(cli_context):
                 
                 # Confirmation
                 if not force:
-                    from rich.prompt import Confirm
-                    if not Confirm.ask(f"\nInstall {len(suite.memberships)} MCPs from suite '{suite.name}'?"):
-                        console.print("[dim]Installation cancelled[/dim]")
+                    try:
+                        response = input(f"\nInstall {len(suite.memberships)} MCPs from suite '{suite.name}'? [y/N]: ")
+                        if response.lower() not in ['y', 'yes']:
+                            console.print("[dim]Installation cancelled[/dim]")
+                            return
+                    except (EOFError, KeyboardInterrupt):
+                        console.print("\n[dim]Installation cancelled[/dim]")
                         return
                 
                 # Step 4: Install each MCP
@@ -96,10 +100,59 @@ def suite_commands(cli_context):
                             console.print(f"   ⏭️  [yellow]Skipped[/yellow]: {server_name} already exists")
                             continue
                         
-                        # Get server configuration from discovery or database
-                        # This would normally query the server registry for install commands
-                        console.print(f"   ❌ [red]Failed[/red]: Server '{server_name}' installation not implemented yet")
-                        failed_count += 1
+                        # Get server configuration from discovery system
+                        try:
+                            from mcp_manager.core.discovery.server_discovery import ServerDiscovery
+                            from mcp_manager.core.models import ServerType
+                            from mcp_manager.core.exceptions import MCPManagerError
+                            
+                            discovery = ServerDiscovery()
+                            
+                            # Search for the server by name
+                            logger.debug(f"[SUITE_INSTALL] Searching for server: {server_name}")
+                            discovery_results = await discovery.discover_servers(query=server_name, limit=10)
+                            
+                            # Find best match
+                            best_match = None
+                            for result in discovery_results:
+                                if result.name.lower() == server_name.lower() or server_name.lower() in result.name.lower():
+                                    best_match = result
+                                    break
+                            
+                            if not best_match:
+                                console.print(f"   ❌ [red]Failed[/red]: Server '{server_name}' not found in registry")
+                                logger.warning(f"[SUITE_INSTALL] Server '{server_name}' not found in discovery results")
+                                failed_count += 1
+                                continue
+                                
+                            logger.debug(f"[SUITE_INSTALL] Found server: {best_match.name} (package: {best_match.package})")
+                            
+                            # Convert discovery result to server and add it
+                            server = best_match.to_server()
+                            
+                            # Add server using the manager
+                            success = await manager.add_server(
+                                name=server.name,
+                                server_type=server.server_type,
+                                command=server.command,
+                                description=server.description,
+                                args=server.args,
+                                env=server.env
+                            )
+                            
+                            if success:
+                                console.print(f"   ✅ [green]Installed[/green]: {server_name}")
+                                installed_count += 1
+                                logger.info(f"[SUITE_INSTALL] Successfully installed: {server_name}")
+                            else:
+                                console.print(f"   ❌ [red]Failed[/red]: Could not add server '{server_name}'")
+                                failed_count += 1
+                                logger.error(f"[SUITE_INSTALL] Failed to add server: {server_name}")
+                                
+                        except Exception as discovery_error:
+                            console.print(f"   ❌ [red]Failed[/red]: Discovery error for '{server_name}': {discovery_error}")
+                            logger.error(f"[SUITE_INSTALL] Discovery error for {server_name}: {discovery_error}")
+                            failed_count += 1
                         
                     except Exception as e:
                         logger.error(f"[SUITE_INSTALL] Failed to install {server_name}: {e}")
@@ -206,7 +259,7 @@ def suite_commands(cli_context):
                 console.print(f"[blue]Creating suite '{name}' with ID '{generated_id}'...[/blue]")
                 
                 # Create the suite
-                success = await suite_manager.create_suite(
+                success = await suite_manager.create_or_update_suite(
                     suite_id=generated_id,
                     name=name,
                     description=description or f"Custom suite: {name}",
@@ -326,6 +379,81 @@ def suite_commands(cli_context):
                 console.print(f"[red]Failed to delete suite: {e}[/red]")
         
         asyncio.run(delete_suite())
+    
+    
+    @suite.command("show")
+    @click.argument("suite_id")
+    @handle_errors
+    def suite_show(suite_id: str):
+        """Show detailed information about a specific suite."""
+        
+        async def show_suite():
+            try:
+                from mcp_manager.core.suite_manager import suite_manager
+                
+                suite = await suite_manager.get_suite(suite_id)
+                
+                if not suite:
+                    console.print(f"[red]❌ Suite '{suite_id}' not found[/red]")
+                    console.print(f"[yellow]💡 Available suites:[/yellow]")
+                    
+                    all_suites = await suite_manager.list_suites()
+                    for available_suite in all_suites:
+                        console.print(f"   • [cyan]{available_suite.id}[/cyan]: {available_suite.name}")
+                    return
+                
+                # Display suite header
+                console.print(f"[bold blue]📦 Suite: {suite.name}[/bold blue]")
+                console.print(f"[dim]ID: {suite.id}[/dim]")
+                console.print(f"[dim]Category: {suite.category}[/dim]")
+                console.print(f"Description: {suite.description}")
+                
+                # Display members
+                if suite.memberships:
+                    console.print(f"\n[bold cyan]🔧 Servers ({len(suite.memberships)}):[/bold cyan]")
+                    
+                    from rich.table import Table
+                    
+                    table = Table(show_header=True, header_style="bold cyan")
+                    table.add_column("Server Name", style="green", width=25)
+                    table.add_column("Role", style="yellow", width=12)
+                    table.add_column("Priority", style="blue", width=10)
+                    table.add_column("Status", style="white", width=12)
+                    
+                    # Sort by priority (highest first)
+                    sorted_memberships = sorted(suite.memberships, key=lambda m: m.priority, reverse=True)
+                    
+                    for membership in sorted_memberships:
+                        # Check if server exists
+                        try:
+                            manager = cli_context.get_manager()
+                            existing_servers = manager.list_servers_fast()
+                            server_exists = any(s.name == membership.server_name for s in existing_servers)
+                            status = "[green]✅ Installed[/green]" if server_exists else "[dim]❌ Not Installed[/dim]"
+                        except:
+                            status = "[dim]❓ Unknown[/dim]"
+                        
+                        table.add_row(
+                            membership.server_name,
+                            membership.role,
+                            str(membership.priority),
+                            status
+                        )
+                    
+                    console.print(table)
+                    
+                    # Installation info
+                    console.print(f"\n[dim]💡 To install this suite:[/dim]")
+                    console.print(f"[dim]   [cyan]mcp-manager install-suite --suite-name {suite_id}[/cyan][/dim]")
+                else:
+                    console.print(f"\n[yellow]📭 This suite has no servers yet[/yellow]")
+                    console.print(f"[dim]💡 Add servers with:[/dim]")
+                    console.print(f"[dim]   [cyan]mcp-manager suite add {suite_id} <server-name> --role member --priority 50[/cyan][/dim]")
+                
+            except Exception as e:
+                console.print(f"[red]Failed to show suite details: {e}[/red]")
+        
+        asyncio.run(show_suite())
     
     
     @suite.command("summary")

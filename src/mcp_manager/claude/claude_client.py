@@ -115,13 +115,13 @@ class ClaudeClient:
                 [self.claude_path, "mcp", "list"],
                 capture_output=True,
                 text=True,
-                timeout=30,
+                timeout=10,  # Reduced timeout
                 env=self._get_env(),
             )
             
             if result.returncode != 0:
                 logger.warning(f"claude mcp list failed: {result.stderr}")
-                return []
+                raise MCPManagerError(f"Claude MCP command failed: {result.stderr}")
             
             servers = []
             for line in result.stdout.strip().split('\n'):
@@ -161,6 +161,9 @@ class ClaudeClient:
             logger.debug(f"Found {len(servers)} servers in Claude")
             return servers
             
+        except subprocess.TimeoutExpired:
+            logger.error("Claude CLI command timed out")
+            raise MCPManagerError("Claude MCP command timed out - check Claude Code is running and servers are configured properly")
         except Exception as e:
             logger.error(f"Failed to list Claude servers: {e}")
             raise MCPManagerError(f"Failed to list servers: {e}")
@@ -265,3 +268,75 @@ class ClaudeClient:
         except Exception as e:
             logger.debug(f"Docker availability check failed: {e}")
             return False
+    
+    def _list_servers_from_config(self) -> List[Server]:
+        """
+        Fallback method to read servers directly from Claude's config files.
+        
+        Returns:
+            List of servers from configuration files
+        """
+        import json
+        from pathlib import Path
+        
+        servers = []
+        
+        try:
+            # Try to read from Claude's internal config
+            claude_config = Path.home() / ".claude.json"
+            if claude_config.exists():
+                with open(claude_config, 'r') as f:
+                    config = json.load(f)
+                
+                # Get MCP servers from global config
+                mcp_servers = config.get("mcpServers", {})
+                for name, server_config in mcp_servers.items():
+                    command = server_config.get("command", "")
+                    args = server_config.get("args", [])
+                    
+                    # Determine server type
+                    server_type = self._determine_server_type(command)
+                    
+                    server = Server(
+                        name=name,
+                        command=command,
+                        args=args,
+                        server_type=server_type,
+                        scope=ServerScope.USER,
+                        enabled=True,
+                    )
+                    servers.append(server)
+            
+            # Also try user config
+            user_config = Path.home() / ".config" / "claude-code" / "mcp-servers.json"
+            if user_config.exists():
+                with open(user_config, 'r') as f:
+                    config = json.load(f)
+                
+                mcp_servers = config.get("mcpServers", {})
+                for name, server_config in mcp_servers.items():
+                    # Skip if we already have this server
+                    if any(s.name == name for s in servers):
+                        continue
+                    
+                    command = server_config.get("command", "")
+                    args = server_config.get("args", [])
+                    
+                    server_type = self._determine_server_type(command)
+                    
+                    server = Server(
+                        name=name,
+                        command=command,
+                        args=args,
+                        server_type=server_type,
+                        scope=ServerScope.USER,
+                        enabled=True,
+                    )
+                    servers.append(server)
+            
+            logger.info(f"Read {len(servers)} servers from configuration files")
+            return servers
+            
+        except Exception as e:
+            logger.warning(f"Failed to read servers from config files: {e}")
+            return []

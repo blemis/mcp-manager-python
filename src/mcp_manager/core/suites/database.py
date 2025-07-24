@@ -20,7 +20,8 @@ class SuiteDatabase:
     def __init__(self, db_path: Optional[Path] = None):
         """Initialize database manager."""
         self.config = get_config()
-        self.db_path = db_path or self.config.database_path
+        raw_path = db_path or self.config.database_path
+        self.db_path = Path(raw_path) if isinstance(raw_path, str) else raw_path
         self._ensure_database()
     
     def _ensure_database(self):

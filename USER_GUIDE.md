@@ -1,1784 +1,1071 @@
-# MCP Manager - Comprehensive User Guide
+# MCP Manager User Guide
 
-**Version:** 1.0  
-**Date:** July 2025  
-**Target Audience:** Developers, DevOps Engineers, AI Engineers
+**Version 2.0** | **Enterprise-Grade MCP Server Management**
 
 ---
 
 ## Table of Contents
 
-1. [Overview](#overview)
-2. [Installation](#installation)
-3. [Getting Started](#getting-started)
-4. [Core Concepts](#core-concepts)
-5. [User Interfaces](#user-interfaces)
-6. [Command Reference](#command-reference)
-7. [Common Workflows](#common-workflows)
-8. [Use Cases & Examples](#use-cases--examples)
-9. [Configuration](#configuration)
-10. [Troubleshooting](#troubleshooting)
-11. [Advanced Usage](#advanced-usage)
-12. [Uninstallation](#uninstallation)
-
----
-
-## Overview
-
-MCP Manager is a comprehensive tool for managing Model Context Protocol (MCP) servers used by Claude Code. It provides discovery, installation, configuration, and synchronization capabilities across multiple server sources including Docker Desktop, NPM registry, Docker Hub, and custom implementations.
-
-### Key Features
-
-- 🔍 **Multi-Source Discovery**: Find servers from NPM, Docker Hub, Docker Desktop catalogs
-- ⚡ **One-Command Installation**: Install servers with unique install IDs  
-- 🔄 **External Change Synchronization**: Automatic detection and sync of configuration changes
-- 🖥️ **Multiple Interfaces**: Interactive menu, CLI commands, and TUI options
-- 🛡️ **Sync Loop Protection**: Prevents conflicts during background operations
-- 📊 **Comprehensive Monitoring**: Background service with configurable auto-sync
-
----
-
-## Installation
-
-### Prerequisites
-
-**Required**:
-- Python 3.9+ (Python 3.11+ recommended)
-- Claude Code CLI installed and configured
-- Operating System: macOS, Linux, or Windows
-
-**Optional** (for full functionality):
-- Docker Desktop (for Docker Desktop MCP integration)
-- Git (for development workflows)
-
-### Installation Methods
-
-#### Method 1: PyPI Installation (Future Release)
-
-> **Note**: PyPI distribution will be available in a future release
-
-```bash
-# Install latest stable version (coming soon)
-pip install mcp-manager
-
-# Install with all optional dependencies
-pip install mcp-manager[all]
-
-# Verify installation
-mcp-manager --version
-```
-
-#### Method 2: Development Installation (Current)
-
-```bash
-# Clone repository
-git clone https://github.com/blemis/mcp-manager-python.git
-cd mcp-manager-python
-
-# Install in development mode
-pip install -e ".[dev]"
-
-# Verify installation
-python -m mcp_manager.cli.main --version
-```
-
-#### Method 3: Docker Installation (Future Release)
-
-> **Note**: Docker images will be available in a future release
-
-```bash
-# Pull and run Docker container (coming soon)
-docker run -it --rm mcpmanager/mcp-manager:latest
-
-# With volume mounting for persistence
-docker run -it --rm -v ~/.claude:/root/.claude mcpmanager/mcp-manager:latest
-```
-
-### Post-Installation Setup
-
-1. **Verify Claude Code Integration**:
-```bash
-# Test Claude Code CLI access
-claude mcp list
-
-# If not found, install Claude Code CLI first
-# Follow: https://docs.anthropic.com/claude/docs/claude-code
-```
-
-2. **Initialize Configuration**:
-```bash
-# Create default configuration
-mcp-manager config --init
-
-# Verify system setup
-mcp-manager system-info
-```
+1. [Getting Started](#getting-started)
+2. [Installation & Setup](#installation--setup)
+3. [Core Features](#core-features)
+4. [Server Management](#server-management)
+5. [Suite-Based Organization](#suite-based-organization)
+6. [Workflow Automation](#workflow-automation)
+7. [Analytics & Monitoring](#analytics--monitoring)
+8. [API Server](#api-server)
+9. [Proxy Server](#proxy-server)
+10. [Terminal User Interface](#terminal-user-interface)
+11. [Command Reference](#command-reference)
+12. [Troubleshooting](#troubleshooting)
+13. [Best Practices](#best-practices)
 
 ---
 
 ## Getting Started
 
-### Quick Start (5 Minutes)
+### What is MCP Manager?
 
-1. **Launch Interactive Menu**:
-```bash
-mcp-manager
-```
+MCP Manager is an enterprise-grade tool for managing **Model Context Protocol (MCP) servers** used by Claude Code. It provides a complete ecosystem for MCP server lifecycle management with advanced features:
 
-**Example Screen**:
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    🚀 MCP Manager v1.0                     │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  1. 📋 List Servers           7. 🔍 Discover Servers        │
-│  2. ➕ Add Server             8. 📦 Install Package         │
-│  3. ➖ Remove Server          9. 🔄 Sync Changes           │
-│  4. ✅ Enable Server          10. 👀 Monitor Changes       │
-│  5. ❌ Disable Server         11. ⚙️  System Info          │
-│  6. 🔧 Configure Server       12. ❓ Help                  │
-│                                                             │
-│  Press number + Enter, or 'q' to quit                      │
-└─────────────────────────────────────────────────────────────┘
-```
+- **🔍 Intelligent Discovery** - Multi-source server discovery with AI curation
+- **🎯 Suite Management** - Organized collections of servers for specific workflows
+- **⚡ Workflow Automation** - Task-specific configurations with AI recommendations
+- **📊 Advanced Analytics** - Comprehensive usage tracking and performance insights
+- **🔄 Proxy Server** - Unified endpoint with protocol translation and load balancing
+- **🌐 REST API** - Full API server with authentication and rate limiting
+- **🎨 Rich Interfaces** - Modern CLI, TUI, and web dashboard options
 
-2. **Discover Available Servers**:
-```bash
-# Option 7 from menu, or direct command:
-mcp-manager discover --query filesystem
-```
+### New in Version 2.0
 
-**Example Output**:
-```
-🔍 Discovering MCP servers...
-
-┌──────────────────── 📦 Discovery Results (3 servers) ────────────────────┐
-│                                                                           │
-│  Install ID          Name              Type           Score  Description  │
-│ ──────────────────────────────────────────────────────────────────────── │
-│  dd-filesystem       filesystem        docker-desktop  10.0  File ops    │
-│  mcp-filesystem      @mcp/filesystem   npm             8.2   File system │  
-│  docker-filesystem   mcp-filesystem    docker          6.1   MCP Files   │
-│                                                                           │
-│  💡 Use: mcp-manager install-package <install-id>                       │
-└───────────────────────────────────────────────────────────────────────────┘
-```
-
-3. **Install a Server**:
-```bash
-# Option 8 from menu, or direct command:
-mcp-manager install-package dd-filesystem
-```
-
-**Example Output**:
-```
-📦 Installing server: dd-filesystem
-
-🔍 Resolving install ID...
-✅ Found: filesystem (Docker Desktop MCP)
-
-🐳 Enabling in Docker Desktop...
-✅ Server enabled: filesystem
-
-🔄 Importing to Claude Code...  
-✅ Docker gateway imported successfully
-
-📊 Updating server catalog...
-✅ Server catalog updated
-
-🎉 Installation complete!
-   Server 'filesystem' is now available in Claude Code
-```
-
-4. **Verify Installation**:
-```bash
-# Option 1 from menu, or direct command:
-mcp-manager list
-```
-
-**Example Output**:
-```
-                            MCP Servers                            
-┏━━━━━━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━━━━━━━┳━━━━━━━━━┓
-┃ Name            ┃  Scope  ┃ Status  ┃      Type      ┃ Command ┃
-┡━━━━━━━━━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━━━━━━━╇━━━━━━━━━┩
-│ filesystem      │ 🌐 user │ enabled │ docker-desktop │ docker  │
-│ test-server     │ 🌐 user │ enabled │      npm       │ npx     │
-└─────────────────┴─────────┴─────────┴────────────────┴─────────┘
-```
+- **Task-Specific Workflows** - AI-driven workflow recommendations
+- **MCP Proxy Server** - Protocol translation and unified endpoints
+- **REST API Server** - Complete API with JWT authentication
+- **Advanced Analytics** - Usage patterns and performance metrics
+- **Tool Registry** - Centralized tool discovery and management
+- **Suite-Based Architecture** - Modular server organization
 
 ---
 
-## Core Concepts
+## Installation & Setup
 
-### Server Types
+### Prerequisites
 
-| Type | Description | Installation Method | Example |
-|------|-------------|-------------------|---------|
-| **Docker Desktop** | Official Docker Desktop MCP servers | Enable in DD, import gateway | SQLite, filesystem |
-| **NPM** | JavaScript/TypeScript packages | NPM registry installation | @mcp/filesystem |
-| **Docker** | Containerized MCP servers | Docker Hub or custom registry | mcp/server-name |
-| **Custom** | User-defined commands | Manual command specification | echo, python scripts |
+- **Python 3.8+** with pip
+- **Claude Code** installed and configured
+- **Docker** (optional, for Docker-based servers)
+- **Node.js** (optional, for NPM servers)
 
-### Install IDs
-
-**Purpose**: Unique identifiers to distinguish servers with identical names
-
-**Format Examples**:
-- `dd-SQLite` - Docker Desktop SQLite server
-- `mcp-sqlite` - NPM sqlite package  
-- `docker-sqlite` - Docker Hub sqlite container
-- `custom-sqlite` - User-defined SQLite implementation
-
-### Configuration Scopes
-
-| Scope | Location | Purpose | Example |
-|-------|----------|---------|---------|
-| **System** | `/etc/mcp-manager/` | Organization-wide policies | Corporate server whitelist |
-| **User** | `~/.config/mcp-manager/` | Personal preferences | Default discovery sources |
-| **Project** | `./.mcp-manager.toml` | Project-specific settings | Local development servers |
-
-### External Change Detection
-
-**Purpose**: Monitor and synchronize changes made by external tools
-
-**Sources Monitored**:
-- Changes via `claude mcp` commands
-- Docker Desktop server enable/disable operations
-- Manual configuration file edits
-- Other tools modifying MCP configurations
-
----
-
-## User Interfaces
-
-### 1. Interactive Menu (Default)
-
-**Launch**: `mcp-manager` (no arguments)
-
-**Features**:
-- Numbered menu options for all operations
-- Real-time server status display
-- Progress indicators for long operations
-- Contextual help and error messages
-
-**Navigation**:
-- Enter number to select option
-- 'q' or 'quit' to exit
-- 'h' or 'help' for assistance
-
-### 2. Command Line Interface (CLI)
-
-**Launch**: `mcp-manager <command> [options]`
-
-**Example Commands**:
-```bash
-# Discovery and installation
-mcp-manager discover --query database
-mcp-manager install-package dd-SQLite
-
-# Server management  
-mcp-manager list
-mcp-manager add myserver "python server.py"
-mcp-manager remove myserver --force
-
-# Configuration sync
-mcp-manager sync --dry-run
-mcp-manager detect-changes --watch
-```
-
-### 3. Terminal User Interface (TUI)
-
-**Launch**: `mcp-manager tui`
-
-> **Note**: `mcp-manager` with no arguments launches the interactive menu, not the TUI
-
-**Example Screen Layout**:
-```
-┌───────────────────────── MCP Manager TUI ─────────────────────────────┐
-│                                                                        │
-│ ┌─ Servers ────────────────────┐ ┌─ Actions ─────────────────────────┐ │
-│ │                              │ │                                   │ │
-│ │ ● filesystem  [enabled ]     │ │  ➕ Add Server                   │ │
-│ │ ● SQLite      [enabled ]     │ │  🔍 Discover Servers             │ │
-│ │ ○ test-server [disabled]     │ │  🔄 Sync Changes                 │ │
-│ │                              │ │  ⚙️ Configure                    │ │
-│ │                              │ │  📊 System Info                  │ │
-│ └──────────────────────────────┘ └───────────────────────────────────┘ │
-│                                                                        │
-│ ┌─ Server Details ─────────────────────────────────────────────────────┐ │
-│ │ Name: filesystem                                                     │ │
-│ │ Type: docker-desktop                                                 │ │
-│ │ Command: docker mcp server filesystem                               │ │
-│ │ Status: enabled                                                      │ │
-│ │ Description: File system operations for MCP                         │ │
-│ └──────────────────────────────────────────────────────────────────────┘ │
-│                                                                        │
-│ [Tab] Switch panels  [Enter] Select  [q] Quit  [h] Help              │
-└────────────────────────────────────────────────────────────────────────┘
-```
-
-
----
-
-## Command Reference
-
-### Discovery Commands
-
-#### `discover`
-Find available MCP servers from multiple sources
+### Installation
 
 ```bash
-# Basic discovery
+# Install MCP Manager
+pip install mcp-manager
+
+# Verify installation
+mcp-manager --version
+
+# Initialize system
+mcp-manager system init
+```
+
+### Quick Setup
+
+```bash
+# Check system status
+mcp-manager status
+
+# Discover available servers
 mcp-manager discover
 
-# Search with query
-mcp-manager discover --query "database sqlite"
+# Install a basic suite
+mcp-manager install-suite --suite-name development
 
-# Filter by type
+# Start monitoring
+mcp-manager monitoring start
+```
+
+---
+
+## Core Features
+
+### 🔍 Multi-Source Discovery
+
+MCP Manager discovers servers from multiple sources with intelligent ranking:
+
+```bash
+# Discover all available servers
+mcp-manager discover
+
+# Search with AI-powered relevance
+mcp-manager discover --query "database operations"
+mcp-manager discover --query "web scraping tools"
+
+# Filter by source type
 mcp-manager discover --type npm
 mcp-manager discover --type docker-desktop
+mcp-manager discover --type docker-hub
 
-# Limit results
-mcp-manager discover --limit 10
-
-# Include detailed information
-mcp-manager discover --detailed
-
-# Update cached catalogs
+# Update discovery cache
 mcp-manager discover --update-catalog
 ```
 
-**Example Output**:
-```
-🔍 Discovering MCP servers across all sources...
+**Discovery Sources:**
+- **Docker Desktop** - Pre-built, tested servers
+- **NPM Registry** - JavaScript/TypeScript servers
+- **Docker Hub** - Community containers
+- **GitHub** - Open source implementations
+- **AI Curation** - Quality-scored recommendations
 
-┌────────────────────── 📦 Docker Desktop MCP ──────────────────────────┐
-│ 3 servers available                                                    │
-└─────────────────────────────────────────────────────────────────────────┘
-                                                                          
-  Install ID       Name           Tools    Description                    
- ──────────────────────────────────────────────────────────────────────── 
-  dd-SQLite        SQLite         3        Database operations            
-  dd-filesystem    filesystem     12       File system operations         
-  dd-search        search         2        Web search capabilities        
-                                                                          
-┌─────────────────────────── 📦 NPM Registry ───────────────────────────┐
-│ 2 servers available                                                    │
-└─────────────────────────────────────────────────────────────────────────┘
-                                                                          
-  Install ID                Name                    Downloads  Description 
- ──────────────────────────────────────────────────────────────────────── 
-  modelcontextprotocol-...  @modelcontextprotocol-  1.2K      File system 
-  mcp-server-sqlite        @mcp/server-sqlite      856        SQLite MCP  
-```
+### 📦 Intelligent Installation
 
-### Installation Commands
-
-#### `install-package`
-Install a server using its unique install ID
+Install servers with dependency resolution and conflict detection:
 
 ```bash
-# Install Docker Desktop server
+# Install by unique ID
 mcp-manager install-package dd-SQLite
-
-# Install NPM server
 mcp-manager install-package modelcontextprotocol-filesystem
 
-# Install with specific configuration
-mcp-manager install-package mcp-server --config config.json
+# Install with automatic dependencies
+mcp-manager install-package playwright-mcp --with-deps
 
-# Force reinstallation
-mcp-manager install-package dd-filesystem --force
+# Batch installation
+mcp-manager install-package dd-filesystem dd-http sqlite-mcp
 ```
 
-#### `install`
-Install from discovery results (legacy)
+### 🎯 Suite-Based Organization
+
+Organize servers into logical collections:
 
 ```bash
-# Install by index from last discovery
-mcp-manager install 1
+# List available suites
+mcp-manager suite list
 
-# Install specific server type
-mcp-manager install --name SQLite --type docker-desktop
+# Install pre-configured suite
+mcp-manager install-suite --suite-name web-development
+
+# View suite details
+mcp-manager suite show web-development
+
+# Create custom suite
+mcp-manager suite create "Data Science Stack" \
+  --description "ML and data analysis tools" \
+  --category data_analysis
 ```
 
-### Server Management Commands
+---
 
-#### `add`
-Add a custom MCP server
+## Server Management
 
-```bash
-# Basic custom server
-mcp-manager add myserver "python /path/to/server.py"
-
-# With arguments and environment
-mcp-manager add database-server "npx @mcp/sqlite" \
-  --args "--db-path /data/app.db" \
-  --env "DEBUG=1"
-
-# Docker container server
-mcp-manager add containerized "docker run -i myimage:latest"
-```
-
-#### `remove`
-Remove an MCP server
-
-```bash
-# Interactive removal (prompts for confirmation)
-mcp-manager remove myserver
-
-# Force removal (no prompts)
-mcp-manager remove myserver --force
-
-# Remove with cleanup
-mcp-manager remove myserver --cleanup
-```
-
-#### `enable` / `disable`
-Control server status
-
-```bash
-# Enable server
-mcp-manager enable myserver
-
-# Disable server
-mcp-manager disable myserver
-
-# Enable multiple servers
-mcp-manager enable server1 server2 server3
-```
-
-#### `list`
-Display configured servers
+### Basic Server Operations
 
 ```bash
 # List all servers
 mcp-manager list
 
-# Filter by status
-mcp-manager list --enabled
-mcp-manager list --disabled
+# Show active servers only
+mcp-manager list --active-only
 
-# Filter by type
-mcp-manager list --type docker-desktop
-mcp-manager list --type npm
+# Server details
+mcp-manager show <server-name>
 
-# Detailed output
-mcp-manager list --detailed
+# Remove server
+mcp-manager remove <server-name>
 
-# JSON output
-mcp-manager list --json
+# Restart server
+mcp-manager restart <server-name>
 ```
 
-**Example Outputs**:
-
-*Standard List*:
-```
-                            MCP Servers                            
-┏━━━━━━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━━━━━━━┳━━━━━━━━━┓
-┃ Name            ┃  Scope  ┃ Status  ┃      Type      ┃ Command ┃
-┡━━━━━━━━━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━━━━━━━╇━━━━━━━━━┩
-│ filesystem      │ 🌐 user │ enabled │ docker-desktop │ docker  │
-│ SQLite          │ 🌐 user │ enabled │ docker-desktop │ docker  │
-│ test-server     │ 🌐 user │ enabled │      npm       │ npx     │
-│ custom-script   │ 🌐 user │ disabled│     custom     │ python  │
-└─────────────────┴─────────┴─────────┴────────────────┴─────────┘
-```
-
-*Detailed List*:
-```
-📋 MCP Server Details
-
-┌─ filesystem (docker-desktop) ──────────────────────────────────┐
-│ Status: enabled                                                │
-│ Scope: user                                                    │
-│ Command: docker mcp server filesystem                         │
-│ Tools: read_file, write_file, list_directory, create_directory│
-│ Description: Provides file system access for MCP clients      │
-└────────────────────────────────────────────────────────────────┘
-
-┌─ SQLite (docker-desktop) ──────────────────────────────────────┐
-│ Status: enabled                                                │
-│ Scope: user                                                    │
-│ Command: docker mcp server SQLite                             │
-│ Tools: query, execute, schema                                 │
-│ Description: SQLite database operations for MCP               │
-└────────────────────────────────────────────────────────────────┘
-```
-
-### Configuration Synchronization Commands
-
-#### `sync`
-Synchronize with external configuration changes
+### Advanced Server Configuration
 
 ```bash
-# Interactive sync (prompts before applying changes)
-mcp-manager sync
+# Add custom server
+mcp-manager add my-custom-server \
+  "npx my-mcp-package" \
+  --type npm \
+  --args "--port 3000" \
+  --env "API_KEY=secret"
 
-# Dry run (show what would change)
-mcp-manager sync --dry-run
+# Configure server parameters
+mcp-manager configure <server-name> \
+  --timeout 30 \
+  --retries 3 \
+  --health-check-interval 60
 
-# Automatic sync (apply all changes)
-mcp-manager sync --auto-apply
+# Server health monitoring
+mcp-manager health <server-name>
 ```
 
-**Example Sync Session**:
-```
-🔄 External Configuration Sync
+### Docker Desktop Integration
 
-🔍 Detecting external changes...
-📋 Detected 2 configuration changes:
-
-┌───────────────────────── 📦 Claude Internal Config ──────────────────────────┐
-│ 1 changes                                                                     │
-└────────────────────────────────────────────────────────────────────────────────┘
-                                                                          
-  Change            Server                 Details                        
- ──────────────────────────────────────────────────────────────────────── 
-  ➕ Added          new-server             cmd: python,                   
-                                           (external_server_not_in_catalog)
-                                                                          
-┌─────────────────────────── 📦 Docker Desktop MCP ────────────────────────────┐
-│ 1 changes                                                                     │
-└────────────────────────────────────────────────────────────────────────────────┘
-                                                                          
-  Change            Server                 Details                        
- ──────────────────────────────────────────────────────────────────────── 
-  ➖ Removed        old-server             (catalog_server_not_external)  
-
-Apply these changes to synchronize configurations? (y/N): y
-
-🔄 Applying synchronization changes...
-  ✅ Added server: new-server
-  ➖ Removed server from catalog: old-server
-
-✅ Successfully applied 2 changes
-🎉 Synchronization complete
-```
-
-#### `detect-changes`
-Monitor external configuration changes
+MCP Manager provides seamless Docker Desktop integration:
 
 ```bash
-# One-time change detection
-mcp-manager detect-changes
+# Sync with Docker Desktop
+mcp-manager claude sync --docker-desktop
 
-# Continuous monitoring
-mcp-manager detect-changes --watch
+# Enable Docker Desktop servers
+mcp-manager docker enable-server sqlite
+mcp-manager docker enable-server filesystem
 
-# Custom interval monitoring
-mcp-manager detect-changes --watch --interval 30
-```
-
-**Example Watch Output**:
-```
-👀 Monitoring external changes (interval: 5s, press Ctrl+C to stop)...
-
-[18:30:15] ✅ No changes detected
-[18:30:20] ✅ No changes detected  
-[18:30:25] 🔍 1 new changes detected at 18:30:25
-  • server_added:docker:new-database-server
-
-[18:30:30] ✅ No changes detected
-```
-
-### Monitoring Commands
-
-#### `monitor`
-Background monitoring service
-
-```bash
-# Start monitoring service with auto-sync
-mcp-manager monitor --start --auto-sync
-
-# Start with custom interval
-mcp-manager monitor --start --interval 120
-
-# Check service status
-mcp-manager monitor --status
-
-# Stop service
-mcp-manager monitor --stop
-```
-
-#### `monitor-status`
-Quick monitor status check
-
-```bash
-mcp-manager monitor-status
-```
-
-### System Commands
-
-#### `system-info`
-Display system information and diagnostics
-
-```bash
-mcp-manager system-info
-```
-
-**Example Output**:
-```
-🖥️ MCP Manager System Information
-
-┌─ System Environment ──────────────────────────────────────────────┐
-│ OS: macOS 14.5                                                    │
-│ Python: 3.11.5                                                    │
-│ MCP Manager: 1.0.0                                                │
-│ Install Method: PyPI                                               │
-└────────────────────────────────────────────────────────────────────┘
-
-┌─ Dependencies ─────────────────────────────────────────────────────┐
-│ Claude Code CLI: ✅ Available (v0.8.1)                           │
-│ Docker Desktop: ✅ Available (v4.21.1)                           │
-│ Docker MCP: ✅ Available (3 servers enabled)                     │
-│ Git: ✅ Available (v2.39.2)                                       │
-└────────────────────────────────────────────────────────────────────┘
-
-┌─ Configuration ────────────────────────────────────────────────────┐
-│ Config File: ~/.config/mcp-manager/config.toml                    │
-│ Log Level: INFO                                                    │
-│ Cache Directory: ~/.mcp-manager/cache                             │
-│ Change Detection: ✅ Enabled                                      │
-│ Auto Sync: ❌ Disabled                                             │
-└────────────────────────────────────────────────────────────────────┘
-
-┌─ Server Statistics ────────────────────────────────────────────────┐
-│ Total Servers: 4                                                  │
-│ Enabled: 3                                                        │
-│ Docker Desktop: 2                                                 │
-│ NPM: 1                                                            │
-│ Custom: 1                                                         │
-└────────────────────────────────────────────────────────────────────┘
-```
-
-#### `check-sync`
-Check synchronization status
-
-```bash
-mcp-manager check-sync
-```
-
-#### `cleanup`
-Clean up problematic configurations
-
-```bash
-# Interactive cleanup
-mcp-manager cleanup
-
-# Automatic cleanup
-mcp-manager cleanup --auto
-
-# Deep cleanup (removes all cached data)
-mcp-manager cleanup --deep
-```
-
-### Configuration Commands
-
-#### `configure`
-Configure or reconfigure servers
-
-```bash
-# Configure server interactively
-mcp-manager configure myserver
-
-# Show current configuration
-mcp-manager configure myserver --show
-
-# Configure with specific values
-mcp-manager configure myserver --set "key=value"
+# Import all enabled DD servers
+mcp-manager claude add-from-docker-desktop
 ```
 
 ---
 
-## Common Workflows
+## Suite-Based Organization
 
-### Workflow 1: New Project Setup
+### Understanding Suites
 
-**Scenario**: Setting up MCP servers for a new AI development project
+**Suites** are curated collections of MCP servers optimized for specific tasks or workflows. They provide:
+
+- **Logical Grouping** - Related servers bundled together
+- **Dependency Management** - Automatic resolution of server dependencies
+- **Conflict Detection** - Prevents duplicate functionality
+- **Team Collaboration** - Shareable configurations
+
+### Working with Suites
 
 ```bash
-# Step 1: Discover available servers for your domain
-mcp-manager discover --query "filesystem database"
+# Browse available suites
+mcp-manager suite list --category development
+mcp-manager suite list --category data_analysis
 
-# Step 2: Install essential servers
-mcp-manager install-package dd-filesystem
-mcp-manager install-package dd-SQLite
+# Suite information
+mcp-manager suite show development-suite
 
-# Step 3: Add custom project server
-mcp-manager add project-api "python api_server.py" \
-  --args "--port 8080 --project myproject"
+# Install complete suite
+mcp-manager install-suite --suite-name development-suite
 
-# Step 4: Verify setup
-mcp-manager list
+# Create custom suite
+mcp-manager suite create "My DevOps Stack" \
+  --description "Docker, K8s, and CI/CD tools" \
+  --category devops
 
-# Step 5: Test in Claude Code
-claude mcp list
+# Add servers to suite
+mcp-manager suite add my-devops-stack docker-mcp --role primary --priority 90
+mcp-manager suite add my-devops-stack kubernetes-mcp --role secondary --priority 70
 ```
 
-**Expected Result**: 3 servers (filesystem, SQLite, project-api) available in Claude Code
+### Popular Pre-configured Suites
 
-### Workflow 2: Server Discovery and Evaluation
+#### Development Suite
+- **Servers**: filesystem, git, docker, sqlite, http-client
+- **Use Cases**: Full-stack development, code management, testing
+- **Install**: `mcp-manager install-suite --suite-name development`
 
-**Scenario**: Finding the best MCP server for specific functionality
+#### Data Analysis Suite  
+- **Servers**: pandas-mcp, jupyter-mcp, sqlite, visualization-tools
+- **Use Cases**: Data science, analytics, reporting
+- **Install**: `mcp-manager install-suite --suite-name data-analysis`
+
+#### Web Development Suite
+- **Servers**: playwright, http-client, filesystem, database, deployment-tools
+- **Use Cases**: Web development, testing, deployment
+- **Install**: `mcp-manager install-suite --suite-name web-development`
+
+#### AI Research Suite
+- **Servers**: pytorch-mcp, huggingface-mcp, jupyter, data-tools
+- **Use Cases**: Machine learning, research, experimentation
+- **Install**: `mcp-manager install-suite --suite-name ai-research`
+
+---
+
+## Workflow Automation
+
+### Task-Specific Workflows
+
+**Workflows** provide automated, task-specific MCP server configurations that adapt to your current work context.
+
+### Creating Workflows
 
 ```bash
-# Step 1: Broad discovery
-mcp-manager discover --query "web search"
+# Create development workflow
+mcp-manager workflow create development-workflow \
+  --description "Full-stack development environment" \
+  --suites development-suite web-tools-suite \
+  --category development \
+  --priority 80 \
+  --auto-activate
 
-# Step 2: Detailed comparison
-mcp-manager discover --query "web search" --detailed
-
-# Step 3: Install top candidate
-mcp-manager install-package dd-search
-
-# Step 4: Test functionality
-mcp-manager list --detailed | grep search
-
-# Step 5: Remove if unsatisfactory
-mcp-manager remove search --force
+# Create data analysis workflow
+mcp-manager workflow create data-workflow \
+  --description "Data science and analytics" \
+  --suites data-analysis-suite visualization-suite \
+  --category data_analysis \
+  --priority 75
 ```
 
-### Workflow 3: Configuration Synchronization
-
-**Scenario**: Maintaining consistency when multiple tools modify MCP configs
+### Workflow Management
 
 ```bash
-# Step 1: Enable background monitoring
-mcp-manager monitor --start --auto-sync
+# List all workflows
+mcp-manager workflow list
 
-# Step 2: Make external changes (e.g., via Docker Desktop UI)
-# - Enable/disable servers in Docker Desktop
-# - Use claude mcp commands directly
+# Show workflow details
+mcp-manager workflow show development-workflow
 
-# Step 3: Monitor detects changes automatically
-# Check logs: tail -f ~/.mcp-manager/logs/mcp-manager.log
+# Activate workflow
+mcp-manager workflow activate development-workflow
 
-# Step 4: Manual sync if needed
-mcp-manager sync --dry-run
-mcp-manager sync --auto-apply
+# AI-recommended workflow switching
+mcp-manager workflow switch data_analysis
 
-# Step 5: Verify consistency
-mcp-manager check-sync
+# Deactivate current workflow
+mcp-manager workflow deactivate
+
+# Workflow status
+mcp-manager workflow status
 ```
 
-### Workflow 4: Development Environment Migration
+### Workflow Templates
 
-**Scenario**: Moving MCP configuration to a new development machine
+Create reusable workflow templates:
 
 ```bash
-# On source machine:
-# Step 1: Export current configuration
-mcp-manager list --json > mcp-servers-backup.json
+# Create template from servers
+mcp-manager workflow template "Docker Development" \
+  --servers docker-mcp kubernetes-mcp filesystem-mcp \
+  --category development \
+  --description "Containerized development stack"
 
-# Step 2: Document custom servers
-mcp-manager list --type custom --detailed
-
-# On target machine:
-# Step 3: Install MCP Manager
-pip install mcp-manager
-
-# Step 4: Recreate servers
-mcp-manager install-package dd-filesystem
-mcp-manager install-package dd-SQLite
-mcp-manager add custom-server "python server.py"
-
-# Step 5: Verify migration
-mcp-manager list
-mcp-manager system-info
+# Create template from existing workflow
+mcp-manager workflow template "Team Standard" \
+  --from-workflow development-workflow \
+  --priority 85
 ```
 
-### Workflow 5: Troubleshooting Server Issues
+### AI-Driven Workflow Recommendations
 
-**Scenario**: Debugging MCP server connectivity or configuration problems
+MCP Manager uses AI to recommend optimal workflows:
 
 ```bash
-# Step 1: Check system health
-mcp-manager system-info
+# Get AI workflow recommendations
+mcp-manager ai recommend-workflow --task "web development"
+mcp-manager ai recommend-workflow --task "data analysis"
 
-# Step 2: Verify server status
-mcp-manager list --detailed
-
-# Step 3: Check Claude Code integration
-claude mcp list
-
-# Step 4: Detect configuration drift
-mcp-manager detect-changes
-
-# Step 5: Clean up if needed
-mcp-manager cleanup
-
-# Step 6: Re-sync configurations  
-mcp-manager sync --auto-apply
-
-# Step 7: Verify fix
-mcp-manager check-sync
+# Auto-switch based on task category
+mcp-manager workflow switch content_creation
+mcp-manager workflow switch system_administration
 ```
 
 ---
 
-## Use Cases & Examples
+## Analytics & Monitoring
 
-### Use Case 1: Data Science Team
+### Usage Analytics
 
-**Scenario**: Data science team needs file system access and database connectivity
+Track and analyze MCP server usage patterns:
 
-**Requirements**:
-- Read/write files in project directories
-- Query SQLite databases for analysis
-- Access web search for research
-
-**Implementation**:
 ```bash
-# Team lead sets up standard servers
-mcp-manager install-package dd-filesystem
-mcp-manager install-package dd-SQLite  
-mcp-manager install-package dd-search
+# Usage summary
+mcp-manager analytics summary --days 7
+mcp-manager analytics summary --days 30
 
-# Create team configuration file
-cat > .mcp-manager.toml << EOF
-[discovery]
-preferred_sources = ["docker-desktop"]
-quality_threshold = 8.0
+# Query usage patterns
+mcp-manager analytics query --pattern "database"
+mcp-manager analytics query --pattern "file operations"
 
-[change_detection]
-enabled = true
-auto_sync = false
-EOF
-
-# Verify team setup
-mcp-manager list
+# Tool usage statistics
+mcp-manager tools search filesystem --with-stats
 ```
 
-**Result**: Standardized MCP environment across all team members
+**Sample Analytics Output:**
+```
+📊 Usage Analytics Summary (30 days)
 
-### Use Case 2: DevOps Automation
+Total Queries: 3,456
+Unique Users: 5
+Active Tools: 47
+Success Rate: 96.8%
+Average Response Time: 142.3ms
 
-**Scenario**: Automated deployment pipeline needs MCP server management
+🏆 Most Used Tools:
+  1. filesystem/read: 567 uses (16.4%)
+  2. sqlite/query: 423 uses (12.2%)
+  3. http/request: 334 uses (9.7%)
+  4. git/status: 298 uses (8.6%)
+  5. docker/ps: 234 uses (6.8%)
 
-**Requirements**:
-- Install servers via CI/CD pipeline
-- Synchronize configurations across environments
-- Monitor for configuration drift
+📈 Trending Queries:
+  1. "code analysis": 89 queries
+  2. "database operations": 76 queries
+  3. "file management": 62 queries
 
-**Implementation**:
+⚡ Performance Metrics:
+P50 Response Time: 98ms
+P95 Response Time: 287ms
+P99 Response Time: 543ms
+Error Rate: 3.2%
+```
+
+### Real-Time Monitoring
+
 ```bash
-#!/bin/bash
-# deploy-mcp-servers.sh
+# Start background monitoring
+mcp-manager monitoring start
 
-# Install required servers
-mcp-manager install-package dd-filesystem
-mcp-manager install-package modelcontextprotocol-kubernetes
+# Monitor specific servers
+mcp-manager monitoring watch filesystem-mcp sqlite-mcp
 
-# Configure custom deployment server
-mcp-manager add deployment-helper "python /opt/deploy/mcp_server.py" \
-  --env "ENVIRONMENT=production" \
-  --args "--config /opt/deploy/config.yaml"
+# Live performance dashboard
+mcp-manager monitoring dashboard
 
-# Enable monitoring
-mcp-manager monitor --start --auto-sync --interval 300
-
-# Verify deployment
-mcp-manager check-sync || exit 1
+# Server health checks
+mcp-manager monitoring health-check --all
 ```
 
-**Result**: Automated, consistent MCP server deployment
+### Performance Analysis
 
-### Use Case 3: Multi-Project Organization
-
-**Scenario**: Organization with multiple projects, each with specific MCP requirements
-
-**Project Structure**:
-```
-organization/
-├── project-a/
-│   ├── .mcp-manager.toml
-│   └── custom-servers/
-├── project-b/  
-│   ├── .mcp-manager.toml
-│   └── requirements.txt
-└── shared/
-    └── global-config.toml
-```
-
-**Project A Configuration**:
-```toml
-# project-a/.mcp-manager.toml
-[servers]
-filesystem = { install_id = "dd-filesystem", required = true }
-database = { install_id = "dd-SQLite", required = true }
-api-gateway = { 
-  command = "python custom-servers/api_gateway.py",
-  type = "custom",
-  args = ["--project", "project-a"]
-}
-
-[change_detection]
-enabled = true
-scope = "project"
-```
-
-**Project B Configuration**:
-```toml
-# project-b/.mcp-manager.toml
-[servers]
-filesystem = { install_id = "modelcontextprotocol-filesystem", required = true }
-search = { install_id = "dd-search", required = true }
-nlp-tools = {
-  command = "npx @nlp/mcp-server",
-  type = "npm", 
-  args = ["--model", "gpt-4"]
-}
-
-[change_detection]
-enabled = true
-auto_sync = true
-```
-
-**Usage**:
 ```bash
-# In project-a directory
-cd project-a
-mcp-manager install-package dd-filesystem
-mcp-manager install-package dd-SQLite
-mcp-manager add api-gateway "python custom-servers/api_gateway.py" --args "--project project-a"
+# Performance trends
+mcp-manager analytics performance --timeframe week
+mcp-manager analytics performance --server sqlite-mcp
 
-# In project-b directory  
-cd ../project-b
-mcp-manager install-package modelcontextprotocol-filesystem
-mcp-manager install-package dd-search
-mcp-manager install-package nlp-mcp-tools
+# Error analysis
+mcp-manager analytics errors --top 10
+mcp-manager analytics errors --server problematic-server
+
+# Resource usage
+mcp-manager analytics resources --memory --cpu
 ```
-
-**Result**: Project-specific MCP configurations with shared organizational policies
-
-### Use Case 4: AI Research Lab
-
-**Scenario**: Research lab with frequently changing experimental MCP servers
-
-**Requirements**:
-- Easy installation of experimental servers
-- Version management for research reproducibility  
-- Quick server switching for A/B testing
-
-**Implementation**:
-```bash
-# Research experiment setup script
-#!/bin/bash
-# setup-experiment.sh
-
-EXPERIMENT_NAME="$1"
-EXPERIMENT_CONFIG="experiments/${EXPERIMENT_NAME}.yaml"
-
-# Create experiment-specific configuration
-mcp-manager add "${EXPERIMENT_NAME}-processor" \
-  "python experiments/${EXPERIMENT_NAME}/processor.py" \
-  --args "--config ${EXPERIMENT_CONFIG}"
-
-# Install supporting servers based on experiment type
-case "$EXPERIMENT_NAME" in
-  "nlp-"*)
-    mcp-manager install-package modelcontextprotocol-text
-    mcp-manager install-package dd-search
-    ;;
-  "vision-"*)  
-    mcp-manager install-package modelcontextprotocol-vision
-    mcp-manager install-package dd-filesystem
-    ;;
-  "data-"*)
-    mcp-manager install-package dd-SQLite
-    mcp-manager install-package modelcontextprotocol-pandas
-    ;;
-esac
-
-# Start monitoring for this experiment
-mcp-manager monitor --start --interval 30
-
-echo "Experiment ${EXPERIMENT_NAME} MCP environment ready"
-mcp-manager list --type custom
-```
-
-**Usage**:
-```bash
-# Setup NLP experiment
-./setup-experiment.sh nlp-sentiment-analysis
-
-# Switch to computer vision experiment  
-mcp-manager cleanup --auto
-./setup-experiment.sh vision-object-detection
-
-# List experiment servers
-mcp-manager list --grep "nlp-\|vision-"
-```
-
-**Result**: Flexible, reproducible MCP environments for research experiments
-
-### Use Case 5: Enterprise Security Compliance
-
-**Scenario**: Enterprise environment with strict security and compliance requirements
-
-**Requirements**:
-- Centralized server approval process
-- Audit logging of all MCP operations
-- Restricted server installation sources
-
-**System Configuration**:
-```toml
-# /etc/mcp-manager/config.toml (system-wide)
-[security]
-approved_sources = ["docker-desktop", "internal-registry"]
-require_approval = true
-audit_logging = true
-
-[discovery]
-blocked_sources = ["docker-hub"]
-quality_threshold = 9.0
-
-[logging]
-level = "INFO"
-audit_file = "/var/log/mcp-manager/audit.log"
-format = "json"
-```
-
-**User Workflow**:
-```bash
-# User requests server installation
-mcp-manager discover --query "database" --source approved
-
-# System shows only approved sources
-# User submits installation request
-mcp-manager install-package dd-SQLite --request-approval
-
-# Admin approves via system
-# User receives notification and completes installation
-mcp-manager install-package dd-SQLite --approved-token abc123
-
-# All operations logged
-tail -f /var/log/mcp-manager/audit.log
-```
-
-**Audit Log Example**:
-```json
-{
-  "timestamp": "2025-07-21T18:30:00Z",
-  "user": "developer1",
-  "action": "install_package",
-  "server": "dd-SQLite",
-  "source": "docker-desktop", 
-  "approval_token": "abc123",
-  "result": "success"
-}
-```
-
-**Result**: Secure, auditable MCP server management meeting enterprise compliance
 
 ---
 
-## Configuration
+## API Server
 
-### Configuration File Locations
+### REST API Server
 
-The MCP Manager uses a hierarchical configuration system:
+MCP Manager includes a full-featured REST API server with authentication, rate limiting, and comprehensive endpoints.
 
-1. **System**: `/etc/mcp-manager/config.toml` (admin-managed)
-2. **User**: `~/.config/mcp-manager/config.toml` (user preferences) 
-3. **Project**: `./.mcp-manager.toml` (project-specific)
-4. **Environment**: `MCP_MANAGER_*` variables (runtime overrides)
-
-### Complete Configuration Example
-
-```toml
-# ~/.config/mcp-manager/config.toml
-
-[general]
-default_interface = "interactive"  # interactive, cli, tui
-auto_update_check = true
-verbose_output = false
-
-[logging]
-level = "INFO"                     # DEBUG, INFO, WARNING, ERROR
-format = "text"                    # text, json
-file = "~/.mcp-manager/logs/mcp-manager.log"
-max_size = "10MB"
-backup_count = 5
-console_output = true
-
-[discovery]
-sources = ["docker-desktop", "npm", "docker-hub"]
-cache_ttl = 3600                   # seconds
-quality_threshold = 5.0            # minimum score for results
-max_results = 50
-parallel_requests = true
-timeout = 30                       # seconds
-
-[installation]
-default_scope = "user"             # user, system, project
-auto_enable = true
-backup_before_changes = true
-verify_after_install = true
-
-[change_detection]
-enabled = true
-check_interval = 60                # seconds for background monitoring
-auto_sync = false
-operation_cooldown = 2.0           # seconds to prevent sync loops
-watch_docker_config = true
-watch_claude_configs = true
-
-[servers]
-# Pre-configured server definitions
-filesystem = { install_id = "dd-filesystem", auto_install = false }
-database = { install_id = "dd-SQLite", auto_install = false }
-
-[ui]
-color_output = true
-progress_indicators = true
-table_style = "rounded"            # ascii, rounded, double
-pager = "auto"                     # auto, always, never
-
-[security]
-verify_signatures = true
-allowed_sources = ["docker-desktop", "npm"]  # empty = all allowed
-require_confirmation = true
-audit_logging = false
-
-[performance] 
-cache_enabled = true
-concurrent_operations = 4
-connection_timeout = 10
-retry_attempts = 3
-retry_delay = 1.0
-
-[docker]
-docker_command = "docker"
-docker_desktop_integration = true
-auto_import_gateway = true
-
-[npm]
-npm_command = "npx" 
-npm_registry = "https://registry.npmjs.org"
-install_timeout = 120
-```
-
-### Environment Variables
-
-All configuration options can be overridden with environment variables:
+### Starting the API Server
 
 ```bash
-# General settings
-export MCP_MANAGER_DEFAULT_INTERFACE="cli"
-export MCP_MANAGER_VERBOSE_OUTPUT="true"
+# Start API server
+mcp-manager api start --host 127.0.0.1 --port 8000
 
-# Logging
-export MCP_MANAGER_LOG_LEVEL="DEBUG"
-export MCP_MANAGER_LOG_FORMAT="json"
-export MCP_MANAGER_LOG_FILE="/tmp/mcp-manager.log"
+# Start with custom configuration
+mcp-manager api start --config api-config.json
 
-# Discovery
-export MCP_MANAGER_DISCOVERY_SOURCES="docker-desktop,npm"
-export MCP_MANAGER_CACHE_TTL="7200"
-export MCP_MANAGER_QUALITY_THRESHOLD="8.0"
+# Check API server status
+mcp-manager api status
 
-# Change detection
-export MCP_MANAGER_CHANGE_DETECTION_ENABLED="true"
-export MCP_MANAGER_AUTO_SYNC="true"
-export MCP_MANAGER_CHECK_INTERVAL="30"
-
-# Security
-export MCP_MANAGER_REQUIRE_CONFIRMATION="false"
-export MCP_MANAGER_AUDIT_LOGGING="true"
+# Test API connectivity
+mcp-manager api test --host 127.0.0.1 --port 8000
 ```
 
-### Configuration Commands
+### Authentication Management
 
 ```bash
-# Show current configuration
-mcp-manager config
+# Create API key
+mcp-manager api create-key "my-app" \
+  --scopes analytics:read tools:read servers:read
 
-# Initialize default configuration
-mcp-manager config --init
+# Create admin API key
+mcp-manager api create-key "admin-access" \
+  --scopes admin:full \
+  --expires-days 90
 
-# Show configuration for specific section
-mcp-manager config --section logging
-
-# Set configuration value
-mcp-manager config --set "discovery.quality_threshold=8.0"
-
-# Validate configuration
-mcp-manager config --validate
-
-# Reset to defaults
-mcp-manager config --reset
+# List API keys (admin only)
+curl -H "Authorization: Bearer YOUR_API_KEY" \
+  http://localhost:8000/admin/api-keys
 ```
+
+### API Endpoints
+
+**Core Endpoints:**
+- `GET /health` - Health check
+- `POST /auth/token` - Authentication
+- `POST /analytics/query` - Analytics data
+- `POST /tools/search` - Tool search
+- `GET /servers` - Server listing
+- `POST /export` - Data export
+
+**Authentication:**
+- JWT tokens with configurable expiration
+- API key-based access control
+- Role-based permissions (read, write, admin)
+- Rate limiting (per-minute and per-hour limits)
+
+### Using the API
+
+```bash
+# Get authentication token
+curl -X POST http://localhost:8000/auth/token \
+  -H "Content-Type: application/json" \
+  -d '{"api_key": "YOUR_API_KEY"}'
+
+# Query analytics
+curl -X POST http://localhost:8000/analytics/query \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"query_type": "usage_summary", "days": 7}'
+
+# Search tools
+curl -X POST http://localhost:8000/tools/search \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "filesystem", "limit": 10}'
+```
+
+---
+
+## Proxy Server
+
+### MCP Proxy Server
+
+The proxy server provides a unified endpoint for multiple MCP servers with protocol translation, load balancing, and failover capabilities.
+
+### Starting the Proxy Server
+
+```bash
+# Start proxy server
+mcp-manager proxy start --host 127.0.0.1 --port 3001
+
+# Start with specific mode
+mcp-manager proxy start --mode load_balancing
+
+# Start with configuration file
+mcp-manager proxy start --config proxy-config.json
+
+# Check proxy status
+mcp-manager proxy status
+```
+
+### Proxy Modes
+
+#### Transparent Mode (Default)
+Routes requests to appropriate servers with minimal modification:
+```bash
+mcp-manager proxy start --mode transparent
+```
+
+#### Load Balancing Mode
+Distributes requests across multiple servers:
+```bash
+mcp-manager proxy start --mode load_balancing
+```
+
+#### Aggregating Mode
+Combines responses from multiple servers:
+```bash
+mcp-manager proxy start --mode aggregating
+```
+
+#### Failover Mode
+Automatic failover on server failures:
+```bash
+mcp-manager proxy start --mode failover
+```
+
+### Managing Proxy Servers
+
+```bash
+# Add server to proxy
+mcp-manager proxy add-server my-server \
+  http://localhost:3000/mcp \
+  --protocol mcp-v1 \
+  --weight 100
+
+# Remove server from proxy
+mcp-manager proxy remove-server my-server
+
+# View proxy statistics
+mcp-manager proxy stats
+
+# Test proxy functionality
+mcp-manager proxy test --method tools/list
+```
+
+### Protocol Translation
+
+The proxy automatically translates between different MCP protocol versions:
+
+- **MCP v1** - Standard JSON-RPC 2.0 format
+- **MCP v2** - Enhanced format with metadata
+- **Legacy** - Simplified format for older servers
+
+```bash
+# Generate proxy configuration
+mcp-manager proxy config --template --output proxy-config.json
+
+# Start with protocol translation
+mcp-manager proxy start --config proxy-config.json
+```
+
+### Proxy Web Interface
+
+Access the proxy web interface at `http://localhost:3001` for:
+- Real-time server status
+- Request/response monitoring
+- Configuration management
+- Performance metrics
+
+---
+
+## Terminal User Interface
+
+### Rich TUI Experience
+
+Launch the modern terminal user interface:
+
+```bash
+# Start TUI
+mcp-tui
+
+# Or via main command
+mcp-manager tui
+```
+
+### TUI Features
+
+**Main Dashboard:**
+- Server status overview
+- Real-time analytics
+- Quick actions menu
+- System health indicators
+
+**Server Management:**
+- Interactive server browser
+- One-click installation
+- Configuration editing
+- Health monitoring
+
+**Suite Explorer:**
+- Browse available suites
+- Preview suite contents
+- Install with progress tracking
+- Custom suite creation
+
+**Workflow Designer:**
+- Visual workflow creation
+- Drag-and-drop server assignment
+- Workflow testing
+- Performance metrics
+
+**Analytics Viewer:**
+- Interactive charts and graphs
+- Usage pattern analysis
+- Performance trends
+- Export capabilities
+
+---
+
+## Command Reference
+
+### Core Commands
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `mcp-manager status` | System status overview | `mcp-manager status --verbose` |
+| `mcp-manager list` | List configured servers | `mcp-manager list --format table` |
+| `mcp-manager discover` | Find available servers | `mcp-manager discover --query git` |
+| `mcp-manager install-package <id>` | Install server by ID | `mcp-manager install-package dd-SQLite` |
+| `mcp-manager remove <name>` | Remove server | `mcp-manager remove old-server` |
+| `mcp-manager restart <name>` | Restart server | `mcp-manager restart sqlite-mcp` |
+
+### Suite Management
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `mcp-manager suite list` | List available suites | `mcp-manager suite list --category web` |
+| `mcp-manager suite create <name>` | Create new suite | `mcp-manager suite create "DevOps Tools"` |
+| `mcp-manager suite add <suite> <server>` | Add server to suite | `mcp-manager suite add devops docker-mcp` |
+| `mcp-manager suite show <suite>` | Show suite details | `mcp-manager suite show development` |
+| `mcp-manager install-suite --suite-name <id>` | Install complete suite | `mcp-manager install-suite --suite-name web-dev` |
+| `mcp-manager suite delete <suite>` | Delete suite | `mcp-manager suite delete old-suite` |
+
+### Workflow Automation
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `mcp-manager workflow list` | List workflows | `mcp-manager workflow list --category dev` |
+| `mcp-manager workflow create <name>` | Create workflow | `mcp-manager workflow create dev-flow` |
+| `mcp-manager workflow activate <name>` | Activate workflow | `mcp-manager workflow activate dev-flow` |
+| `mcp-manager workflow switch <category>` | AI-recommended switch | `mcp-manager workflow switch data_analysis` |
+| `mcp-manager workflow deactivate` | Deactivate current | `mcp-manager workflow deactivate` |
+| `mcp-manager workflow status` | Show workflow status | `mcp-manager workflow status` |
+| `mcp-manager workflow template <name>` | Create template | `mcp-manager workflow template "Team Standard"` |
+
+### Analytics & Monitoring
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `mcp-manager analytics summary` | Usage overview | `mcp-manager analytics summary --days 30` |
+| `mcp-manager analytics query` | Query usage patterns | `mcp-manager analytics query --pattern db` |
+| `mcp-manager tools search <query>` | Search tool registry | `mcp-manager tools search filesystem` |
+| `mcp-manager tools list` | List all tools | `mcp-manager tools list --available-only` |
+| `mcp-manager monitoring start` | Start monitoring | `mcp-manager monitoring start` |
+| `mcp-manager monitoring status` | Monitoring status | `mcp-manager monitoring status` |
+
+### API Server
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `mcp-manager api start` | Start API server | `mcp-manager api start --port 8000` |
+| `mcp-manager api stop` | Stop API server | `mcp-manager api stop` |
+| `mcp-manager api status` | API server status | `mcp-manager api status` |
+| `mcp-manager api test` | Test API connectivity | `mcp-manager api test` |
+| `mcp-manager api create-key <name>` | Create API key | `mcp-manager api create-key myapp` |
+
+### Proxy Server
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `mcp-manager proxy start` | Start proxy server | `mcp-manager proxy start --mode failover` |
+| `mcp-manager proxy status` | Proxy server status | `mcp-manager proxy status` |
+| `mcp-manager proxy stats` | Proxy statistics | `mcp-manager proxy stats` |
+| `mcp-manager proxy add-server <name> <url>` | Add server to proxy | `mcp-manager proxy add-server srv1 http://localhost:3000` |
+| `mcp-manager proxy remove-server <name>` | Remove server from proxy | `mcp-manager proxy remove-server srv1` |
+| `mcp-manager proxy test` | Test proxy functionality | `mcp-manager proxy test --method tools/list` |
+| `mcp-manager proxy config --template` | Generate config template | `mcp-manager proxy config --template` |
+
+### System Management
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `mcp-manager system init` | Initialize system | `mcp-manager system init` |
+| `mcp-manager system diagnose` | System diagnostics | `mcp-manager system diagnose` |
+| `mcp-manager system cleanup` | Clean system state | `mcp-manager system cleanup --fix-config` |
+| `mcp-manager system export-config` | Export configuration | `mcp-manager system export-config` |
+| `mcp-manager system logs` | View system logs | `mcp-manager system logs --tail 50` |
 
 ---
 
 ## Troubleshooting
 
-### Common Issues and Solutions
+### Common Issues
 
-#### Issue 1: "Claude Code CLI not found"
+#### Server Installation Problems
 
-**Symptoms**:
-```
-Error: claude command not found
-Failed to execute: claude mcp list
-```
-
-**Solutions**:
+**Problem**: Server installation fails
 ```bash
-# Check if Claude Code is installed
-which claude
-
-# Install Claude Code CLI if missing
-# Follow: https://docs.anthropic.com/claude/docs/claude-code
-
-# Add to PATH if installed but not found
-export PATH="$PATH:/usr/local/bin"
-
-# Verify installation
-claude --version
-```
-
-#### Issue 2: "Docker Desktop servers not appearing"
-
-**Symptoms**:
-```
-Discovery shows no Docker Desktop servers
-docker mcp commands fail
-```
-
-**Solutions**:
-```bash
-# Check Docker Desktop installation
-docker --version
-
-# Ensure Docker Desktop is running
-docker info
-
-# Check Docker MCP plugin availability
-docker mcp --help
-
-# Enable Docker Desktop MCP servers
-docker mcp server enable SQLite
-docker mcp server enable filesystem
-
-# Import to Claude Code
-claude mcp add-from-claude-desktop docker-gateway
-
-# Verify integration
-mcp-manager check-sync
-```
-
-#### Issue 3: "Permission denied errors"
-
-**Symptoms**:
-```
-Permission denied: ~/.config/mcp-manager/
-Failed to write configuration file
-```
-
-**Solutions**:
-```bash
-# Check file permissions
-ls -la ~/.config/mcp-manager/
-
-# Create directories if missing
-mkdir -p ~/.config/mcp-manager/logs
-mkdir -p ~/.config/mcp-manager/cache
-
-# Fix permissions
-chmod 755 ~/.config/mcp-manager
-chmod 644 ~/.config/mcp-manager/config.toml
-
-# Run with proper user context
-# Avoid running with sudo unless necessary
-```
-
-#### Issue 4: "Server installation fails"
-
-**Symptoms**:
-```
-Failed to install package: dd-SQLite
-Server not found in Docker Desktop catalog
-```
-
-**Solutions**:
-```bash
-# Update discovery cache
+# Check discovery cache
 mcp-manager discover --update-catalog
 
-# Check available servers
-mcp-manager discover --query SQLite
+# Verify server availability
+mcp-manager discover --query <server-name>
 
-# Try alternative install ID
-mcp-manager discover --detailed | grep -i sqlite
-
-# Manual installation
-docker mcp server enable SQLite
-claude mcp add-from-claude-desktop docker-gateway
-mcp-manager sync
+# Check installation logs
+mcp-manager system logs --filter installation
 ```
 
-#### Issue 5: "Sync conflicts and loops"
-
-**Symptoms**:
-```
-Continuous sync operations
-Background monitor consuming CPU
-Configuration changes keep reverting
-```
-
-**Solutions**:
+**Problem**: Dependency conflicts
 ```bash
-# Stop background monitoring
-mcp-manager monitor --stop
+# Check for conflicts
+mcp-manager system diagnose --check-conflicts
 
-# Check sync protection status
-mcp-manager check-sync
+# Resolve conflicts
+mcp-manager cleanup --resolve-conflicts
 
-# Clear sync history
-mcp-manager cleanup --deep
-
-# Reset change detection
-mcp-manager detect-changes --reset
-
-# Restart with fresh state
-mcp-manager monitor --start --interval 300
+# Force reinstall
+mcp-manager install-package <server> --force
 ```
 
-### Diagnostic Commands
+#### Performance Issues
 
+**Problem**: Slow MCP operations
+```bash
+# Check server health
+mcp-manager monitoring health-check --all
+
+# Analyze performance
+mcp-manager analytics performance --server <problematic-server>
+
+# Restart problematic servers
+mcp-manager restart <server-name>
+```
+
+**Problem**: High memory usage
+```bash
+# Check resource usage
+mcp-manager analytics resources --memory
+
+# Identify heavy servers
+mcp-manager monitoring top --memory
+
+# Optimize configuration
+mcp-manager configure <server> --memory-limit 512MB
+```
+
+#### Configuration Problems
+
+**Problem**: Claude Code doesn't see servers
+```bash
+# Sync with Claude Code
+mcp-manager claude sync
+
+# Check Claude Code status
+mcp-manager claude status
+
+# Force configuration update
+mcp-manager cleanup --fix-config
+```
+
+**Problem**: Workflow activation fails
+```bash
+# Check workflow status
+mcp-manager workflow status
+
+# Validate workflow
+mcp-manager workflow show <workflow-name>
+
+# Recreate workflow
+mcp-manager workflow delete <workflow-name>
+mcp-manager workflow create <workflow-name> --suites <suites>
+```
+
+#### API/Proxy Server Issues
+
+**Problem**: API server won't start
+```bash
+# Check port availability
+mcp-manager api status
+
+# Start with different port
+mcp-manager api start --port 8001
+
+# Check logs
+mcp-manager system logs --component api-server
+```
+
+**Problem**: Proxy server connection issues
+```bash
+# Test proxy connectivity
+mcp-manager proxy test
+
+# Check server health
+mcp-manager proxy status
+
+# Restart proxy with debug logging
+mcp-manager proxy start --log-level DEBUG
+```
+
+### Diagnostic Tools
+
+#### System Health Check
 ```bash
 # Comprehensive system check
-mcp-manager system-info
+mcp-manager system diagnose
 
-# Verify all dependencies
-mcp-manager system-info --verify-deps
-
-# Check configuration validity
-mcp-manager config --validate
-
-# Test Claude Code integration
-claude mcp list
-
-# Test Docker Desktop integration  
-docker mcp server list
-
-# Check log files
-tail -f ~/.mcp-manager/logs/mcp-manager.log
-
-# Enable debug logging
-export MCP_MANAGER_LOG_LEVEL="DEBUG"
-mcp-manager discover --query test
+# Check specific components
+mcp-manager system diagnose --check servers
+mcp-manager system diagnose --check workflows
+mcp-manager system diagnose --check api
 ```
 
-### Getting Help
-
-**Community Support**:
-- GitHub Issues: https://github.com/blemis/mcp-manager-python/issues
-- Discussions: https://github.com/blemis/mcp-manager-python/discussions
-- Documentation: https://github.com/blemis/mcp-manager-python/wiki
-
-**Bug Reports**:
-When reporting bugs, include:
+#### Configuration Validation
 ```bash
-# System information
-mcp-manager system-info
+# Validate all configurations
+mcp-manager system validate
 
-# Configuration (remove sensitive data)
-mcp-manager config
+# Export current state
+mcp-manager system export-config --output backup.json
 
-# Recent log entries
-tail -50 ~/.mcp-manager/logs/mcp-manager.log
+# Reset to clean state
+mcp-manager system reset --keep-servers
+```
 
-# Steps to reproduce the issue
+#### Log Analysis
+```bash
+# View recent logs
+mcp-manager system logs --tail 100
+
+# Filter by component
+mcp-manager system logs --component proxy --level ERROR
+
+# Export logs for support
+mcp-manager system logs --export --output support-logs.txt
 ```
 
 ---
 
-## Advanced Usage
+## Best Practices
 
-### Custom Discovery Sources
+### 🎯 Server Management
 
-**Create Custom Discovery Plugin**:
-```python
-# ~/.config/mcp-manager/plugins/custom_discovery.py
+**Optimal Server Selection:**
+- Start with pre-configured suites for common tasks
+- Avoid installing duplicate functionality servers
+- Regularly review and remove unused servers
+- Monitor server performance and health
+- Keep servers updated to latest versions
 
-from mcp_manager.core.discovery import DiscoverySource
-from typing import List, Dict, Any
-
-class CustomRegistrySource(DiscoverySource):
-    """Custom internal registry discovery source."""
-    
-    def __init__(self):
-        super().__init__("custom-registry", "Internal Registry")
-    
-    async def discover_servers(self, query: str = "") -> List[Dict[str, Any]]:
-        # Implement custom discovery logic
-        servers = await self._fetch_from_internal_registry(query)
-        return [self._format_server(s) for s in servers]
-    
-    async def _fetch_from_internal_registry(self, query: str):
-        # Custom implementation
-        pass
-        
-    def _format_server(self, server_data: Dict) -> Dict[str, Any]:
-        return {
-            'install_id': f"custom-{server_data['name']}",
-            'name': server_data['name'],
-            'type': 'custom',
-            'description': server_data.get('description', ''),
-            'command': server_data['command'],
-            'args': server_data.get('args', []),
-            'quality_score': server_data.get('rating', 5.0)
-        }
-```
-
-**Register Custom Source**:
-```toml
-# ~/.config/mcp-manager/config.toml
-[discovery]
-sources = ["docker-desktop", "npm", "custom-registry"]
-plugin_paths = ["~/.config/mcp-manager/plugins"]
-```
-
-### Scripting and Automation
-
-**Batch Server Management**:
+**Server Organization:**
 ```bash
-#!/bin/bash
-# batch-server-setup.sh
+# Good: Use suites for organization
+mcp-manager suite create "Web Development" --category web
+mcp-manager suite add web-development playwright-mcp --role primary
+mcp-manager suite add web-development http-client-mcp --role secondary
 
-# Read server list from file
-SERVERS_FILE="servers.txt"
-
-while IFS= read -r server_id; do
-    echo "Installing: $server_id"
-    
-    if mcp-manager install-package "$server_id"; then
-        echo "✅ Installed: $server_id"
-    else
-        echo "❌ Failed: $server_id"
-        # Log failure for later review
-        echo "$server_id" >> failed-installs.txt
-    fi
-    
-    # Rate limiting
-    sleep 2
-done < "$SERVERS_FILE"
-
-# Verify all installations
-mcp-manager list --json > installation-report.json
-echo "Installation report saved to installation-report.json"
+# Good: Regular cleanup
+mcp-manager cleanup --remove-unused --days 30
 ```
 
-**Configuration Backup and Restore**:
+### 🔄 Workflow Optimization
+
+**Effective Workflow Design:**
+- Create task-specific workflows with clear purposes
+- Use AI recommendations for workflow switching
+- Monitor workflow performance with analytics
+- Document workflow purposes for team sharing
+- Regular workflow optimization based on usage patterns
+
+**Workflow Best Practices:**
 ```bash
-#!/bin/bash
-# backup-mcp-config.sh
+# Good: Descriptive workflow creation
+mcp-manager workflow create "Full-Stack Development" \
+  --description "Complete development environment with testing tools" \
+  --suites development-suite testing-suite \
+  --category development \
+  --priority 85
 
-BACKUP_DIR="mcp-backup-$(date +%Y%m%d-%H%M%S)"
-mkdir -p "$BACKUP_DIR"
-
-# Export current server configuration
-mcp-manager list --json > "$BACKUP_DIR/servers.json"
-
-# Backup configuration files
-cp ~/.config/mcp-manager/config.toml "$BACKUP_DIR/"
-cp ~/.claude.json "$BACKUP_DIR/" 2>/dev/null || true
-
-# Create restore script
-cat > "$BACKUP_DIR/restore.sh" << 'EOF'
-#!/bin/bash
-echo "Restoring MCP configuration from backup..."
-
-# Stop any monitoring
-mcp-manager monitor --stop 2>/dev/null || true
-
-# Clear current configuration
-mcp-manager cleanup --deep --auto
-
-# Restore servers from backup
-while IFS= read -r line; do
-    server_id=$(echo "$line" | jq -r '.install_id // empty')
-    if [ -n "$server_id" ]; then
-        mcp-manager install-package "$server_id"
-    fi
-done < <(jq -r '.[] | @json' servers.json)
-
-echo "Restore complete"
-EOF
-
-chmod +x "$BACKUP_DIR/restore.sh"
-echo "Backup created in: $BACKUP_DIR"
+# Good: Use AI recommendations
+mcp-manager workflow switch data_analysis  # AI picks best workflow
 ```
 
-### Integration with External Tools
+### 📊 Performance Monitoring
 
-**Jenkins Pipeline Integration**:
-```groovy
-// Jenkinsfile
-pipeline {
-    agent any
-    
-    stages {
-        stage('Setup MCP Environment') {
-            steps {
-                sh '''
-                    # Install MCP Manager if not present
-                    pip install mcp-manager
-                    
-                    # Setup project-specific servers
-                    mcp-manager install-package dd-filesystem
-                    mcp-manager install-package dd-SQLite
-                    
-                    # Configure project server
-                    mcp-manager add ci-helper "python ci/mcp_server.py" \
-                        --env "JENKINS_BUILD_ID=${BUILD_ID}" \
-                        --args "--project ${JOB_NAME}"
-                '''
-            }
-        }
-        
-        stage('Verify MCP Setup') {
-            steps {
-                sh '''
-                    # Verify MCP environment
-                    mcp-manager check-sync
-                    mcp-manager list --json > mcp-servers.json
-                '''
-                
-                archiveArtifacts artifacts: 'mcp-servers.json'
-            }
-        }
-    }
-    
-    post {
-        always {
-            sh 'mcp-manager cleanup --auto || true'
-        }
-    }
-}
+**Monitoring Strategy:**
+- Enable continuous monitoring for production use
+- Set up alerts for performance degradation
+- Regular analytics review (weekly/monthly)
+- Track resource usage trends
+- Monitor error rates and response times
+
+**Performance Optimization:**
+```bash
+# Set up monitoring
+mcp-manager monitoring start --alerts
+
+# Regular performance checks
+mcp-manager analytics performance --trends
+
+# Resource optimization
+mcp-manager configure --optimize-memory --all-servers
 ```
 
-**Docker Compose Integration (Future Release)**:
+### 🔒 Security Best Practices
 
-> **Note**: Docker Compose support will be available in a future release
+**API Security:**
+- Use strong API keys with appropriate scopes
+- Set reasonable token expiration times
+- Monitor API usage for anomalies
+- Regularly rotate API keys
+- Enable rate limiting in production
 
-```yaml
-# docker-compose.yml (coming soon)
-version: '3.8'
+**Server Security:**
+```bash
+# Good: Scoped API key creation
+mcp-manager api create-key "dashboard-app" \
+  --scopes analytics:read tools:read \
+  --expires-days 30
 
-services:
-  app:
-    image: myapp:latest
-    depends_on:
-      - mcp-manager
-    environment:
-      - MCP_MANAGER_HOST=mcp-manager
-    volumes:
-      - mcp-data:/mcp
+# Good: Monitor API usage
+mcp-manager analytics api-usage --alerts
+```
 
-  mcp-manager:
-    image: mcpmanager/mcp-manager:latest
-    ports:
-      - "8080:8080"  # API server mode
-    volumes:
-      - mcp-data:/data
-      - ./mcp-config:/config
-    environment:
-      - MCP_MANAGER_CONFIG_PATH=/config/config.toml
-      - MCP_MANAGER_DATA_PATH=/data
-      - MCP_MANAGER_LOG_LEVEL=INFO
-    command: ["mcp-manager", "monitor", "--start", "--auto-sync", "--api-mode"]
+### 👥 Team Collaboration
 
-volumes:
-  mcp-data:
+**Team Setup:**
+- Create shared suite configurations
+- Document team workflows and standards
+- Use version control for configuration files
+- Establish server naming conventions
+- Regular team configuration reviews
+
+**Collaboration Tools:**
+```bash
+# Share team configuration
+mcp-manager system export-config --team-template
+
+# Create team-specific suites
+mcp-manager suite create "Team Standard Development" \
+  --description "Company standard development stack" \
+  --category team-standard
+```
+
+### 🚀 Production Deployment
+
+**Production Readiness:**
+- Enable comprehensive logging and monitoring
+- Set up backup and recovery procedures
+- Configure proper resource limits
+- Implement health checks and alerting
+- Document operational procedures
+
+**Production Configuration:**
+```bash
+# Production API server
+mcp-manager api start \
+  --host 0.0.0.0 \
+  --port 8000 \
+  --log-level INFO \
+  --daemon
+
+# Production proxy server
+mcp-manager proxy start \
+  --mode failover \
+  --config production-proxy.json \
+  --daemon
 ```
 
 ---
 
-## Uninstallation
+## Quick Start Guide
 
-### Complete Removal
+### Day 1: Basic Setup
+1. **Install MCP Manager**: `pip install mcp-manager`
+2. **Initialize system**: `mcp-manager system init`
+3. **Discover servers**: `mcp-manager discover`
+4. **Install basic suite**: `mcp-manager install-suite --suite-name development`
+5. **Verify installation**: `mcp-manager status`
 
-**Step 1: Stop Background Services**
-```bash
-# Stop any running monitoring services
-mcp-manager monitor --stop
+### Week 1: Customization
+1. **Create custom workflow**: Based on your primary tasks
+2. **Set up monitoring**: `mcp-manager monitoring start`
+3. **Explore analytics**: `mcp-manager analytics summary`
+4. **Try TUI interface**: `mcp-tui`
+5. **Configure API access**: For integrations
 
-# Kill any background processes
-pkill -f mcp-manager
-```
+### Month 1: Optimization
+1. **Review usage patterns**: `mcp-manager analytics summary --days 30`
+2. **Optimize workflows**: Based on analytics insights
+3. **Set up team sharing**: Export configurations for team use
+4. **Configure proxy server**: For unified access patterns
+5. **Performance tuning**: Based on monitoring data
 
-**Step 2: Remove Servers (Optional)**
-```bash
-# List all managed servers
-mcp-manager list
-
-# Remove specific servers if desired
-mcp-manager remove server-name --force
-
-# Or clean up all managed servers
-mcp-manager cleanup --deep --auto
-```
-
-**Step 3: Remove MCP Manager**
-```bash
-# If installed via pip
-pip uninstall mcp-manager
-
-# If installed via development mode
-pip uninstall mcp-manager
-rm -rf /path/to/mcp-manager-python
-
-# If installed via Docker (future release)
-docker rmi mcpmanager/mcp-manager:latest
-```
-
-**Step 4: Remove Configuration and Data**
-```bash
-# Remove user configuration
-rm -rf ~/.config/mcp-manager
-
-# Remove system configuration (if admin)
-sudo rm -rf /etc/mcp-manager
-
-# Remove logs and cache
-rm -rf ~/.mcp-manager
-
-# Remove any project configurations
-find . -name ".mcp-manager.toml" -delete
-```
-
-**Step 5: Clean Up Environment**
-```bash
-# Remove environment variables from shell profile
-# Edit ~/.bashrc, ~/.zshrc, etc. and remove MCP_MANAGER_* exports
-
-# Unset current session variables
-unset $(env | grep MCP_MANAGER_ | cut -d= -f1)
-```
-
-### Partial Removal (Keep Servers)
-
-If you want to remove MCP Manager but keep your configured servers:
-
-```bash
-# Export current configuration
-mcp-manager list --json > mcp-servers-backup.json
-
-# Note: Servers will remain in Claude Code's configuration
-# They can still be managed via claude mcp commands
-
-# Remove only MCP Manager
-pip uninstall mcp-manager
-rm -rf ~/.config/mcp-manager
-```
-
-### Verification of Removal
-
-```bash
-# Verify MCP Manager is removed
-mcp-manager --version  # Should return "command not found"
-
-# Check that servers are still accessible in Claude Code (if kept)
-claude mcp list
-
-# Verify no background processes
-ps aux | grep mcp-manager
-
-# Check for remaining files
-find ~ -name "*mcp-manager*" -type f
-```
+### Ongoing: Maintenance
+- **Weekly**: Check analytics and health status
+- **Monthly**: Review and clean unused servers
+- **Quarterly**: Update workflows and optimize configuration
+- **As needed**: Discover new servers and capabilities
 
 ---
 
-## Quick Reference
+## Getting Support
 
-### Essential Commands
+### Documentation Resources
+- **Admin Guide**: Advanced configuration and architecture
+- **API Reference**: Complete API documentation
+- **GitHub Repository**: Source code and examples
+- **Community Forum**: Discussions and Q&A
 
-```bash
-# Interactive menu (most common)
-mcp-manager
+### Support Channels
+- **GitHub Issues**: Bug reports and feature requests
+- **Community Discussions**: General questions and sharing
+- **Documentation**: Comprehensive guides and tutorials
+- **Examples Repository**: Sample configurations and workflows
 
-# Discover and install servers
-mcp-manager discover --query filesystem
-mcp-manager install-package dd-filesystem
-
-# Manage servers
-mcp-manager list
-mcp-manager enable myserver
-mcp-manager remove myserver --force
-
-# Synchronization
-mcp-manager sync --dry-run
-mcp-manager sync --auto-apply
-mcp-manager detect-changes --watch
-
-# System maintenance
-mcp-manager system-info
-mcp-manager cleanup
-mcp-manager check-sync
-```
-
-### Configuration Locations
-
-```
-System:     /etc/mcp-manager/config.toml
-User:       ~/.config/mcp-manager/config.toml  
-Project:    ./.mcp-manager.toml
-Logs:       ~/.mcp-manager/logs/mcp-manager.log
-Cache:      ~/.mcp-manager/cache/
-```
-
-### Environment Variables
-
-```bash
-export MCP_MANAGER_LOG_LEVEL="DEBUG"
-export MCP_MANAGER_AUTO_SYNC="true"
-export MCP_MANAGER_CHECK_INTERVAL="60"
-```
-
-### Help and Documentation
-
-```bash
-mcp-manager --help                    # General help
-mcp-manager <command> --help          # Command-specific help
-mcp-manager system-info               # System diagnostics
-```
+### Staying Updated
+- **Release Notes**: Follow GitHub releases for updates
+- **Community**: Join discussions for tips and best practices
+- **Blog**: Technical deep-dives and use cases
+- **Roadmap**: Upcoming features and improvements
 
 ---
 
-## Roadmap & Future Releases
+**Welcome to the future of MCP server management! 🚀**
 
-The following features are planned for future releases:
-
-### v1.1 - PyPI Distribution
-- **PyPI Package**: Official package distribution via `pip install mcp-manager`
-- **Simplified Installation**: One-command installation without git clone
-- **Version Management**: Semantic versioning and upgrade paths
-
-### v1.2 - Container Support  
-- **Docker Images**: Official Docker images on Docker Hub
-- **Docker Compose**: Pre-configured compose files for containerized deployments
-- **API Server Mode**: REST API for programmatic access and integration
-- **Kubernetes**: Helm charts and K8s deployment manifests
-
-### v1.3 - Enterprise Features
-- **Centralized Management**: Organization-wide server policies and approval workflows
-- **Audit Logging**: Enhanced audit trails and compliance reporting
-- **Multi-Tenant**: Project isolation and team-based access controls
-- **Metrics Dashboard**: Web-based monitoring and analytics interface
-
-### v2.0 - Advanced Integration
-- **IDE Extensions**: VS Code and JetBrains plugin support
-- **CI/CD Integration**: Native GitHub Actions and Jenkins plugins
-- **Plugin Architecture**: Custom discovery sources and server types
-- **Distributed Discovery**: Organizational server registries and catalogs
-
----
-
-*This user guide covers MCP Manager version 1.0. For the latest updates and additional examples, visit the project repository at https://github.com/blemis/mcp-manager-python*
+*This guide covers all user-facing features of MCP Manager v2.0. For system administration, server development, and detailed architecture information, see the [Admin Guide](ADMIN_GUIDE.md).*

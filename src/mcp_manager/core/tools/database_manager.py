@@ -31,7 +31,7 @@ class DatabaseManager:
         if db_path is None:
             db_path = self._get_default_db_path()
         
-        self.db_path = db_path
+        self.db_path = Path(db_path) if isinstance(db_path, str) else db_path
         self._ensure_database_ready()
         
         logger.info("Database manager initialized", extra={

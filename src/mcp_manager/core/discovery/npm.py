@@ -164,7 +164,7 @@ class NPMDiscovery:
             name = name.split('/')[-1]
         
         # Remove common prefixes
-        prefixes = ['mcp-', 'claude-mcp-', 'anthropic-mcp-', 'modelcontextprotocol-']
+        prefixes = ['mcp-', 'claude-mcp-', 'anthropic-mcp-', 'modelcontextprotocol-', 'server-']
         for prefix in prefixes:
             if name.startswith(prefix):
                 name = name[len(prefix):]

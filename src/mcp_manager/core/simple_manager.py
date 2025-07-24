@@ -10,7 +10,7 @@ import threading
 import time
 from typing import List, Optional, Dict, Any
 
-from mcp_manager.core.claude_interface import ClaudeInterface
+from mcp_manager.claude import ClaudeInterface
 from mcp_manager.core.exceptions import MCPManagerError
 from mcp_manager.core.models import Server, ServerType, ServerScope
 from mcp_manager.utils.config import get_config
