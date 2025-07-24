@@ -9,6 +9,7 @@ import pytest
 from tests.utils.validators import OutputValidator, TestAssertions
 
 
+@pytest.mark.unit
 class TestBasicCommands:
     """Test basic CLI commands every user would try."""
     
@@ -86,6 +87,7 @@ class TestBasicCommands:
             )
 
 
+@pytest.mark.unit
 class TestDiscoveryCommands:
     """Test server discovery functionality."""
     
@@ -132,6 +134,7 @@ class TestDiscoveryCommands:
         TestAssertions.assert_command_success(result, "Discover combined options")
 
 
+@pytest.mark.unit
 class TestSystemInformation:
     """Test system information and status commands."""
     
@@ -142,7 +145,7 @@ class TestSystemInformation:
         TestAssertions.assert_command_success(result, "System info command")
         
         # Should show system information
-        expected_info = ["Python", "Platform", "Dependencies"]
+        expected_info = ["Version", "Server Count", "Claude CLI", "Docker", "Current Mode"]
         # Note: Not all may be present, so we don't assert all
         output_lower = result['stdout'].lower()
         info_present = any(info.lower() in output_lower for info in expected_info)
