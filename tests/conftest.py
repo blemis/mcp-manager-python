@@ -60,7 +60,20 @@ class CLITestRunner:
     
     def __init__(self, test_env: TestEnvironment):
         self.test_env = test_env
-        self.base_cmd = "python -m mcp_manager.cli.main"
+        # Use direct CLI invocation to avoid module import issues
+        self.use_direct_cli = True
+    
+    def _build_direct_command(self, cmd: str) -> list:
+        """Build command list for direct CLI invocation."""
+        # Import here to avoid circular imports
+        import sys
+        import shlex
+        
+        # Parse the command arguments
+        args = shlex.split(cmd) if cmd.strip() else []
+        
+        # Build command as list for subprocess
+        return [sys.executable, "-m", "mcp_manager.cli.main"] + args
     
     def run_command(self, cmd: str, expect_success: bool = True, 
                    timeout: int = 30, input_text: Optional[str] = None) -> Dict[str, Any]:
@@ -68,7 +81,7 @@ class CLITestRunner:
         Run CLI command and validate results.
         
         Args:
-            cmd: Command to run (without base python -m prefix)
+            cmd: Command to run (CLI arguments only)
             expect_success: Whether command should succeed
             timeout: Command timeout in seconds
             input_text: Optional stdin input
@@ -76,12 +89,19 @@ class CLITestRunner:
         Returns:
             Dictionary with command results and validation info
         """
-        full_cmd = f"{self.base_cmd} {cmd}" if not cmd.startswith("python") else cmd
+        if self.use_direct_cli:
+            # Use direct CLI invocation to avoid module import issues
+            cmd_list = self._build_direct_command(cmd)
+            full_cmd_str = " ".join(cmd_list)
+        else:
+            # Fallback to subprocess approach
+            full_cmd_str = f"python -m mcp_manager.cli.main {cmd}"
+            cmd_list = full_cmd_str.split()
         
         try:
             result = subprocess.run(
-                full_cmd,
-                shell=True,
+                cmd_list,
+                shell=False,  # Use list format, no shell needed
                 capture_output=True,
                 text=True,
                 input=input_text,
@@ -96,7 +116,7 @@ class CLITestRunner:
                 'stdout': result.stdout,
                 'stderr': result.stderr,
                 'success': success,
-                'command': full_cmd,
+                'command': full_cmd_str,
                 'expected_success': expect_success
             }
             
@@ -106,7 +126,7 @@ class CLITestRunner:
                 'stdout': '',
                 'stderr': f'Command timed out after {timeout}s',
                 'success': False,
-                'command': full_cmd,
+                'command': full_cmd_str,
                 'error': 'timeout'
             }
         except Exception as e:
@@ -115,7 +135,7 @@ class CLITestRunner:
                 'stdout': '',
                 'stderr': str(e),
                 'success': False,
-                'command': full_cmd,
+                'command': full_cmd_str,
                 'error': str(e)
             }
     
