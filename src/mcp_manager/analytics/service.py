@@ -26,7 +26,7 @@ from mcp_manager.utils.logging import get_logger
 logger = get_logger(__name__)
 
 
-class AnalyticsService:
+class UsageAnalyticsService:
     """Main orchestration service for usage analytics."""
     
     def __init__(self, config: Optional[AnalyticsConfig] = None, 
