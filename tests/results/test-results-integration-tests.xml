@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="5" skipped="0" tests="7" time="18.620" timestamp="2025-07-24T17:33:56.562885-04:00" hostname="BlemisMac.local"><testcase classname="tests.test_quality_tracking.TestQualityWorkflows" name="test_complete_quality_workflow" time="1.089"><failure message="AssertionError: &#10;Test: Quality workflow: Record feedback&#10;Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback test-quality-workflow-server test-workflow-id --rating 4 --comment Initial feedback&#10;Expected: Success&#10;Actual: Failure (code 2)&#10;STDOUT: &#10;STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic">tests/test_quality_tracking.py:400: in test_complete_quality_workflow
+    TestAssertions.assert_command_success(feedback_result, "Quality workflow: Record feedback")
+tests/utils/validators.py:217: in assert_command_success
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Quality workflow: Record feedback
+E   Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback test-quality-workflow-server test-workflow-id --rating 4 --comment Initial feedback
+E   Expected: Success
+E   Actual: Failure (code 2)
+E   STDOUT: 
+E   STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic</failure></testcase><testcase classname="tests.test_quality_tracking.TestQualityWorkflows" name="test_bulk_quality_feedback" time="1.084"><failure message="AssertionError: &#10;Test: Bulk feedback: bulk-server-1&#10;Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback bulk-server-1 bulk-test-id --rating 5 --comment Excellent performance&#10;Expected: Success&#10;Actual: Failure (code 2)&#10;STDOUT: &#10;STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic">tests/test_quality_tracking.py:446: in test_bulk_quality_feedback
+    TestAssertions.assert_command_success(feedback_result, f"Bulk feedback: {server_name}")
+tests/utils/validators.py:217: in assert_command_success
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Bulk feedback: bulk-server-1
+E   Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback bulk-server-1 bulk-test-id --rating 5 --comment Excellent performance
+E   Expected: Success
+E   Actual: Failure (code 2)
+E   STDOUT: 
+E   STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic</failure></testcase><testcase classname="tests.test_server_management.TestServerLifecycle" name="test_complete_server_lifecycle" time="1.982"><failure message="AssertionError: &#10;Test: Lifecycle: Server in list&#10;Missing items: ['test-lifecycle-server']&#10;In text: &#10;                             MCP Servers (45 total)                             &#10;┏━━━━━━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━┳━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓&#10;┃ Name            ┃ Type    ┃ Sc… ┃ Sta… ┃ Command                             ┃&#10;┡━━━━━━━━━━━━━━━━━╇━━━━━━━━━╇━━━━━╇━━━━━━╇━━━━━━━━━━━━━━">tests/test_server_management.py:354: in test_complete_server_lifecycle
+    TestAssertions.assert_contains_all(
+tests/utils/validators.py:290: in assert_contains_all
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Lifecycle: Server in list
+E   Missing items: ['test-lifecycle-server']
+E   In text: 
+E                                MCP Servers (45 total)                             
+E   ┏━━━━━━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━┳━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+E   ┃ Name            ┃ Type    ┃ Sc… ┃ Sta… ┃ Command                             ┃
+E   ┡━━━━━━━━━━━━━━━━━╇━━━━━━━━━╇━━━━━╇━━━━━━╇━━━━━━━━━━━━━━</failure></testcase><testcase classname="tests.test_server_management.TestServerLifecycle" name="test_bulk_server_operations" time="8.366" /><testcase classname="tests.test_suite_management.TestSuiteWorkflows" name="test_complete_suite_lifecycle" time="1.930" /><testcase classname="tests.test_workflows.TestComplexIntegrationWorkflows" name="test_complete_enterprise_deployment_workflow" time="3.072"><failure message="AssertionError: &#10;Test: Enterprise: QA feedback development filesystem&#10;Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback filesystem enterprise-development --rating 4 --comment Enterprise development deployment&#10;Expected: Success&#10;Actual: Failure (code 2)&#10;STDOUT: &#10;STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic">tests/test_workflows.py:604: in test_complete_enterprise_deployment_workflow
+    TestAssertions.assert_command_success(feedback_result, f"Enterprise: QA feedback {env} {server}")
+tests/utils/validators.py:217: in assert_command_success
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Enterprise: QA feedback development filesystem
+E   Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback filesystem enterprise-development --rating 4 --comment Enterprise development deployment
+E   Expected: Success
+E   Actual: Failure (code 2)
+E   STDOUT: 
+E   STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic</failure></testcase><testcase classname="tests.test_workflows.TestComplexIntegrationWorkflows" name="test_continuous_integration_workflow" time="1.028"><failure message="AssertionError: &#10;Test: CI: Record test 1 for filesystem&#10;Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback filesystem ci-iteration-0 --rating 4 --comment CI test iteration 1&#10;Expected: Success&#10;Actual: Failure (code 2)&#10;STDOUT: &#10;STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic">tests/test_workflows.py:660: in test_continuous_integration_workflow
+    TestAssertions.assert_command_success(feedback_result, f"CI: Record test {iteration + 1} for {tool}")
+tests/utils/validators.py:217: in assert_command_success
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: CI: Record test 1 for filesystem
+E   Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback filesystem ci-iteration-0 --rating 4 --comment CI test iteration 1
+E   Expected: Success
+E   Actual: Failure (code 2)
+E   STDOUT: 
+E   STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic</failure></testcase></testsuite></testsuites>

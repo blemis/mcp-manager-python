@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="7" skipped="0" tests="24" time="46.417" timestamp="2025-07-24T17:33:06.473179-04:00" hostname="BlemisMac.local"><testcase classname="tests.test_error_handling.TestInvalidCommands" name="test_completely_invalid_command" time="0.663" /><testcase classname="tests.test_error_handling.TestInvalidCommands" name="test_invalid_subcommands" time="1.034"><failure message="AssertionError: &#10;Test: Invalid subcommand: add invalid-server-action&#10;Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main add invalid-server-action&#10;Expected: Failure&#10;Actual: Success (returncode 0)&#10;Output: ❌ Failed to add server: Failed to add server invalid-server-action: 1 &#10;validation error for Server&#10;command&#10;  Value error, Server command cannot be empty &#10;    For further information visit https://erro">tests/test_error_handling.py:40: in test_invalid_subcommands
+    TestAssertions.assert_command_failure(result, f"Invalid subcommand: {cmd}")
+tests/utils/validators.py:248: in assert_command_failure
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Invalid subcommand: add invalid-server-action
+E   Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main add invalid-server-action
+E   Expected: Failure
+E   Actual: Success (returncode 0)
+E   Output: ❌ Failed to add server: Failed to add server invalid-server-action: 1 
+E   validation error for Server
+E   command
+E     Value error, Server command cannot be empty 
+E       For further information visit https://erro</failure></testcase><testcase classname="tests.test_error_handling.TestInvalidCommands" name="test_malformed_command_syntax" time="0.663" /><testcase classname="tests.test_error_handling.TestInvalidCommands" name="test_missing_required_arguments" time="1.326" /><testcase classname="tests.test_error_handling.TestInvalidCommands" name="test_conflicting_arguments" time="0.367"><failure message="AssertionError: &#10;Test: Conflicting args: discover --type npm --type docker&#10;Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main discover --type npm --type docker&#10;Expected: Failure&#10;Actual: Success (returncode 0)&#10;Output: &#10;                      Discovered MCP Servers (20 results)                       &#10;┏━━━━━━━━━━━━━━━┳┳━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓&#10;┃ Install ID    ┃┃ Name/Package">tests/test_error_handling.py:90: in test_conflicting_arguments
+    TestAssertions.assert_command_failure(result, f"Conflicting args: {cmd}")
+tests/utils/validators.py:248: in assert_command_failure
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Conflicting args: discover --type npm --type docker
+E   Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main discover --type npm --type docker
+E   Expected: Failure
+E   Actual: Success (returncode 0)
+E   Output: 
+E                         Discovered MCP Servers (20 results)                       
+E   ┏━━━━━━━━━━━━━━━┳┳━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+E   ┃ Install ID    ┃┃ Name/Package</failure></testcase><testcase classname="tests.test_error_handling.TestNonexistentResources" name="test_nonexistent_server_operations" time="0.545"><failure message="assert ('not found' in &quot;remove server 'nonexistent-server-xyz'? [y/n]: failed to remove server: eof when reading a line\n&quot; or 'does not exist' in &quot;remove server 'nonexistent-server-xyz'? [y/n]: failed to remove server: eof when reading a line\n&quot;)&#10; +  where &quot;remove server 'nonexistent-server-xyz'? [y/n]: failed to remove server: eof when reading a line\n&quot; = &lt;built-in method lower of str object at 0x103316670&gt;()&#10; +    where &lt;built-in method lower of str object at 0x103316670&gt; = &quot;Remove server 'nonexistent-server-xyz'? [y/n]: Failed to remove server: EOF when reading a line\n&quot;.lower&#10; +  and   &quot;remove server 'nonexistent-server-xyz'? [y/n]: failed to remove server: eof when reading a line\n&quot; = &lt;built-in method lower of str object at 0x103316670&gt;()&#10; +    where &lt;built-in method lower of str object at 0x103316670&gt; = &quot;Remove server 'nonexistent-server-xyz'? [y/n]: Failed to remove server: EOF when reading a line\n&quot;.lower">tests/test_error_handling.py:114: in test_nonexistent_server_operations
+    assert "not found" in result['stdout'].lower() or \
+E   assert ('not found' in "remove server 'nonexistent-server-xyz'? [y/n]: failed to remove server: eof when reading a line\n" or 'does not exist' in "remove server 'nonexistent-server-xyz'? [y/n]: failed to remove server: eof when reading a line\n")
+E    +  where "remove server 'nonexistent-server-xyz'? [y/n]: failed to remove server: eof when reading a line\n" = &lt;built-in method lower of str object at 0x103316670&gt;()
+E    +    where &lt;built-in method lower of str object at 0x103316670&gt; = "Remove server 'nonexistent-server-xyz'? [y/n]: Failed to remove server: EOF when reading a line\n".lower
+E    +  and   "remove server 'nonexistent-server-xyz'? [y/n]: failed to remove server: eof when reading a line\n" = &lt;built-in method lower of str object at 0x103316670&gt;()
+E    +    where &lt;built-in method lower of str object at 0x103316670&gt; = "Remove server 'nonexistent-server-xyz'? [y/n]: Failed to remove server: EOF when reading a line\n".lower</failure></testcase><testcase classname="tests.test_error_handling.TestNonexistentResources" name="test_nonexistent_suite_operations" time="0.855" /><testcase classname="tests.test_error_handling.TestNonexistentResources" name="test_nonexistent_package_installation" time="2.865" /><testcase classname="tests.test_error_handling.TestInvalidDataFormats" name="test_invalid_server_names" time="0.550"><failure message="AssertionError: &#10;Test: Invalid server name: ''&#10;Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main add  --type custom --command echo test&#10;Expected: Failure&#10;Actual: Success (returncode 0)&#10;Output: ❌ Failed to add server: Failed to add server : 1 validation error for Server&#10;name&#10;  Value error, Server name cannot be empty &#10;    For further information visit https://errors.pydantic.dev/2.11/v/value">tests/test_error_handling.py:182: in test_invalid_server_names
+    TestAssertions.assert_command_failure(result, f"Invalid server name: {repr(name)}")
+tests/utils/validators.py:248: in assert_command_failure
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Invalid server name: ''
+E   Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main add  --type custom --command echo test
+E   Expected: Failure
+E   Actual: Success (returncode 0)
+E   Output: ❌ Failed to add server: Failed to add server : 1 validation error for Server
+E   name
+E     Value error, Server name cannot be empty 
+E       For further information visit https://errors.pydantic.dev/2.11/v/value</failure></testcase><testcase classname="tests.test_error_handling.TestInvalidDataFormats" name="test_invalid_suite_names" time="0.176"><failure message="AssertionError: &#10;Test: Invalid suite name: ''&#10;Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main suite create  --description Test suite&#10;Expected: Failure&#10;Actual: Success (returncode 0)&#10;Output: Creating suite '' with ID ''...&#10;✅ Suite '' created successfully!&#10;Suite ID: &#10;&#10;#x1F4A1 Add servers to this suite with:&#10;   mcp-manager suite add  &lt;server-name&gt; --role member --priority 50">tests/test_error_handling.py:201: in test_invalid_suite_names
+    TestAssertions.assert_command_failure(result, f"Invalid suite name: {repr(name)}")
+tests/utils/validators.py:248: in assert_command_failure
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Invalid suite name: ''
+E   Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main suite create  --description Test suite
+E   Expected: Failure
+E   Actual: Success (returncode 0)
+E   Output: Creating suite '' with ID ''...
+E   ✅ Suite '' created successfully!
+E   Suite ID: 
+E   
+E   #x1F4A1 Add servers to this suite with:
+E      mcp-manager suite add  &lt;server-name&gt; --role member --priority 50</failure></testcase><testcase classname="tests.test_error_handling.TestInvalidDataFormats" name="test_invalid_quality_ratings" time="1.914" /><testcase classname="tests.test_error_handling.TestResourceLimits" name="test_extremely_long_names" time="0.549"><failure message="AssertionError: &#10;Test: Extremely long server name&#10;Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main add aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa --type custom --command echo test&#10;Expected: Failure&#10;Actual: Success (returncode 0)&#10;Output: ❌ Failed to add server: Failed to add server &#10;aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&#10;aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa">tests/test_error_handling.py:245: in test_extremely_long_names
+    TestAssertions.assert_command_failure(result, "Extremely long server name")
+tests/utils/validators.py:248: in assert_command_failure
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Extremely long server name
+E   Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main add aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa --type custom --command echo test
+E   Expected: Failure
+E   Actual: Success (returncode 0)
+E   Output: ❌ Failed to add server: Failed to add server 
+E   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+E   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</failure></testcase><testcase classname="tests.test_error_handling.TestResourceLimits" name="test_extremely_long_descriptions" time="0.176" /><testcase classname="tests.test_error_handling.TestResourceLimits" name="test_many_servers_in_suite" time="9.297" /><testcase classname="tests.test_error_handling.TestConcurrentOperations" name="test_rapid_server_operations" time="10.269" /><testcase classname="tests.test_error_handling.TestConcurrentOperations" name="test_rapid_suite_operations" time="3.610" /><testcase classname="tests.test_error_handling.TestSystemResourceHandling" name="test_filesystem_permissions" time="1.944" /><testcase classname="tests.test_error_handling.TestSystemResourceHandling" name="test_network_timeout_handling" time="0.543" /><testcase classname="tests.test_error_handling.TestSystemResourceHandling" name="test_large_output_handling" time="0.455" /><testcase classname="tests.test_error_handling.TestEdgeCaseInputs" name="test_unicode_and_special_characters" time="4.768" /><testcase classname="tests.test_error_handling.TestEdgeCaseInputs" name="test_empty_and_whitespace_inputs" time="0.547"><failure message="AssertionError: &#10;Test: Empty input: ''&#10;Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main add  --type custom --command echo test&#10;Expected: Failure&#10;Actual: Success (returncode 0)&#10;Output: ❌ Failed to add server: Failed to add server : 1 validation error for Server&#10;name&#10;  Value error, Server name cannot be empty &#10;    For further information visit https://errors.pydantic.dev/2.11/v/value">tests/test_error_handling.py:429: in test_empty_and_whitespace_inputs
+    TestAssertions.assert_command_failure(result, f"Empty input: {repr(empty_input)}")
+tests/utils/validators.py:248: in assert_command_failure
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Empty input: ''
+E   Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main add  --type custom --command echo test
+E   Expected: Failure
+E   Actual: Success (returncode 0)
+E   Output: ❌ Failed to add server: Failed to add server : 1 validation error for Server
+E   name
+E     Value error, Server name cannot be empty 
+E       For further information visit https://errors.pydantic.dev/2.11/v/value</failure></testcase><testcase classname="tests.test_error_handling.TestRegressionScenarios" name="test_suite_installation_regression" time="0.518" /><testcase classname="tests.test_error_handling.TestRegressionScenarios" name="test_command_help_consistency" time="1.665" /><testcase classname="tests.test_error_handling.TestRegressionScenarios" name="test_error_message_quality" time="1.049" /></testsuite></testsuites>

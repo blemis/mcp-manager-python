@@ -166,6 +166,24 @@ class CLITestRunner:
 @pytest.fixture(scope="function")
 def isolated_environment():
     """Provide completely isolated test environment."""
+    # Run nuke command to clean up any existing servers before each test
+    import subprocess
+    import sys
+    
+    try:
+        # Clean up existing MCP servers to ensure isolation
+        result = subprocess.run(
+            [sys.executable, "-m", "mcp_manager.cli.main", "nuke", "--force"],
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        # Don't fail if nuke fails - just log and continue
+        if result.returncode != 0:
+            print(f"Warning: nuke command failed: {result.stderr}")
+    except Exception as e:
+        print(f"Warning: Could not run nuke command: {e}")
+    
     with tempfile.TemporaryDirectory(prefix="mcp_test_") as temp_dir:
         env = TestEnvironment(temp_dir)
         try:

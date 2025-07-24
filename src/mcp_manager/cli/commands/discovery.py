@@ -3,6 +3,7 @@ Discovery and installation commands for MCP Manager CLI.
 """
 
 import asyncio
+import sys
 from typing import Optional
 
 import click
@@ -157,7 +158,7 @@ def discovery_commands(cli_context):
                     for result in similar_results[:3]:
                         similar_id = generate_install_id(result)
                         console.print(f"   • [cyan]{similar_id}[/cyan]: {result.description or 'No description'}")
-                return
+                sys.exit(1)
             
             # Get manager and install
             manager = cli_context.get_manager()
@@ -216,6 +217,7 @@ def discovery_commands(cli_context):
             except Exception as e:
                 console.print(f"[red]❌ Installation failed: {e}[/red]")
                 console.print("[dim]Check the error details above and try again[/dim]")
+                sys.exit(1)
         
         asyncio.run(find_and_install())
     

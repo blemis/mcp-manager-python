@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="6" skipped="0" tests="33" time="19.027" timestamp="2025-07-24T17:32:25.152400-04:00" hostname="BlemisMac.local"><testcase classname="tests.test_suite_management.TestSuiteCreation" name="test_create_basic_suite" time="0.348" /><testcase classname="tests.test_suite_management.TestSuiteCreation" name="test_create_suite_with_category" time="0.344" /><testcase classname="tests.test_suite_management.TestSuiteCreation" name="test_create_suites_different_categories[development]" time="0.175" /><testcase classname="tests.test_suite_management.TestSuiteCreation" name="test_create_suites_different_categories[production]" time="0.174" /><testcase classname="tests.test_suite_management.TestSuiteCreation" name="test_create_suites_different_categories[testing]" time="0.179" /><testcase classname="tests.test_suite_management.TestSuiteCreation" name="test_create_suites_different_categories[monitoring]" time="0.175" /><testcase classname="tests.test_suite_management.TestSuiteCreation" name="test_create_duplicate_suite" time="0.347"><failure message="AssertionError: &#10;Test: Duplicate suite creation&#10;Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main suite create test-duplicate-suite --description Duplicate suite&#10;Expected: Failure&#10;Actual: Success (returncode 0)&#10;Output: Creating suite 'test-duplicate-suite' with ID 'test-duplicate-suite'...&#10;✅ Suite 'test-duplicate-suite' created successfully!&#10;Suite ID: test-duplicate-suite&#10;&#10;#x1F4A1 Add servers to this suite with:&#10;   mcp-ma">tests/test_suite_management.py:85: in test_create_duplicate_suite
+    TestAssertions.assert_command_failure(result2, "Duplicate suite creation")
+tests/utils/validators.py:248: in assert_command_failure
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Duplicate suite creation
+E   Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main suite create test-duplicate-suite --description Duplicate suite
+E   Expected: Failure
+E   Actual: Success (returncode 0)
+E   Output: Creating suite 'test-duplicate-suite' with ID 'test-duplicate-suite'...
+E   ✅ Suite 'test-duplicate-suite' created successfully!
+E   Suite ID: test-duplicate-suite
+E   
+E   #x1F4A1 Add servers to this suite with:
+E      mcp-ma</failure></testcase><testcase classname="tests.test_suite_management.TestSuiteCreation" name="test_create_suite_invalid_name" time="0.173"><failure message="AssertionError: &#10;Test: Invalid suite name: &#10;Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main suite create  --description Invalid name test&#10;Expected: Failure&#10;Actual: Success (returncode 0)&#10;Output: Creating suite '' with ID ''...&#10;✅ Suite '' created successfully!&#10;Suite ID: &#10;&#10;#x1F4A1 Add servers to this suite with:&#10;   mcp-manager suite add  &lt;server-name&gt; --role member --priority 50">tests/test_suite_management.py:98: in test_create_suite_invalid_name
+    TestAssertions.assert_command_failure(result, f"Invalid suite name: {invalid_name}")
+tests/utils/validators.py:248: in assert_command_failure
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Invalid suite name: 
+E   Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main suite create  --description Invalid name test
+E   Expected: Failure
+E   Actual: Success (returncode 0)
+E   Output: Creating suite '' with ID ''...
+E   ✅ Suite '' created successfully!
+E   Suite ID: 
+E   
+E   #x1F4A1 Add servers to this suite with:
+E      mcp-manager suite add  &lt;server-name&gt; --role member --priority 50</failure></testcase><testcase classname="tests.test_suite_management.TestSuiteServerManagement" name="test_add_server_to_suite" time="0.884" /><testcase classname="tests.test_suite_management.TestSuiteServerManagement" name="test_add_multiple_servers_to_suite" time="1.231" /><testcase classname="tests.test_suite_management.TestSuiteServerManagement" name="test_remove_server_from_suite" time="1.226" /><testcase classname="tests.test_suite_management.TestSuiteServerManagement" name="test_add_server_to_nonexistent_suite" time="0.175"><failure message="AssertionError: &#10;Test: Add server to nonexistent suite&#10;Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main suite add nonexistent-suite test-server&#10;Expected: Failure&#10;Actual: Success (returncode 0)&#10;Output: Adding test-server to suite nonexistent-suite as member...&#10;❌ Failed to add server to suite">tests/test_suite_management.py:208: in test_add_server_to_nonexistent_suite
+    TestAssertions.assert_command_failure(result, "Add server to nonexistent suite")
+tests/utils/validators.py:248: in assert_command_failure
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Add server to nonexistent suite
+E   Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main suite add nonexistent-suite test-server
+E   Expected: Failure
+E   Actual: Success (returncode 0)
+E   Output: Adding test-server to suite nonexistent-suite as member...
+E   ❌ Failed to add server to suite</failure></testcase><testcase classname="tests.test_suite_management.TestSuiteServerManagement" name="test_remove_server_from_nonexistent_suite" time="0.173"><failure message="AssertionError: &#10;Test: Remove server from nonexistent suite&#10;Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main suite remove nonexistent-suite test-server&#10;Expected: Failure&#10;Actual: Success (returncode 0)&#10;Output: Removing test-server from suite nonexistent-suite...&#10;❌ Failed to remove server from suite">tests/test_suite_management.py:218: in test_remove_server_from_nonexistent_suite
+    TestAssertions.assert_command_failure(result, "Remove server from nonexistent suite")
+tests/utils/validators.py:248: in assert_command_failure
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Remove server from nonexistent suite
+E   Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main suite remove nonexistent-suite test-server
+E   Expected: Failure
+E   Actual: Success (returncode 0)
+E   Output: Removing test-server from suite nonexistent-suite...
+E   ❌ Failed to remove server from suite</failure></testcase><testcase classname="tests.test_suite_management.TestSuiteListing" name="test_list_empty_suites" time="0.171" /><testcase classname="tests.test_suite_management.TestSuiteListing" name="test_list_multiple_suites" time="0.685" /><testcase classname="tests.test_suite_management.TestSuiteListing" name="test_list_suites_by_category[development]" time="0.683"><failure message="AssertionError: &#10;Test: Category filter shows development suite&#10;Missing items: ['development-suite']&#10;In text: &#10;                          MCP Server Suites (1 total)                           &#10;┏━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┳━━━━━━━━┳━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓&#10;┃ Suite ID    ┃ Name             ┃ Categ… ┃  ┃ Description                     ┃&#10;┡━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━╇━━━━━━━━╇━━╇━━━━━━━━━━">tests/test_suite_management.py:277: in test_list_suites_by_category
+    TestAssertions.assert_contains_all(
+tests/utils/validators.py:290: in assert_contains_all
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Category filter shows development suite
+E   Missing items: ['development-suite']
+E   In text: 
+E                             MCP Server Suites (1 total)                           
+E   ┏━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┳━━━━━━━━┳━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+E   ┃ Suite ID    ┃ Name             ┃ Categ… ┃  ┃ Description                     ┃
+E   ┡━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━╇━━━━━━━━╇━━╇━━━━━━━━━━</failure></testcase><testcase classname="tests.test_suite_management.TestSuiteListing" name="test_list_suites_by_category[production]" time="0.687" /><testcase classname="tests.test_suite_management.TestSuiteListing" name="test_list_suites_by_category[testing]" time="0.686" /><testcase classname="tests.test_suite_management.TestSuiteListing" name="test_suite_summary" time="1.023" /><testcase classname="tests.test_suite_management.TestSuiteDetails" name="test_show_suite_details" time="1.055" /><testcase classname="tests.test_suite_management.TestSuiteDetails" name="test_show_nonexistent_suite" time="0.174" /><testcase classname="tests.test_suite_management.TestSuiteDetails" name="test_show_empty_suite" time="0.343" /><testcase classname="tests.test_suite_management.TestSuiteInstallation" name="test_suite_installation_dry_run" time="0.687" /><testcase classname="tests.test_suite_management.TestSuiteInstallation" name="test_suite_installation_actual" time="1.633" /><testcase classname="tests.test_suite_management.TestSuiteInstallation" name="test_suite_installation_nonexistent_suite" time="0.174"><failure message="AssertionError: &#10;Test: Install nonexistent suite&#10;Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main install-suite --suite-name nonexistent-suite&#10;Expected: Failure&#10;Actual: Success (returncode 0)&#10;Output: ❌ Suite 'nonexistent-suite' not found&#10;#x1F4A1 Available suites:">tests/test_suite_management.py:450: in test_suite_installation_nonexistent_suite
+    TestAssertions.assert_command_failure(result, "Install nonexistent suite")
+tests/utils/validators.py:248: in assert_command_failure
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Install nonexistent suite
+E   Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main install-suite --suite-name nonexistent-suite
+E   Expected: Failure
+E   Actual: Success (returncode 0)
+E   Output: ❌ Suite 'nonexistent-suite' not found
+E   #x1F4A1 Available suites:</failure></testcase><testcase classname="tests.test_suite_management.TestSuiteInstallation" name="test_suite_installation_empty_suite" time="0.343" /><testcase classname="tests.test_suite_management.TestSuiteInstallation" name="test_suite_installation_options[--force]" time="0.885" /><testcase classname="tests.test_suite_management.TestSuiteInstallation" name="test_suite_installation_options[--skip-existing]" time="0.512" /><testcase classname="tests.test_suite_management.TestSuiteInstallation" name="test_suite_installation_options[--update-existing]" time="0.509" /><testcase classname="tests.test_suite_management.TestSuiteDeletion" name="test_delete_suite" time="0.513" /><testcase classname="tests.test_suite_management.TestSuiteDeletion" name="test_delete_suite_with_force" time="0.515" /><testcase classname="tests.test_suite_management.TestSuiteDeletion" name="test_delete_nonexistent_suite" time="0.173" /><testcase classname="tests.test_suite_management.TestSuiteWorkflows" name="test_complete_suite_lifecycle" time="1.908" /></testsuite></testsuites>

@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="11" skipped="0" tests="12" time="31.353" timestamp="2025-07-24T17:34:15.381157-04:00" hostname="BlemisMac.local"><testcase classname="tests.test_workflows.TestUserOnboardingWorkflows" name="test_new_user_discovery_to_installation" time="5.602" /><testcase classname="tests.test_workflows.TestUserOnboardingWorkflows" name="test_developer_workflow_suite_creation" time="1.588"><failure message="AssertionError: &#10;Test: Developer: Record feedback&#10;Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback filesystem dev-test-id --rating 5 --comment Essential for development work&#10;Expected: Success&#10;Actual: Failure (code 2)&#10;STDOUT: &#10;STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic">tests/test_workflows.py:119: in test_developer_workflow_suite_creation
+    TestAssertions.assert_command_success(feedback_result, "Developer: Record feedback")
+tests/utils/validators.py:217: in assert_command_success
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Developer: Record feedback
+E   Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback filesystem dev-test-id --rating 5 --comment Essential for development work
+E   Expected: Success
+E   Actual: Failure (code 2)
+E   STDOUT: 
+E   STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic</failure></testcase><testcase classname="tests.test_workflows.TestUserOnboardingWorkflows" name="test_admin_bulk_management_workflow" time="2.689"><failure message="AssertionError: &#10;Test: Admin: Quality report&#10;Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality report&#10;Expected: Success&#10;Actual: Failure (code 2)&#10;STDOUT: &#10;STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic">tests/test_workflows.py:171: in test_admin_bulk_management_workflow
+    TestAssertions.assert_command_success(report_result, "Admin: Quality report")
+tests/utils/validators.py:217: in assert_command_success
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Admin: Quality report
+E   Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality report
+E   Expected: Success
+E   Actual: Failure (code 2)
+E   STDOUT: 
+E   STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic</failure></testcase><testcase classname="tests.test_workflows.TestProblemSolvingWorkflows" name="test_troubleshooting_workflow" time="3.955"><failure message="AssertionError: &#10;Test: Problematic server in list&#10;Missing items: ['problematic-server']&#10;In text: &#10;                             MCP Servers (47 total)                             &#10;┏━━━━━━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━┳━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓&#10;┃ Name            ┃ Type    ┃ Sc… ┃ Sta… ┃ Command                             ┃&#10;┡━━━━━━━━━━━━━━━━━╇━━━━━━━━━╇━━━━━╇━━━━━━╇━━━━━━━━━━━━━━">tests/test_workflows.py:200: in test_troubleshooting_workflow
+    TestAssertions.assert_contains_all(
+tests/utils/validators.py:290: in assert_contains_all
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Problematic server in list
+E   Missing items: ['problematic-server']
+E   In text: 
+E                                MCP Servers (47 total)                             
+E   ┏━━━━━━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━┳━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+E   ┃ Name            ┃ Type    ┃ Sc… ┃ Sta… ┃ Command                             ┃
+E   ┡━━━━━━━━━━━━━━━━━╇━━━━━━━━━╇━━━━━╇━━━━━━╇━━━━━━━━━━━━━━</failure></testcase><testcase classname="tests.test_workflows.TestProblemSolvingWorkflows" name="test_performance_optimization_workflow" time="0.863"><failure message="AssertionError: &#10;Test: Performance: Feedback for http&#10;Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback http perf-test --rating 5 --comment Optimized for performance&#10;Expected: Success&#10;Actual: Failure (code 2)&#10;STDOUT: &#10;STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic">tests/test_workflows.py:269: in test_performance_optimization_workflow
+    TestAssertions.assert_command_success(feedback_result, f"Performance: Feedback for {server}")
+tests/utils/validators.py:217: in assert_command_success
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Performance: Feedback for http
+E   Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback http perf-test --rating 5 --comment Optimized for performance
+E   Expected: Success
+E   Actual: Failure (code 2)
+E   STDOUT: 
+E   STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic</failure></testcase><testcase classname="tests.test_workflows.TestProblemSolvingWorkflows" name="test_migration_workflow" time="4.509"><failure message="AssertionError: &#10;Test: Migration: Record feedback&#10;Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback filesystem migration-test --rating 5 --comment Successful migration to modern config&#10;Expected: Success&#10;Actual: Failure (code 2)&#10;STDOUT: &#10;STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic">tests/test_workflows.py:334: in test_migration_workflow
+    TestAssertions.assert_command_success(migration_feedback, "Migration: Record feedback")
+tests/utils/validators.py:217: in assert_command_success
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Migration: Record feedback
+E   Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback filesystem migration-test --rating 5 --comment Successful migration to modern config
+E   Expected: Success
+E   Actual: Failure (code 2)
+E   STDOUT: 
+E   STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic</failure></testcase><testcase classname="tests.test_workflows.TestCollaborationWorkflows" name="test_team_development_workflow" time="0.858"><failure message="AssertionError: &#10;Test: Team: Feedback for filesystem&#10;Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback filesystem team-filesystem --rating 5 --comment Essential for file operations&#10;Expected: Success&#10;Actual: Failure (code 2)&#10;STDOUT: &#10;STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic">tests/test_workflows.py:398: in test_team_development_workflow
+    TestAssertions.assert_command_success(feedback_result, f"Team: Feedback for {tool}")
+tests/utils/validators.py:217: in assert_command_success
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Team: Feedback for filesystem
+E   Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback filesystem team-filesystem --rating 5 --comment Essential for file operations
+E   Expected: Success
+E   Actual: Failure (code 2)
+E   STDOUT: 
+E   STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic</failure></testcase><testcase classname="tests.test_workflows.TestCollaborationWorkflows" name="test_project_handoff_workflow" time="0.865"><failure message="AssertionError: &#10;Test: Handoff: Document http&#10;Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback http project-alpha --rating 4 --comment Used in Project Alpha - works reliably&#10;Expected: Success&#10;Actual: Failure (code 2)&#10;STDOUT: &#10;STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic">tests/test_workflows.py:433: in test_project_handoff_workflow
+    TestAssertions.assert_command_success(doc_feedback, f"Handoff: Document {server}")
+tests/utils/validators.py:217: in assert_command_success
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Handoff: Document http
+E   Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback http project-alpha --rating 4 --comment Used in Project Alpha - works reliably
+E   Expected: Success
+E   Actual: Failure (code 2)
+E   STDOUT: 
+E   STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic</failure></testcase><testcase classname="tests.test_workflows.TestMaintenanceWorkflows" name="test_routine_maintenance_workflow" time="3.019"><failure message="AssertionError: &#10;Test: Maintenance: Generate report&#10;Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality report&#10;Expected: Success&#10;Actual: Failure (code 2)&#10;STDOUT: &#10;STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic">tests/test_workflows.py:489: in test_routine_maintenance_workflow
+    TestAssertions.assert_command_success(maintenance_report, "Maintenance: Generate report")
+tests/utils/validators.py:217: in assert_command_success
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Maintenance: Generate report
+E   Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality report
+E   Expected: Success
+E   Actual: Failure (code 2)
+E   STDOUT: 
+E   STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic</failure></testcase><testcase classname="tests.test_workflows.TestMaintenanceWorkflows" name="test_emergency_recovery_workflow" time="3.384"><failure message="AssertionError: &#10;Test: Emergency: Document response&#10;Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback filesystem emergency-test --rating 5 --comment Successful emergency recovery&#10;Expected: Success&#10;Actual: Failure (code 2)&#10;STDOUT: &#10;STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic">tests/test_workflows.py:541: in test_emergency_recovery_workflow
+    TestAssertions.assert_command_success(emergency_feedback, "Emergency: Document response")
+tests/utils/validators.py:217: in assert_command_success
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Emergency: Document response
+E   Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback filesystem emergency-test --rating 5 --comment Successful emergency recovery
+E   Expected: Success
+E   Actual: Failure (code 2)
+E   STDOUT: 
+E   STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic</failure></testcase><testcase classname="tests.test_workflows.TestComplexIntegrationWorkflows" name="test_complete_enterprise_deployment_workflow" time="2.904"><failure message="AssertionError: &#10;Test: Enterprise: QA feedback development filesystem&#10;Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback filesystem enterprise-development --rating 4 --comment Enterprise development deployment&#10;Expected: Success&#10;Actual: Failure (code 2)&#10;STDOUT: &#10;STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic">tests/test_workflows.py:604: in test_complete_enterprise_deployment_workflow
+    TestAssertions.assert_command_success(feedback_result, f"Enterprise: QA feedback {env} {server}")
+tests/utils/validators.py:217: in assert_command_success
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Enterprise: QA feedback development filesystem
+E   Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback filesystem enterprise-development --rating 4 --comment Enterprise development deployment
+E   Expected: Success
+E   Actual: Failure (code 2)
+E   STDOUT: 
+E   STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic</failure></testcase><testcase classname="tests.test_workflows.TestComplexIntegrationWorkflows" name="test_continuous_integration_workflow" time="1.038"><failure message="AssertionError: &#10;Test: CI: Record test 1 for filesystem&#10;Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback filesystem ci-iteration-0 --rating 4 --comment CI test iteration 1&#10;Expected: Success&#10;Actual: Failure (code 2)&#10;STDOUT: &#10;STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic">tests/test_workflows.py:660: in test_continuous_integration_workflow
+    TestAssertions.assert_command_success(feedback_result, f"CI: Record test {iteration + 1} for {tool}")
+tests/utils/validators.py:217: in assert_command_success
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: CI: Record test 1 for filesystem
+E   Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback filesystem ci-iteration-0 --rating 4 --comment CI test iteration 1
+E   Expected: Success
+E   Actual: Failure (code 2)
+E   STDOUT: 
+E   STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic</failure></testcase></testsuite></testsuites>

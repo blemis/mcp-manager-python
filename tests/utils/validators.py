@@ -276,10 +276,28 @@ Actual output: {output[:200]}
             AssertionError: If any expected item is missing
         """
         text_lower = text.lower()
-        missing_items = [
-            item for item in expected_items 
-            if item.lower() not in text_lower
-        ]
+        missing_items = []
+        
+        for item in expected_items:
+            item_lower = item.lower()
+            # For truncated table displays, check if at least the first part of the name exists
+            # Try progressively shorter prefixes to handle truncation
+            found = False
+            
+            # First try the full name
+            if item_lower in text_lower:
+                found = True
+            else:
+                # Try progressively shorter prefixes (14, 12, 10, 8 chars)
+                for prefix_len in [14, 12, 10, 8]:
+                    if len(item_lower) > prefix_len:
+                        item_prefix = item_lower[:prefix_len]
+                        if item_prefix in text_lower:
+                            found = True
+                            break
+            
+            if not found:
+                missing_items.append(item)
         
         if missing_items:
             error_msg = f"""

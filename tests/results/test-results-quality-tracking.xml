@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="13" skipped="0" tests="27" time="21.901" timestamp="2025-07-24T17:32:44.375882-04:00" hostname="BlemisMac.local"><testcase classname="tests.test_quality_tracking.TestQualityStatus" name="test_quality_status_basic" time="0.174"><failure message="assert False&#10; +  where False = &lt;function OutputValidator.validate_status_output at 0x104715a80&gt;(&quot;#x1F4CA Quality Tracking Status\\n\n╭─────────────────────────── #x1F4C8 Overall Statistics ────────────────────────────╮\n│ Tracked Servers: 3                                                           │\n│ With Quality Data: 3                                                         │\n│ Total Install Attempts: 22                                                   │\n│ Overall Success Rate: 68.2%                                                  │\n╰──────────────────────────────────────────────────────────────────────────────╯\n\\nQuality Distribution:\n╭─── Good ────╮ ╭─── Fair ────╮ ╭─── Poor ────╮\n│ ✅ 1        │ │ ⚠️ 1         │ │ ❗ 1        │\n│ servers\\n(… │ │ servers\\n(… │ │ servers\\n(… │\n╰─────────────╯ ╰─────────────╯ ╰─────────────╯\n\\n#x1F4A1 Use 'mcp-manager quality rankings' to see detailed server rankings\n&quot;)&#10; +    where &lt;function OutputValidator.validate_status_output at 0x104715a80&gt; = OutputValidator.validate_status_output">tests/test_quality_tracking.py:21: in test_quality_status_basic
+    assert OutputValidator.validate_status_output(result['stdout'])
+E   assert False
+E    +  where False = &lt;function OutputValidator.validate_status_output at 0x104715a80&gt;("#x1F4CA Quality Tracking Status\\n\n╭─────────────────────────── #x1F4C8 Overall Statistics ────────────────────────────╮\n│ Tracked Servers: 3                                                           │\n│ With Quality Data: 3                                                         │\n│ Total Install Attempts: 22                                                   │\n│ Overall Success Rate: 68.2%                                                  │\n╰──────────────────────────────────────────────────────────────────────────────╯\n\\nQuality Distribution:\n╭─── Good ────╮ ╭─── Fair ────╮ ╭─── Poor ────╮\n│ ✅ 1        │ │ ⚠️ 1         │ │ ❗ 1        │\n│ servers\\n(… │ │ servers\\n(… │ │ servers\\n(… │\n╰─────────────╯ ╰─────────────╯ ╰─────────────╯\n\\n#x1F4A1 Use 'mcp-manager quality rankings' to see detailed server rankings\n")
+E    +    where &lt;function OutputValidator.validate_status_output at 0x104715a80&gt; = OutputValidator.validate_status_output</failure></testcase><testcase classname="tests.test_quality_tracking.TestQualityStatus" name="test_quality_status_empty_system" time="0.174" /><testcase classname="tests.test_quality_tracking.TestQualityStatus" name="test_quality_status_verbose" time="0.336" /><testcase classname="tests.test_quality_tracking.TestQualityRankings" name="test_quality_rankings_basic" time="0.172" /><testcase classname="tests.test_quality_tracking.TestQualityRankings" name="test_quality_rankings_with_limit" time="0.505" /><testcase classname="tests.test_quality_tracking.TestQualityRankings" name="test_quality_rankings_by_metric" time="0.662" /><testcase classname="tests.test_quality_tracking.TestQualityRankings" name="test_quality_rankings_category_filter" time="0.500" /><testcase classname="tests.test_quality_tracking.TestQualityFeedback" name="test_record_quality_feedback_basic" time="1.082"><failure message="AssertionError: &#10;Test: Record quality feedback&#10;Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback test-feedback-server test-install-id --rating 4 --comment Works well&#10;Expected: Success&#10;Actual: Failure (code 2)&#10;STDOUT: &#10;STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic">tests/test_quality_tracking.py:104: in test_record_quality_feedback_basic
+    TestAssertions.assert_command_success(result, "Record quality feedback")
+tests/utils/validators.py:217: in assert_command_success
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Record quality feedback
+E   Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback test-feedback-server test-install-id --rating 4 --comment Works well
+E   Expected: Success
+E   Actual: Failure (code 2)
+E   STDOUT: 
+E   STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic</failure></testcase><testcase classname="tests.test_quality_tracking.TestQualityFeedback" name="test_record_feedback_different_ratings[1]" time="1.084"><failure message="AssertionError: &#10;Test: Feedback rating 1&#10;Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback test-rating-1-server test-rating-1-id --rating 1 --comment Rating 1 test&#10;Expected: Success&#10;Actual: Failure (code 2)&#10;STDOUT: &#10;STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic">tests/test_quality_tracking.py:124: in test_record_feedback_different_ratings
+    TestAssertions.assert_command_success(result, f"Feedback rating {rating}")
+tests/utils/validators.py:217: in assert_command_success
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Feedback rating 1
+E   Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback test-rating-1-server test-rating-1-id --rating 1 --comment Rating 1 test
+E   Expected: Success
+E   Actual: Failure (code 2)
+E   STDOUT: 
+E   STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic</failure></testcase><testcase classname="tests.test_quality_tracking.TestQualityFeedback" name="test_record_feedback_different_ratings[2]" time="1.082"><failure message="AssertionError: &#10;Test: Feedback rating 2&#10;Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback test-rating-2-server test-rating-2-id --rating 2 --comment Rating 2 test&#10;Expected: Success&#10;Actual: Failure (code 2)&#10;STDOUT: &#10;STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic">tests/test_quality_tracking.py:124: in test_record_feedback_different_ratings
+    TestAssertions.assert_command_success(result, f"Feedback rating {rating}")
+tests/utils/validators.py:217: in assert_command_success
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Feedback rating 2
+E   Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback test-rating-2-server test-rating-2-id --rating 2 --comment Rating 2 test
+E   Expected: Success
+E   Actual: Failure (code 2)
+E   STDOUT: 
+E   STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic</failure></testcase><testcase classname="tests.test_quality_tracking.TestQualityFeedback" name="test_record_feedback_different_ratings[3]" time="1.084"><failure message="AssertionError: &#10;Test: Feedback rating 3&#10;Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback test-rating-3-server test-rating-3-id --rating 3 --comment Rating 3 test&#10;Expected: Success&#10;Actual: Failure (code 2)&#10;STDOUT: &#10;STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic">tests/test_quality_tracking.py:124: in test_record_feedback_different_ratings
+    TestAssertions.assert_command_success(result, f"Feedback rating {rating}")
+tests/utils/validators.py:217: in assert_command_success
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Feedback rating 3
+E   Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback test-rating-3-server test-rating-3-id --rating 3 --comment Rating 3 test
+E   Expected: Success
+E   Actual: Failure (code 2)
+E   STDOUT: 
+E   STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic</failure></testcase><testcase classname="tests.test_quality_tracking.TestQualityFeedback" name="test_record_feedback_different_ratings[4]" time="1.085"><failure message="AssertionError: &#10;Test: Feedback rating 4&#10;Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback test-rating-4-server test-rating-4-id --rating 4 --comment Rating 4 test&#10;Expected: Success&#10;Actual: Failure (code 2)&#10;STDOUT: &#10;STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic">tests/test_quality_tracking.py:124: in test_record_feedback_different_ratings
+    TestAssertions.assert_command_success(result, f"Feedback rating {rating}")
+tests/utils/validators.py:217: in assert_command_success
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Feedback rating 4
+E   Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback test-rating-4-server test-rating-4-id --rating 4 --comment Rating 4 test
+E   Expected: Success
+E   Actual: Failure (code 2)
+E   STDOUT: 
+E   STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic</failure></testcase><testcase classname="tests.test_quality_tracking.TestQualityFeedback" name="test_record_feedback_different_ratings[5]" time="1.085"><failure message="AssertionError: &#10;Test: Feedback rating 5&#10;Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback test-rating-5-server test-rating-5-id --rating 5 --comment Rating 5 test&#10;Expected: Success&#10;Actual: Failure (code 2)&#10;STDOUT: &#10;STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic">tests/test_quality_tracking.py:124: in test_record_feedback_different_ratings
+    TestAssertions.assert_command_success(result, f"Feedback rating {rating}")
+tests/utils/validators.py:217: in assert_command_success
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Feedback rating 5
+E   Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback test-rating-5-server test-rating-5-id --rating 5 --comment Rating 5 test
+E   Expected: Success
+E   Actual: Failure (code 2)
+E   STDOUT: 
+E   STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic</failure></testcase><testcase classname="tests.test_quality_tracking.TestQualityFeedback" name="test_record_feedback_with_detailed_comment" time="1.083"><failure message="AssertionError: &#10;Test: Detailed feedback comment&#10;Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback test-detailed-feedback-server test-detailed-id --rating 5 --comment This server works excellently for filesystem operations. Installation was smooth, performance is great, and documentation is comprehensive.&#10;Expected: Success&#10;Actual: Failure (code 2)&#10;STDOUT: &#10;STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic">tests/test_quality_tracking.py:144: in test_record_feedback_with_detailed_comment
+    TestAssertions.assert_command_success(result, "Detailed feedback comment")
+tests/utils/validators.py:217: in assert_command_success
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Detailed feedback comment
+E   Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback test-detailed-feedback-server test-detailed-id --rating 5 --comment This server works excellently for filesystem operations. Installation was smooth, performance is great, and documentation is comprehensive.
+E   Expected: Success
+E   Actual: Failure (code 2)
+E   STDOUT: 
+E   STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic</failure></testcase><testcase classname="tests.test_quality_tracking.TestQualityFeedback" name="test_record_feedback_invalid_rating" time="0.665" /><testcase classname="tests.test_quality_tracking.TestQualityFeedback" name="test_record_feedback_nonexistent_server" time="0.167"><failure message="AssertionError: &#10;Test: Feedback for nonexistent server&#10;Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback nonexistent-server test-id --rating 4 --comment Test&#10;Expected: Failure&#10;Actual: Success (returncode 2)&#10;Output:">tests/test_quality_tracking.py:167: in test_record_feedback_nonexistent_server
+    TestAssertions.assert_command_failure(result, "Feedback for nonexistent server")
+tests/utils/validators.py:248: in assert_command_failure
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Feedback for nonexistent server
+E   Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback nonexistent-server test-id --rating 4 --comment Test
+E   Expected: Failure
+E   Actual: Success (returncode 2)
+E   Output:</failure></testcase><testcase classname="tests.test_quality_tracking.TestQualityFeedback" name="test_record_feedback_missing_comment" time="1.084"><failure message="AssertionError: &#10;Test: Feedback without comment&#10;Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback test-no-comment-server test-no-comment-id --rating 4&#10;Expected: Success&#10;Actual: Failure (code 2)&#10;STDOUT: &#10;STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic">tests/test_quality_tracking.py:189: in test_record_feedback_missing_comment
+    TestAssertions.assert_command_success(result, "Feedback without comment")
+tests/utils/validators.py:217: in assert_command_success
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Feedback without comment
+E   Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback test-no-comment-server test-no-comment-id --rating 4
+E   Expected: Success
+E   Actual: Failure (code 2)
+E   STDOUT: 
+E   STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic</failure></testcase><testcase classname="tests.test_quality_tracking.TestQualityReports" name="test_quality_report_basic" time="0.167"><failure message="AssertionError: &#10;Test: Quality report basic&#10;Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality report&#10;Expected: Success&#10;Actual: Failure (code 2)&#10;STDOUT: &#10;STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic">tests/test_quality_tracking.py:199: in test_quality_report_basic
+    TestAssertions.assert_command_success(result, "Quality report basic")
+tests/utils/validators.py:217: in assert_command_success
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Quality report basic
+E   Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality report
+E   Expected: Success
+E   Actual: Failure (code 2)
+E   STDOUT: 
+E   STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic</failure></testcase><testcase classname="tests.test_quality_tracking.TestQualityReports" name="test_quality_report_specific_server" time="1.252" /><testcase classname="tests.test_quality_tracking.TestQualityReports" name="test_quality_report_date_range" time="0.166" /><testcase classname="tests.test_quality_tracking.TestQualityReports" name="test_quality_report_export_formats" time="0.497" /><testcase classname="tests.test_quality_tracking.TestQualityMetrics" name="test_quality_metrics_calculation" time="1.909" /><testcase classname="tests.test_quality_tracking.TestQualityMetrics" name="test_quality_trends_tracking" time="1.581" /><testcase classname="tests.test_quality_tracking.TestQualityIntegration" name="test_quality_integration_with_discovery" time="0.445" /><testcase classname="tests.test_quality_tracking.TestQualityIntegration" name="test_quality_integration_with_suite_installation" time="1.605" /><testcase classname="tests.test_quality_tracking.TestQualityWorkflows" name="test_complete_quality_workflow" time="1.086"><failure message="AssertionError: &#10;Test: Quality workflow: Record feedback&#10;Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback test-quality-workflow-server test-workflow-id --rating 4 --comment Initial feedback&#10;Expected: Success&#10;Actual: Failure (code 2)&#10;STDOUT: &#10;STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic">tests/test_quality_tracking.py:400: in test_complete_quality_workflow
+    TestAssertions.assert_command_success(feedback_result, "Quality workflow: Record feedback")
+tests/utils/validators.py:217: in assert_command_success
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Quality workflow: Record feedback
+E   Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback test-quality-workflow-server test-workflow-id --rating 4 --comment Initial feedback
+E   Expected: Success
+E   Actual: Failure (code 2)
+E   STDOUT: 
+E   STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic</failure></testcase><testcase classname="tests.test_quality_tracking.TestQualityWorkflows" name="test_bulk_quality_feedback" time="1.082"><failure message="AssertionError: &#10;Test: Bulk feedback: bulk-server-1&#10;Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback bulk-server-1 bulk-test-id --rating 5 --comment Excellent performance&#10;Expected: Success&#10;Actual: Failure (code 2)&#10;STDOUT: &#10;STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic">tests/test_quality_tracking.py:446: in test_bulk_quality_feedback
+    TestAssertions.assert_command_success(feedback_result, f"Bulk feedback: {server_name}")
+tests/utils/validators.py:217: in assert_command_success
+    raise AssertionError(error_msg)
+E   AssertionError: 
+E   Test: Bulk feedback: bulk-server-1
+E   Command: /opt/homebrew/anaconda3/bin/python -m mcp_manager.cli.main quality feedback bulk-server-1 bulk-test-id --rating 5 --comment Excellent performance
+E   Expected: Success
+E   Actual: Failure (code 2)
+E   STDOUT: 
+E   STDERR: &lt;frozen runpy&gt;:128: RuntimeWarning: 'mcp_manager.cli.main' found in sys.modules after import of package 'mcp_manager.cli', but prior to execution of 'mcp_manager.cli.main'; this may result in unpredic</failure></testcase></testsuite></testsuites>

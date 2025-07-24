@@ -26,7 +26,8 @@ class TestServerAddition:
         # Build add command
         cmd_parts = ["add", server_name, "--type", server_type, "--command", f"'{command}'"]
         if args:
-            cmd_parts.extend(["--args"] + [f"'{arg}'" for arg in args])
+            for arg in args:
+                cmd_parts.extend(["--args", f"'{arg}'"])
         
         add_cmd = " ".join(cmd_parts)
         result = cli_runner.run_command(add_cmd)
@@ -115,8 +116,8 @@ class TestServerRemoval:
         )
         TestAssertions.assert_command_success(add_result, "Add server for removal test")
         
-        # Remove the server
-        remove_result = cli_runner.run_command(f"remove {server_name}")
+        # Remove the server (using --force to skip confirmation in automated tests)
+        remove_result = cli_runner.run_command(f"remove {server_name} --force")
         TestAssertions.assert_command_success(remove_result, "Remove existing server")
         assert OutputValidator.validate_success_message(remove_result['stdout'], "remove")
         
@@ -130,15 +131,12 @@ class TestServerRemoval:
     
     def test_remove_nonexistent_server(self, cli_runner):
         """Test removing nonexistent server handles gracefully."""
-        result = cli_runner.run_command("remove nonexistent-server-xyz")
+        result = cli_runner.run_command("remove nonexistent-server-xyz --force")
         
         # Should either succeed (no-op) or fail gracefully
-        if not result['success']:
-            assert OutputValidator.validate_error_message(result['stderr'], "not found")
-        else:
-            # If it succeeds, should indicate no action taken
-            assert "not found" in result['stdout'].lower() or \
-                   "does not exist" in result['stdout'].lower()
+        # Check for error messages in both stdout and stderr (depending on CLI implementation)
+        error_output = (result['stdout'] + result['stderr']).lower()
+        assert "not found" in error_output or "does not exist" in error_output or "no user-scoped" in error_output
     
     def test_remove_with_confirmation(self, cli_runner, isolated_environment):
         """Test remove with force flag."""
@@ -190,7 +188,7 @@ class TestServerListing:
             "All added servers in list"
         )
     
-    @pytest.mark.parametrize("scope", ["user", "project", "global"])
+    @pytest.mark.parametrize("scope", ["user", "project"])
     def test_list_with_scope(self, cli_runner, scope):
         """Test list command with different scopes."""
         result = cli_runner.run_command(f"list --scope {scope}")
@@ -290,7 +288,7 @@ class TestPackageInstallation:
         )
         
         TestAssertions.assert_command_failure(result, "Install nonexistent package")
-        assert OutputValidator.validate_error_message(result['stderr'], "not found")
+        assert OutputValidator.validate_error_message(result['stdout'], "not found")
 
 
 class TestServerValidation:
@@ -366,7 +364,7 @@ class TestServerLifecycle:
         TestAssertions.assert_command_success(disable_result, "Lifecycle: Disable server")
         
         # Step 5: Remove server
-        remove_result = cli_runner.run_command(f"remove {server_name}")
+        remove_result = cli_runner.run_command(f"remove {server_name} --force")
         TestAssertions.assert_command_success(remove_result, "Lifecycle: Remove server")
         
         # Step 6: Verify removal

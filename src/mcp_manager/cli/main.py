@@ -116,6 +116,7 @@ def cli(ctx: click.Context, debug: bool, verbose: bool, config_dir: Optional[Pat
             console.print("[dim]Install with: pip install rich[/dim]")
         except Exception as e:
             console.print(f"[red]Failed to launch menu: {e}[/red]")
+            sys.exit(1)
 
 
 # Core server management commands
@@ -195,6 +196,7 @@ def list_cmd(scope: Optional[str], output_format: str):
             
     except Exception as e:
         console.print(f"[red]Failed to list servers: {e}[/red]")
+        sys.exit(1)
 
 
 @cli.command()
@@ -274,6 +276,7 @@ def add(
             
         except Exception as e:
             console.print(f"[red]❌ Failed to add server: {e}[/red]")
+            sys.exit(1)
     
     asyncio.run(add_server_async())
 
@@ -302,9 +305,11 @@ def remove(name: str, scope: Optional[str], force: bool):
             console.print(f"[green]✅ Removed server '{name}'[/green]")
         else:
             console.print(f"[red]❌ Server '{name}' not found or could not be removed[/red]")
+            sys.exit(1)
             
     except Exception as e:
         console.print(f"[red]Failed to remove server: {e}[/red]")
+        sys.exit(1)
 
 
 @cli.command()
@@ -420,6 +425,7 @@ def nuke(force: bool):
         
     except Exception as e:
         console.print(f"[red]❌ Nuclear cleanup failed: {e}[/red]")
+        sys.exit(1)
 
 
 @cli.command()
@@ -435,8 +441,10 @@ def enable(name: str):
             console.print(f"[green]✅ Enabled server '{name}'[/green]")
         else:
             console.print(f"[red]❌ Server '{name}' not found or could not be enabled[/red]")
+            sys.exit(1)
     except Exception as e:
         console.print(f"[red]Failed to enable server: {e}[/red]")
+        sys.exit(1)
 
 
 @cli.command()
@@ -452,8 +460,10 @@ def disable(name: str):
             console.print(f"[green]✅ Disabled server '{name}'[/green]")
         else:
             console.print(f"[red]❌ Server '{name}' not found or could not be disabled[/red]")
+            sys.exit(1)
     except Exception as e:
         console.print(f"[red]Failed to disable server: {e}[/red]")
+        sys.exit(1)
 
 
 # Register all modular command groups
