@@ -235,12 +235,14 @@ STDERR: {result.get('stderr', '')[:200]}
         Raises:
             AssertionError: If command succeeded unexpectedly
         """
-        if result.get('success', True):
+        # When expect_success=False, success=True means the test passed (command failed as expected)
+        # We only raise an error if success=False (command succeeded when we expected failure)
+        if not result.get('success', False):
             error_msg = f"""
 Test: {test_name}
 Command: {result.get('command', 'unknown')}
 Expected: Failure
-Actual: Success
+Actual: Success (returncode {result.get('returncode', 'unknown')})
 Output: {result.get('stdout', '')[:200]}
 """
             raise AssertionError(error_msg)
