@@ -2746,6 +2746,369 @@ def launch_interactive_menu():
         sys.exit(1)
 
 
+@cli.group("ai")
+def ai():
+    """Manage AI configuration for intelligent MCP curation."""
+    pass
+
+
+@ai.command("setup")
+@click.option("--provider", type=click.Choice(["claude", "openai", "gemini", "local", "ollama"]), 
+              help="Specific AI provider to configure")
+@click.option("--interactive/--no-interactive", default=True, help="Interactive configuration")
+@handle_errors
+def ai_setup(provider: Optional[str], interactive: bool):
+    """Set up AI configuration with secure credential storage."""
+    from mcp_manager.core.ai_config import ai_config_manager, AIProvider
+    from rich.prompt import Prompt, Confirm
+    from rich.panel import Panel
+    
+    console.print(Panel.fit(
+        "[bold blue]AI Configuration Setup[/bold blue]\n"
+        "Configure AI providers for intelligent MCP server curation",
+        title="🤖 AI Setup"
+    ))
+    
+    try:
+        # Load current config
+        config = ai_config_manager.load_config()
+        
+        # Show current status
+        status = ai_config_manager.get_service_status()
+        
+        console.print("\n[bold]Current AI Provider Status:[/bold]")
+        status_table = Table(show_header=True, header_style="bold blue")
+        status_table.add_column("Provider", style="cyan")
+        status_table.add_column("Configured", justify="center")
+        status_table.add_column("API Key Set", justify="center")
+        status_table.add_column("Accessible", justify="center")
+        status_table.add_column("Enabled", justify="center")
+        
+        for provider_name, provider_status in status.items():
+            status_table.add_row(
+                provider_name,
+                "✅" if provider_status["configured"] else "❌",
+                "✅" if provider_status["api_key_set"] else "❌",
+                "✅" if provider_status["accessible"] else "❌",
+                "✅" if provider_status["enabled"] else "❌"
+            )
+        
+        console.print(status_table)
+        console.print()
+        
+        # If specific provider requested
+        if provider:
+            providers_to_setup = [AIProvider(provider)]
+        elif interactive:
+            # Interactive provider selection
+            console.print("[bold]Which AI providers would you like to configure?[/bold]")
+            providers_to_setup = []
+            
+            for ai_provider in AIProvider:
+                if ai_provider in [AIProvider.LOCAL, AIProvider.OLLAMA]:
+                    # Local providers don't need API keys
+                    if Confirm.ask(f"Enable {ai_provider.value} (local, no API key needed)?", default=False):
+                        providers_to_setup.append(ai_provider)
+                else:
+                    current_status = status.get(ai_provider.value, {})
+                    if not current_status.get("api_key_set", False):
+                        if Confirm.ask(f"Configure {ai_provider.value} (requires API key)?", default=False):
+                            providers_to_setup.append(ai_provider)
+                    else:
+                        if Confirm.ask(f"Reconfigure {ai_provider.value} (already set up)?", default=False):
+                            providers_to_setup.append(ai_provider)
+        else:
+            # Non-interactive: show available providers
+            console.print("[yellow]Available providers: claude, openai, gemini, local, ollama[/yellow]")
+            console.print("Use --provider to specify or run interactively")
+            return
+        
+        if not providers_to_setup:
+            console.print("[yellow]No providers selected for configuration[/yellow]")
+            return
+        
+        # Configure each selected provider
+        for ai_provider in providers_to_setup:
+            console.print(f"\n[bold blue]Configuring {ai_provider.value}...[/bold blue]")
+            
+            if ai_provider in [AIProvider.LOCAL, AIProvider.OLLAMA]:
+                # Local providers - just enable them
+                success = ai_config_manager.update_service_config(
+                    ai_provider, 
+                    enabled=True,
+                    api_key_set=True  # No key needed for local
+                )
+                if success:
+                    console.print(f"✅ {ai_provider.value} enabled successfully")
+                else:
+                    console.print(f"❌ Failed to enable {ai_provider.value}")
+                continue
+            
+            # Remote providers need API keys
+            if interactive:
+                console.print(f"\n[dim]Please enter your {ai_provider.value} API key:[/dim]")
+                api_key = Prompt.ask(f"{ai_provider.value} API key", password=True)
+                
+                if not api_key or api_key.strip() == "":
+                    console.print(f"[yellow]Skipping {ai_provider.value} - no API key provided[/yellow]")
+                    continue
+            else:
+                console.print(f"[red]API key required for {ai_provider.value} in non-interactive mode[/red]")
+                continue
+            
+            # Store the API key securely
+            success = ai_config_manager.set_api_key(ai_provider, api_key.strip())
+            if success:
+                console.print(f"✅ {ai_provider.value} API key stored securely")
+                
+                # Configure additional settings if needed
+                if ai_provider == AIProvider.CLAUDE:
+                    ai_config_manager.update_service_config(
+                        ai_provider,
+                        model="claude-3-sonnet-20240229",
+                        max_tokens=4096,
+                        temperature=0.1,
+                        enabled=True,
+                        priority=90
+                    )
+                elif ai_provider == AIProvider.OPENAI:
+                    ai_config_manager.update_service_config(
+                        ai_provider,
+                        model="gpt-4",
+                        max_tokens=4096,
+                        temperature=0.1,
+                        enabled=True,
+                        priority=80
+                    )
+                elif ai_provider == AIProvider.GEMINI:
+                    ai_config_manager.update_service_config(
+                        ai_provider,
+                        model="gemini-pro",
+                        max_tokens=4096,
+                        temperature=0.1,
+                        enabled=True,
+                        priority=70
+                    )
+                
+                console.print(f"✅ {ai_provider.value} configured successfully")
+            else:
+                console.print(f"❌ Failed to store {ai_provider.value} API key")
+        
+        # Set primary provider if interactive
+        if interactive and providers_to_setup:
+            console.print(f"\n[bold]Setting Primary Provider...[/bold]")
+            available = ai_config_manager.get_available_providers()
+            
+            if len(available) == 1:
+                primary = available[0]
+                console.print(f"Using {primary.value} as primary provider")
+            elif len(available) > 1:
+                console.print("Available providers:")
+                for i, prov in enumerate(available):
+                    console.print(f"  {i+1}. {prov.value}")
+                
+                try:
+                    choice = Prompt.ask("Select primary provider", 
+                                      choices=[str(i+1) for i in range(len(available))],
+                                      default="1")
+                    primary = available[int(choice) - 1]
+                except (ValueError, IndexError):
+                    primary = available[0]
+                    console.print(f"Using default: {primary.value}")
+            else:
+                console.print("[yellow]No providers available to set as primary[/yellow]")
+                return
+            
+            # Update primary provider
+            config.primary_provider = primary
+            ai_config_manager._config = config
+            ai_config_manager.save_config()
+            console.print(f"✅ Primary provider set to {primary.value}")
+        
+        # Enable AI curation if any providers are configured
+        available = ai_config_manager.get_available_providers()
+        if available:
+            config.enabled = True
+            ai_config_manager._config = config
+            ai_config_manager.save_config()
+            
+            console.print(f"\n[green]🎉 AI configuration completed![/green]")
+            console.print(f"Available providers: {', '.join(p.value for p in available)}")
+            console.print(f"Primary provider: {config.primary_provider.value}")
+            console.print("\n[dim]AI-powered MCP curation is now enabled[/dim]")
+        else:
+            console.print(f"\n[yellow]⚠️ No AI providers configured - curation remains disabled[/yellow]")
+    
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Setup cancelled by user[/yellow]")
+    except Exception as e:
+        console.print(f"\n[red]Setup failed: {e}[/red]")
+        logger.error(f"AI setup failed: {e}")
+
+
+@ai.command("status")
+@handle_errors  
+def ai_status():
+    """Show AI configuration status."""
+    from mcp_manager.core.ai_config import ai_config_manager
+    from rich.panel import Panel
+    
+    try:
+        config = ai_config_manager.load_config()
+        status = ai_config_manager.get_service_status()
+        
+        # Main status panel
+        status_text = f"[bold]AI Curation: {'🟢 Enabled' if config.enabled else '🔴 Disabled'}[/bold]\n"
+        if config.enabled:
+            primary = ai_config_manager.get_primary_provider()
+            status_text += f"Primary Provider: {primary.value if primary else 'None available'}\n"
+            status_text += f"Auto-update Suites: {'Yes' if config.auto_update_suites else 'No'}\n"
+            status_text += f"Curation Frequency: {config.curation_frequency}"
+        
+        console.print(Panel(status_text, title="🤖 AI Configuration", title_align="left"))
+        
+        # Provider status table
+        console.print("\n[bold]Provider Status:[/bold]")
+        status_table = Table(show_header=True, header_style="bold blue")
+        status_table.add_column("Provider", style="cyan")
+        status_table.add_column("Status", justify="center")
+        status_table.add_column("Priority", justify="center") 
+        status_table.add_column("Model", style="dim")
+        
+        for provider_name, provider_status in status.items():
+            if provider_status["configured"] or provider_status["api_key_set"]:
+                # Get service config for additional details
+                provider_enum = next((p for p in config.services.keys() if p.value == provider_name), None)
+                service_config = config.services.get(provider_enum) if provider_enum else None
+                
+                status_icon = "🟢" if provider_status["accessible"] and provider_status["enabled"] else "🔴"
+                status_text = f"{status_icon} {'Ready' if provider_status['accessible'] else 'Error'}"
+                
+                priority = str(service_config.priority) if service_config else "N/A"
+                model = service_config.model or "default" if service_config else "N/A"
+                
+                status_table.add_row(provider_name, status_text, priority, model)
+        
+        console.print(status_table)
+        
+        # Show configuration file locations
+        console.print(f"\n[dim]Config file: {ai_config_manager.config_file}[/dim]")
+        console.print(f"[dim]Keyring service: {ai_config_manager.keyring_service}[/dim]")
+        
+    except Exception as e:
+        console.print(f"[red]Failed to get AI status: {e}[/red]")
+
+
+@ai.command("test")  
+@click.option("--provider", type=click.Choice(["claude", "openai", "gemini", "local", "ollama"]),
+              help="Test specific provider")
+@handle_errors
+def ai_test(provider: Optional[str]):
+    """Test AI provider connectivity and functionality."""
+    from mcp_manager.core.ai_config import ai_config_manager, AIProvider
+    
+    try:
+        if provider:
+            providers_to_test = [AIProvider(provider)]
+        else:
+            providers_to_test = ai_config_manager.get_available_providers()
+        
+        if not providers_to_test:
+            console.print("[yellow]No AI providers available to test[/yellow]")
+            console.print("Run 'mcp-manager ai setup' to configure providers")
+            return
+        
+        console.print("[blue]🧪 Testing AI Providers...[/blue]\n")
+        
+        for ai_provider in providers_to_test:
+            console.print(f"Testing {ai_provider.value}...")
+            
+            # Test basic configuration
+            is_accessible = ai_config_manager.validate_provider_access(ai_provider)
+            
+            if is_accessible:
+                console.print(f"  ✅ {ai_provider.value} is accessible")
+                
+                # TODO: Add actual API test call when AI client is implemented
+                console.print(f"  ⏳ API functionality test not yet implemented")
+            else:
+                console.print(f"  ❌ {ai_provider.value} is not accessible")
+                
+                if ai_provider not in [AIProvider.LOCAL, AIProvider.OLLAMA]:
+                    api_key = ai_config_manager.get_api_key(ai_provider)
+                    if not api_key:
+                        console.print(f"     → No API key found. Run 'mcp-manager ai setup --provider {ai_provider.value}'")
+                    else:
+                        console.print(f"     → API key found but validation failed")
+        
+        console.print(f"\n[dim]Note: Full API testing requires AI client implementation[/dim]")
+        
+    except Exception as e:
+        console.print(f"[red]AI test failed: {e}[/red]")
+
+
+@ai.command("remove")
+@click.argument("provider", type=click.Choice(["claude", "openai", "gemini", "local", "ollama"]))
+@click.option("--force", "-f", is_flag=True, help="Skip confirmation prompt")
+@handle_errors
+def ai_remove(provider: str, force: bool):
+    """Remove AI provider configuration."""
+    from mcp_manager.core.ai_config import ai_config_manager, AIProvider
+    from rich.prompt import Confirm
+    
+    try:
+        ai_provider = AIProvider(provider)
+        
+        # Check if provider is configured
+        status = ai_config_manager.get_service_status()
+        provider_status = status.get(provider, {})
+        
+        if not provider_status.get("configured", False) and not provider_status.get("api_key_set", False):
+            console.print(f"[yellow]{provider} is not configured[/yellow]")
+            return
+        
+        # Confirmation
+        if not force:
+            if not Confirm.ask(f"Remove {provider} configuration and API key?", default=False):
+                console.print("Cancelled")
+                return
+        
+        # Remove API key
+        if provider_status.get("api_key_set", False):
+            success = ai_config_manager.remove_api_key(ai_provider)
+            if success:
+                console.print(f"✅ Removed API key for {provider}")
+            else:
+                console.print(f"⚠️ Failed to remove API key for {provider}")
+        
+        # Remove from config
+        config = ai_config_manager.load_config()
+        if ai_provider in config.services:
+            del config.services[ai_provider]
+            ai_config_manager._config = config
+            ai_config_manager.save_config()
+            console.print(f"✅ Removed {provider} from configuration")
+        
+        # Update primary provider if needed
+        if config.primary_provider == ai_provider:
+            available = ai_config_manager.get_available_providers()
+            if available:
+                config.primary_provider = available[0]
+                ai_config_manager._config = config
+                ai_config_manager.save_config()
+                console.print(f"✅ Primary provider updated to {available[0].value}")
+            else:
+                config.enabled = False
+                ai_config_manager._config = config
+                ai_config_manager.save_config()
+                console.print("⚠️ No providers remaining - AI curation disabled")
+        
+        console.print(f"[green]Successfully removed {provider}[/green]")
+        
+    except Exception as e:
+        console.print(f"[red]Failed to remove {provider}: {e}[/red]")
+
+
 def main():
     """Main CLI entry point."""
     cli()
