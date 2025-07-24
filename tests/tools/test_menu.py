@@ -320,82 +320,26 @@ class TestMenu:
             print(f"{self.colors['red']}❌ Error reading test results: {e}{self.colors['reset']}")
     
     def show_output_files(self):
-        """Show test output files for sharing."""
-        print(f"{self.colors['bold']}📁 TEST OUTPUT FILES FOR SHARING{self.colors['reset']}")
-        print("-" * 60)
+        """Show test output files for sharing - uses the intelligent show_test_files utility."""
+        # Just call the dedicated utility which is much smarter
+        print(f"{self.colors['cyan']}🔄 Loading intelligent file analysis...{self.colors['reset']}")
+        print()
         
-        cwd = Path.cwd()
-        results_dir = cwd / "tests" / "results"
-        
-        # Summary file
-        summary_file = results_dir / "test-results-summary.json"
-        if summary_file.exists():
-            print(f"{self.colors['cyan']}📊 Summary Report:{self.colors['reset']}")
-            print(f"   {summary_file}")
+        # Run the show_test_files.py utility
+        import subprocess
+        try:
+            result = subprocess.run(
+                [sys.executable, "tests/tools/show_test_files.py"],
+                cwd=Path.cwd(),
+                text=True
+            )
             
-            # Show quick stats from summary
-            try:
-                with open(summary_file, 'r') as f:
-                    data = json.load(f)
-                
-                total_categories = data.get('total_categories', 0)
-                passed_categories = data.get('passed_categories', 0)
-                failed_categories = data.get('failed_categories', 0)
-                success_rate = data.get('success_rate', 0)
-                total_time = data.get('total_time', 0)
-                
-                print(f"   └─ {passed_categories}/{total_categories} passed ({success_rate:.1f}%) in {total_time:.1f}s")
-                
-            except Exception:
-                print("   └─ (Unable to read summary)")
-            
-            print()
-        
-        # XML files
-        xml_files = list(results_dir.glob("test-results-*.xml"))
-        if xml_files:
-            print(f"{self.colors['cyan']}📄 Individual Test Reports ({len(xml_files)} files):{self.colors['reset']}")
-            for xml_file in sorted(xml_files):
-                category = xml_file.stem.replace('test-results-', '').replace('-', ' ').title()
-                size_kb = xml_file.stat().st_size / 1024
-                print(f"   {xml_file}")
-                print(f"   └─ {category} ({size_kb:.1f} KB)")
-            print()
-        
-        # Recent log files (if any)
-        fixtures_dir = cwd / "tests" / "fixtures"
-        log_files = list(fixtures_dir.glob("test_failures.log")) + list(fixtures_dir.glob("*.log"))
-        if log_files:
-            print(f"{self.colors['cyan']}📋 Log Files:{self.colors['reset']}")
-            for log_file in sorted(log_files):
-                size_kb = log_file.stat().st_size / 1024
-                print(f"   {log_file} ({size_kb:.1f} KB)")
-            print()
-        
-        # Easy copy commands
-        all_files = []
-        if summary_file.exists():
-            all_files.append(str(summary_file))
-        all_files.extend([str(f) for f in xml_files])
-        
-        if all_files:
-            print(f"{self.colors['green']}🔗 Copy Commands for Sharing:{self.colors['reset']}")
-            print("# Copy individual files:")
-            for file in all_files:
-                print(f"cp '{file}' /destination/")
-            
-            print()
-            print("# Copy all test results:")
-            files_str = " ".join([f"'{f}'" for f in all_files])
-            print(f"cp {files_str} /destination/")
-            print()
-            
-            print(f"{self.colors['yellow']}💡 Tip: These files contain all test execution details{self.colors['reset']}")
-            print("   Summary JSON: Machine-readable results and statistics")
-            print("   XML files: JUnit format for CI/CD integration")
-        else:
-            print(f"{self.colors['red']}❌ No test output files found.{self.colors['reset']}")
-            print("   Run tests first to generate output files.")
+            if result.returncode != 0:
+                print(f"{self.colors['red']}❌ Error running file analysis utility{self.colors['reset']}")
+                print("   Try running: ./test files")
+        except Exception as e:
+            print(f"{self.colors['red']}❌ Error: {e}{self.colors['reset']}")
+            print("   Try running: ./test files")
     
     def show_help(self):
         """Show help and documentation."""
