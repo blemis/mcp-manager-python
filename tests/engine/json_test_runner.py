@@ -29,6 +29,27 @@ class JsonTestRunner:
         self.validator = TestScenarioValidator()
         self.engine = DynamicTestEngine(self.validator)
         self.results = []
+        self._ensure_database_ready()
+    
+    def _ensure_database_ready(self):
+        """Ensure database is initialized and ready for testing."""
+        try:
+            db_path = Path("data/mcp_manager.db")
+            if not db_path.exists():
+                logger.info("🚀 Auto-initializing database for testing...")
+                # Import and run quick initialization
+                import subprocess
+                result = subprocess.run([sys.executable, "quick_init.py"], 
+                                      capture_output=True, text=True, cwd=Path.cwd())
+                if result.returncode == 0:
+                    logger.info("✅ Database initialized successfully")
+                else:
+                    logger.error(f"❌ Database initialization failed: {result.stderr}")
+            else:
+                logger.debug("📊 Database already exists, continuing...")
+        except Exception as e:
+            logger.error(f"Failed to ensure database readiness: {e}")
+            # Continue anyway - tests may still work
     
     def discover_scenarios(self,
                           category: Optional[str] = None,

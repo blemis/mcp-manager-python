@@ -16,26 +16,23 @@ from pathlib import Path
 logger = get_logger(__name__)
 
 
-def _get_server_description(server_name: str, server_type: str) -> str:
-    """Get description for known MCP servers."""
-    descriptions = {
-        # Docker Desktop servers
-        "dd-SQLite": "SQLite database operations and business intelligence",
-        "dd-Ref": "Powerful search tool connecting your coding to documentation",
+async def _get_server_description(server_name: str, server_type: str) -> str:
+    """Get server description from registry database."""
+    try:
+        from ..database.registry import MCPServerRegistry
         
-        # NPM servers
-        "@modelcontextprotocol/server-filesystem": "File system operations and directory access",
-        "@modelcontextprotocol/server-sqlite": "SQLite database interactions and queries", 
-        "@modelcontextprotocol/server-brave-search": "Web search functionality via Brave Search API",
-        "@modelcontextprotocol/server-playwright": "Browser automation and web testing",
-        "@anthropic/mcp-server-sqlite": "SQLite database management and queries",
+        registry = MCPServerRegistry()
+        server_info = await registry.get_server(server_name)
         
-        # Docker servers
-        "mcp-server-sqlite": "SQLite database server for MCP",
-        "mcp-server-filesystem": "File system access server for MCP",
-    }
-    
-    return descriptions.get(server_name, "")
+        if server_info and server_info.description:
+            return server_info.description
+        
+        # Fallback for servers not in registry yet
+        return f"{server_type} MCP server: {server_name}"
+        
+    except Exception as e:
+        logger.error(f"Failed to get server description for {server_name}: {e}")
+        return f"{server_type} MCP server: {server_name}"
 
 
 @click.group(name='test-admin')
@@ -236,8 +233,8 @@ def list_suites():
                         if membership.server_command:
                             click.echo(f"         Command: {membership.server_command}")
                         
-                        # Add server description based on known servers
-                        description = _get_server_description(membership.server_name, membership.server_type)
+                        # Add server description from registry
+                        description = await _get_server_description(membership.server_name, membership.server_type)
                         if description:
                             click.echo(f"         Description: {description}")
                 else:
@@ -299,8 +296,8 @@ def show_suite(suite_id: str):
                     
                     click.echo(f"\n{i}. {role_emoji}{type_emoji} {membership.server_name}")
                     
-                    # Add description
-                    description = _get_server_description(membership.server_name, membership.server_type)
+                    # Add description from registry
+                    description = await _get_server_description(membership.server_name, membership.server_type)
                     if description:
                         click.echo(f"   Description: {description}")
                     
