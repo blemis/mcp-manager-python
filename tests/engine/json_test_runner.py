@@ -208,15 +208,15 @@ class JsonTestRunner:
             return None
     
     async def run_scenarios(self, 
-                           scenarios: List[ScenarioMetadata],
+                           scenarios: List[Dict[str, Any]],
                            batch_size: int = 5,
                            max_batch_duration: float = 300.0,
                            stop_on_failure: bool = False) -> List[ScenarioResult]:
         """
-        Execute a list of scenarios with batching and error handling.
+        Execute a list of scenario dictionaries with batching and error handling.
         
         Args:
-            scenarios: List of scenarios to execute
+            scenarios: List of scenario dictionaries to execute
             batch_size: Maximum scenarios per batch
             max_batch_duration: Maximum duration per batch (seconds)
             stop_on_failure: Whether to stop execution on first failure
@@ -230,33 +230,48 @@ class JsonTestRunner:
         
         logger.info(f"🚀 Starting execution of {len(scenarios)} scenarios")
         
-        # Create optimal batches
-        batches = self.parser.create_execution_batches(
-            scenarios, max_batch_duration, batch_size
-        )
-        
         all_results = []
         start_time = datetime.now()
         
-        for batch_num, batch in enumerate(batches, 1):
-            logger.info(f"📦 Executing batch {batch_num}/{len(batches)} ({len(batch)} scenarios)")
+        # Execute scenarios directly (no batching needed for now)
+        for scenario_data in scenarios:
+            scenario_info = scenario_data.get('scenario', {})
+            scenario_id = scenario_info.get('id', 'unknown')
+            scenario_name = scenario_info.get('name', 'Unknown Scenario')
             
-            batch_results = []
+            logger.info(f"🎯 Running: {scenario_name}")
             
-            for scenario_metadata in batch:
-                logger.info(f"🎯 Running: {scenario_metadata.name}")
+            try:
+                # Execute the scenario using the test engine
+                result = await self.engine.execute_scenario(scenario_data)
+                all_results.append(result)
                 
-                # Load the full scenario
-                scenario_data = self.parser.load_scenario(scenario_metadata.file_path)
-                if not scenario_data:
-                    # Create a failure result for scenarios that couldn't be loaded
-                    result = ScenarioResult(
-                        scenario_id=scenario_metadata.id,
-                        scenario_name=scenario_metadata.name,
-                        success=False,
-                        duration=0.0,
-                        step_results=[],
-                        validation_results={},
+                # Update scenario stats in database if we have the ID
+                if scenario_id != 'unknown':
+                    try:
+                        from src.mcp_manager.core.test_management.database import TestManagementDB
+                        from pathlib import Path
+                        
+                        test_db_path = Path(__file__).parent.parent / "fixtures" / "test_suites.db"
+                        db = TestManagementDB(test_db_path)
+                        db.update_scenario_stats(scenario_id, result.success, result.duration)
+                    except Exception as e:
+                        logger.debug(f"Failed to update stats for {scenario_id}: {e}")
+                
+                if stop_on_failure and not result.success:
+                    logger.warning("🛑 Stopping execution due to failure")
+                    break
+                    
+            except Exception as e:
+                logger.error(f"❌ Scenario execution failed with exception: {e}")
+                
+                result = ScenarioResult(
+                    scenario_id=scenario_id,
+                    scenario_name=scenario_name,
+                    success=False,
+                    duration=0.0,
+                    step_results=[],
+                    validation_results={},
                         cleanup_performed=False,
                         error_message="Failed to load scenario data"
                     )
@@ -475,13 +490,18 @@ class JsonTestRunner:
         for category, category_scenarios in categories.items():
             print(f"\\n📁 {category.upper()} ({len(category_scenarios)} scenarios)")
             for scenario in category_scenarios:
-                priority_emoji = {"critical": "🔴", "high": "🟡", "medium": "🔵", "low": "⚪"}.get(scenario.priority, "⚪")
-                print(f"   {priority_emoji} {scenario.name}")
-                print(f"      ID: {scenario.id}")
-                print(f"      Priority: {scenario.priority}")
-                print(f"      Duration: ~{scenario.estimated_duration:.0f}s")
-                if scenario.required_servers:
-                    print(f"      Servers: {', '.join(scenario.required_servers)}")
+                scenario_info = scenario.get('scenario', {})
+                priority = scenario_info.get('priority', 'medium')
+                priority_emoji = {"critical": "🔴", "high": "🟡", "medium": "🔵", "low": "⚪"}.get(priority, "⚪")
+                print(f"   {priority_emoji} {scenario_info.get('name', 'Unknown')}")
+                print(f"      ID: {scenario_info.get('id', 'unknown')}")
+                print(f"      Priority: {priority}")
+                
+                # Get required servers from mcp_requirements
+                mcp_reqs = scenario.get('mcp_requirements', {})
+                required_servers = [s.get('name', '') for s in mcp_reqs.get('required_servers', [])]
+                if required_servers:
+                    print(f"      Servers: {', '.join(required_servers)}")
 
 async def main():
     """CLI interface for the JSON test runner."""
