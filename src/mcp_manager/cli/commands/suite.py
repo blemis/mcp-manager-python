@@ -470,6 +470,7 @@ def suite_commands(cli_context):
                 console.print("[bold blue]📊 Suite Summary[/bold blue]")
                 console.print(f"Total Suites: [cyan]{summary.get('total_suites', 0)}[/cyan]")
                 console.print(f"Total Server Memberships: [cyan]{summary.get('total_memberships', 0)}[/cyan]")
+                console.print(f"Expanded Server Count: [cyan]{summary.get('expanded_server_count', 0)}[/cyan] [dim](Docker Desktop servers counted individually)[/dim]")
                 console.print(f"Active Suites: [cyan]{summary.get('active_suites', 0)}[/cyan]")
                 
                 categories = summary.get('categories', {})
@@ -490,5 +491,99 @@ def suite_commands(cli_context):
                 console.print(f"[red]Failed to get suite summary: {e}[/red]")
         
         asyncio.run(show_summary())
+    
+    
+    @suite.command("remove-suite")
+    @click.argument("suite_id")
+    @click.option("--force", "-f", is_flag=True, help="Skip confirmation prompt")
+    @handle_errors
+    def suite_remove_suite(suite_id: str, force: bool):
+        """Remove all servers from a suite while keeping the suite definition."""
+        
+        async def remove_suite_servers():
+            try:
+                from mcp_manager.core.suite_manager import suite_manager
+                
+                # Get suite info first
+                suite = await suite_manager.get_suite(suite_id)
+                if not suite:
+                    console.print(f"[red]❌ Suite '{suite_id}' not found[/red]")
+                    console.print(f"[yellow]💡 Available suites:[/yellow]")
+                    
+                    all_suites = await suite_manager.list_suites()
+                    for available_suite in all_suites:
+                        console.print(f"   • [cyan]{available_suite.id}[/cyan]: {available_suite.name}")
+                    return
+                
+                if not suite.memberships:
+                    console.print(f"[yellow]📭 Suite '{suite.name}' has no servers to remove[/yellow]")
+                    return
+                
+                server_count = len(suite.memberships)
+                console.print(f"[blue]📦 Suite: {suite.name}[/blue]")
+                console.print(f"Servers to remove: {server_count}")
+                
+                # Show servers that will be removed
+                console.print(f"\\n[dim]🔍 Servers that will be removed from Claude Code:[/dim]")
+                for membership in sorted(suite.memberships, key=lambda m: m.priority, reverse=True):
+                    console.print(f"   • [cyan]{membership.server_name}[/cyan] (role: {membership.role}, priority: {membership.priority})")
+                
+                # Confirmation
+                if not force:
+                    try:
+                        response = input(f"\\nRemove {server_count} servers from Claude Code? The suite definition will remain intact. [y/N]: ")
+                        if response.lower() not in ['y', 'yes']:
+                            console.print("[dim]Removal cancelled[/dim]")
+                            return
+                    except (EOFError, KeyboardInterrupt):
+                        console.print("\\n[dim]Removal cancelled[/dim]")
+                        return
+                
+                # Remove each server from Claude Code
+                manager = cli_context.get_manager()
+                removed_count = 0
+                failed_count = 0
+                
+                console.print(f"\\n[blue]🚀 Removing servers from Claude Code...[/blue]")
+                
+                for membership in sorted(suite.memberships, key=lambda m: m.priority, reverse=True):
+                    server_name = membership.server_name
+                    
+                    try:
+                        console.print(f"   🔄 Removing [cyan]{server_name}[/cyan]...")
+                        
+                        # Check if server exists in Claude Code
+                        existing_servers = await manager.list_servers()
+                        server_exists = any(s.name == server_name for s in existing_servers)
+                        
+                        if not server_exists:
+                            console.print(f"   ⏭️  [yellow]Skipped[/yellow]: {server_name} not found in Claude Code")
+                            continue
+                        
+                        # Remove server from Claude Code
+                        from mcp_manager.core.models import ServerScope
+                        success = await manager.remove_server(server_name, ServerScope.USER)
+                        
+                        if success:
+                            console.print(f"   ✅ [green]Removed[/green]: {server_name}")
+                            removed_count += 1
+                        else:
+                            console.print(f"   ❌ [red]Failed[/red]: Could not remove server '{server_name}'")
+                            failed_count += 1
+                                
+                    except Exception as e:
+                        console.print(f"   ❌ [red]Failed[/red]: {server_name} - {e}")
+                        failed_count += 1
+                
+                console.print(f"\\n🎯 [green]Suite Server Removal Complete![/green]")
+                console.print(f"   ✅ Removed: {removed_count}")
+                console.print(f"   ❌ Failed: {failed_count}")
+                console.print(f"\\n[dim]💡 Suite definition '{suite.name}' remains intact for future reinstallation[/dim]")
+                console.print(f"[dim]💡 To reinstall: [cyan]mcp-manager install-suite --suite-name {suite_id}[/cyan][/dim]")
+                
+            except Exception as e:
+                console.print(f"[red]❌ Failed to remove suite servers: {e}[/red]")
+        
+        asyncio.run(remove_suite_servers())
     
     return [install_suite, suite]

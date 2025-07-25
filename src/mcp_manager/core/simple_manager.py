@@ -68,6 +68,15 @@ class SimpleMCPManager:
                 logger.debug(f"Sync blocked: only {time_since_operation:.1f}s since last operation (need {cls._operation_cooldown}s)")
             return is_safe
     
+    def list_servers_fast(self) -> List[Server]:
+        """
+        Fast server listing from config files only (no claude mcp list call).
+        
+        Returns:
+            List of servers from Claude's configuration files
+        """
+        return self.claude.list_servers()
+    
     async def list_servers(self) -> List[Server]:
         """
         List all MCP servers, expanding docker-gateway to show individual servers.
