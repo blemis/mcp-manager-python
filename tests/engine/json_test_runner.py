@@ -34,9 +34,9 @@ class JsonTestRunner:
                           category: Optional[str] = None,
                           priority: Optional[str] = None,
                           tags: Optional[List[str]] = None,
-                          created_by: Optional[str] = None) -> List[ScenarioMetadata]:
+                          created_by: Optional[str] = None) -> List[Dict[str, Any]]:
         """
-        Discover scenarios matching the given criteria.
+        Discover scenarios from database matching the given criteria.
         
         Args:
             category: Filter by category (smoke, core, workflow, etc.)
@@ -45,26 +45,167 @@ class JsonTestRunner:
             created_by: Filter by creator (ai, admin, system, migration)
             
         Returns:
-            List of matching scenario metadata
+            List of scenario dictionaries ready for execution
         """
-        logger.info("🔍 Discovering test scenarios...")
+        logger.info("🔍 Discovering test scenarios from database...")
         
-        scenarios = self.parser.discover_scenarios(
-            category_filter=category,
-            priority_filter=priority,
-            tag_filter=tags,
-            created_by_filter=created_by
-        )
-        
-        # Check for duplicates
-        duplicates = self.parser.detect_duplicate_scenarios(scenarios)
-        if duplicates:
-            logger.warning(f"⚠️  Found {len(duplicates)} potential duplicate scenarios")
-            for dup1, dup2 in duplicates[:3]:  # Show first 3
-                logger.warning(f"   • '{dup1.name}' vs '{dup2.name}'")
-        
-        logger.info(f"📋 Discovered {len(scenarios)} scenarios")
-        return scenarios
+        try:
+            # Import database components
+            from src.mcp_manager.core.test_management.database import TestManagementDB
+            from src.mcp_manager.core.test_management.category_manager import TestCategoryManager
+            from pathlib import Path
+            import json
+            
+            # Initialize database
+            test_db_path = Path(__file__).parent.parent / "fixtures" / "test_suites.db"
+            db = TestManagementDB(test_db_path)
+            category_manager = TestCategoryManager(test_db_path)
+            
+            # Map CLI category to database category if needed
+            if category:
+                category_mapping = {
+                    'unit': 'basic-commands',
+                    'smoke': 'basic-commands', 
+                    'server': 'server-management',
+                    'suite': 'suite-management',
+                    'quality': 'quality-tracking',
+                    'error': 'error-handling',
+                    'workflow': 'workflows',
+                }
+                mapped_category = category_mapping.get(category, category)
+                logger.debug(f"Mapped category '{category}' to '{mapped_category}'")
+                category = mapped_category
+            
+            # Get scenarios from database
+            db_scenarios = db.list_test_scenarios(
+                category=category,
+                enabled_only=True
+            )
+            
+            # If no scenarios in database, create default ones for the category
+            if not db_scenarios and category:
+                logger.info(f"No scenarios found for category {category}, creating default scenario")
+                default_scenario = self._create_default_scenario_for_category(category, db, category_manager)
+                if default_scenario:
+                    db_scenarios = [default_scenario]
+            
+            # Convert database scenarios to JSON format
+            full_scenarios = []
+            for db_scenario in db_scenarios:
+                try:
+                    scenario_dict = json.loads(db_scenario.scenario_json)
+                    
+                    # Apply additional filters
+                    if priority and scenario_dict.get('scenario', {}).get('priority') != priority:
+                        continue
+                        
+                    if created_by and scenario_dict.get('scenario', {}).get('created_by') != created_by:
+                        continue
+                        
+                    if tags:
+                        scenario_tags = scenario_dict.get('scenario', {}).get('tags', [])
+                        if not any(tag in scenario_tags for tag in tags):
+                            continue
+                    
+                    full_scenarios.append(scenario_dict)
+                except Exception as e:
+                    logger.error(f"Failed to parse scenario {db_scenario.id}: {e}")
+            
+            logger.info(f"📋 Discovered {len(full_scenarios)} scenarios from database")
+            return full_scenarios
+            
+        except Exception as e:
+            logger.error(f"Failed to discover scenarios from database: {e}")
+            return []
+    
+    def _create_default_scenario_for_category(self, category: str, db, category_manager):
+        """Create a default test scenario for a category if none exists."""
+        try:
+            import json
+            from datetime import datetime
+            from src.mcp_manager.core.test_management.models import TestScenario
+            
+            # Get category info from database
+            category_info = db.get_test_category(category)
+            if not category_info:
+                logger.warning(f"Category {category} not found in database")
+                return None
+            
+            # Get the suite for this category
+            suite_id = db.get_suite_for_category(category)
+            if not suite_id:
+                logger.warning(f"No suite found for category {category}")
+                return None
+            
+            # Create basic scenario JSON
+            scenario_json = {
+                "schema_version": "1.0",
+                "scenario": {
+                    "id": f"default_{category.replace('-', '_')}_test",
+                    "name": f"Default {category_info.name} Test",
+                    "description": f"Default test scenario for {category_info.description}",
+                    "created_by": "system",
+                    "category": category,
+                    "priority": "medium",
+                    "tags": ["system-generated", category]
+                },
+                "mcp_requirements": {
+                    "required_servers": [],
+                    "optional_servers": [],
+                    "scope": "user"
+                },
+                "test_steps": [
+                    {
+                        "step_id": 1,
+                        "action": "cli_command",
+                        "command": "list",
+                        "expect": "success",
+                        "timeout": 15,
+                        "description": f"Test basic functionality for {category}"
+                    }
+                ],
+                "validation": {
+                    "success_criteria": [
+                        {
+                            "type": "all_steps_pass",
+                            "description": "All test steps must complete successfully"
+                        }
+                    ],
+                    "cleanup_strategy": "minimal"
+                },
+                "metadata": {
+                    "created_date": datetime.now().isoformat(),
+                    "last_modified": datetime.now().isoformat(),
+                    "execution_count": 0,
+                    "success_rate": 0.0,
+                    "average_duration": 0.0
+                }
+            }
+            
+            # Create TestScenario object
+            test_scenario = TestScenario(
+                id=scenario_json["scenario"]["id"],
+                name=scenario_json["scenario"]["name"],
+                description=scenario_json["scenario"]["description"],
+                category=category,
+                priority="medium",
+                created_by="system",
+                scenario_json=json.dumps(scenario_json, indent=2),
+                tags=["system-generated", category],
+                suite_id=suite_id
+            )
+            
+            # Save to database
+            if db.create_test_scenario(test_scenario):
+                logger.info(f"Created default scenario for category {category}")
+                return test_scenario
+            else:
+                logger.error(f"Failed to create default scenario for category {category}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error creating default scenario for {category}: {e}")
+            return None
     
     async def run_scenarios(self, 
                            scenarios: List[ScenarioMetadata],

@@ -25,14 +25,15 @@ class JsonTestRunnerCLI:
     def __init__(self):
         self.runner = JsonTestRunner()
         
-        # Category mapping for backward compatibility with pytest naming
+        # Category mapping from CLI names to database category IDs
         self.category_mapping = {
-            # Legacy pytest categories -> JSON categories
-            'unit': 'core',           # Unit tests map to core functionality
-            'server': 'integration',  # Server management is integration testing
-            'suite': 'workflow',      # Suite management is workflow testing  
-            'quality': 'performance', # Quality tracking maps to performance
-            'error': 'regression',    # Error handling maps to regression testing
+            'unit': 'basic-commands',      # Unit tests map to basic-commands category
+            'smoke': 'basic-commands',     # Smoke tests also use basic commands
+            'server': 'server-management', # Server tests map to server-management category
+            'suite': 'suite-management',   # Suite tests map to suite-management category
+            'quality': 'quality-tracking', # Quality tests map to quality-tracking category
+            'error': 'error-handling',     # Error tests map to error-handling category
+            'workflow': 'workflows',       # Workflow tests map to workflows category
         }
     
     def map_category(self, category: str) -> str:

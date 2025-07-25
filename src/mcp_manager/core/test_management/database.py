@@ -83,6 +83,9 @@ class TestManagementDB:
                 )
             ''')
             
+            # Create test scenarios table
+            self._create_test_scenarios_table(conn)
+            
             # Create indexes
             conn.execute('CREATE INDEX IF NOT EXISTS idx_categories_scope ON test_categories (scope)')
             conn.execute('CREATE INDEX IF NOT EXISTS idx_mappings_category ON test_suite_mappings (test_category_id)')
@@ -240,3 +243,222 @@ class TestManagementDB:
                 return category
         
         return None
+    
+    def _create_test_scenarios_table(self, conn):
+        """Create test scenarios table for JSON scenarios."""
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS test_scenarios (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                description TEXT NOT NULL,
+                category TEXT NOT NULL,
+                priority TEXT NOT NULL,
+                created_by TEXT NOT NULL,
+                scenario_json TEXT NOT NULL,
+                tags TEXT,  -- JSON array of tags
+                confidence_score REAL DEFAULT 0.0,
+                ai_reasoning TEXT,
+                suite_id TEXT,
+                execution_count INTEGER DEFAULT 0,
+                success_rate REAL DEFAULT 0.0,
+                average_duration REAL DEFAULT 0.0,
+                created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                last_modified TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                last_executed TIMESTAMP,
+                enabled BOOLEAN DEFAULT 1,
+                FOREIGN KEY (suite_id) REFERENCES test_suites(id)
+            )
+        ''')
+        
+        # Create indexes for efficient queries
+        conn.execute('CREATE INDEX IF NOT EXISTS idx_scenarios_category ON test_scenarios(category)')
+        conn.execute('CREATE INDEX IF NOT EXISTS idx_scenarios_priority ON test_scenarios(priority)')
+        conn.execute('CREATE INDEX IF NOT EXISTS idx_scenarios_suite ON test_scenarios(suite_id)')
+        conn.execute('CREATE INDEX IF NOT EXISTS idx_scenarios_enabled ON test_scenarios(enabled)')
+    
+    def create_test_scenario(self, scenario: 'TestScenario') -> bool:
+        """Create a new test scenario in the database."""
+        try:
+            with self._get_connection() as conn:
+                conn.execute('''
+                    INSERT INTO test_scenarios (
+                        id, name, description, category, priority, created_by,
+                        scenario_json, tags, confidence_score, ai_reasoning,
+                        suite_id, execution_count, success_rate, average_duration,
+                        created_date, last_modified, enabled
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    scenario.id, scenario.name, scenario.description,
+                    scenario.category, scenario.priority, scenario.created_by,
+                    scenario.scenario_json, json.dumps(scenario.tags),
+                    scenario.confidence_score, scenario.ai_reasoning,
+                    scenario.suite_id, scenario.execution_count,
+                    scenario.success_rate, scenario.average_duration,
+                    scenario.created_date, scenario.last_modified, scenario.enabled
+                ))
+            logger.info(f"Created test scenario: {scenario.id}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to create test scenario {scenario.id}: {e}")
+            return False
+    
+    def get_test_scenario(self, scenario_id: str) -> Optional['TestScenario']:
+        """Retrieve a test scenario by ID."""
+        try:
+            with self._get_connection() as conn:
+                row = conn.execute('''
+                    SELECT * FROM test_scenarios WHERE id = ?
+                ''', (scenario_id,)).fetchone()
+                
+                if row:
+                    from .models import TestScenario
+                    return TestScenario(
+                        id=row['id'],
+                        name=row['name'],
+                        description=row['description'],
+                        category=row['category'],
+                        priority=row['priority'],
+                        created_by=row['created_by'],
+                        scenario_json=row['scenario_json'],
+                        tags=json.loads(row['tags']) if row['tags'] else [],
+                        confidence_score=row['confidence_score'],
+                        ai_reasoning=row['ai_reasoning'],
+                        suite_id=row['suite_id'],
+                        execution_count=row['execution_count'],
+                        success_rate=row['success_rate'],
+                        average_duration=row['average_duration'],
+                        created_date=row['created_date'],
+                        last_modified=row['last_modified'],
+                        last_executed=row['last_executed'],
+                        enabled=bool(row['enabled'])
+                    )
+        except Exception as e:
+            logger.error(f"Failed to get test scenario {scenario_id}: {e}")
+        
+        return None
+    
+    def list_test_scenarios(self, category: Optional[str] = None, 
+                           suite_id: Optional[str] = None,
+                           enabled_only: bool = True) -> List['TestScenario']:
+        """List test scenarios with optional filtering."""
+        try:
+            with self._get_connection() as conn:
+                query = 'SELECT * FROM test_scenarios WHERE 1=1'
+                params = []
+                
+                if category:
+                    query += ' AND category = ?'
+                    params.append(category)
+                
+                if suite_id:
+                    query += ' AND suite_id = ?'
+                    params.append(suite_id)
+                
+                if enabled_only:
+                    query += ' AND enabled = 1'
+                
+                query += ' ORDER BY priority DESC, created_date DESC'
+                
+                rows = conn.execute(query, params).fetchall()
+                
+                from .models import TestScenario
+                scenarios = []
+                for row in rows:
+                    scenarios.append(TestScenario(
+                        id=row['id'],
+                        name=row['name'],
+                        description=row['description'],
+                        category=row['category'],
+                        priority=row['priority'],
+                        created_by=row['created_by'],
+                        scenario_json=row['scenario_json'],
+                        tags=json.loads(row['tags']) if row['tags'] else [],
+                        confidence_score=row['confidence_score'],
+                        ai_reasoning=row['ai_reasoning'],
+                        suite_id=row['suite_id'],
+                        execution_count=row['execution_count'],
+                        success_rate=row['success_rate'],
+                        average_duration=row['average_duration'],
+                        created_date=row['created_date'],
+                        last_modified=row['last_modified'],
+                        last_executed=row['last_executed'],
+                        enabled=bool(row['enabled'])
+                    ))
+                
+                return scenarios
+                
+        except Exception as e:
+            logger.error(f"Failed to list test scenarios: {e}")
+            return []
+    
+    def update_test_scenario(self, scenario: 'TestScenario') -> bool:
+        """Update an existing test scenario."""
+        try:
+            with self._get_connection() as conn:
+                from datetime import datetime
+                scenario.last_modified = datetime.now()
+                conn.execute('''
+                    UPDATE test_scenarios SET
+                        name = ?, description = ?, category = ?, priority = ?,
+                        scenario_json = ?, tags = ?, confidence_score = ?,
+                        ai_reasoning = ?, suite_id = ?, execution_count = ?,
+                        success_rate = ?, average_duration = ?, last_modified = ?,
+                        last_executed = ?, enabled = ?
+                    WHERE id = ?
+                ''', (
+                    scenario.name, scenario.description, scenario.category,
+                    scenario.priority, scenario.scenario_json, json.dumps(scenario.tags),
+                    scenario.confidence_score, scenario.ai_reasoning, scenario.suite_id,
+                    scenario.execution_count, scenario.success_rate, scenario.average_duration,
+                    scenario.last_modified, scenario.last_executed, scenario.enabled,
+                    scenario.id
+                ))
+            logger.info(f"Updated test scenario: {scenario.id}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to update test scenario {scenario.id}: {e}")
+            return False
+    
+    def delete_test_scenario(self, scenario_id: str) -> bool:
+        """Delete a test scenario."""
+        try:
+            with self._get_connection() as conn:
+                conn.execute('DELETE FROM test_scenarios WHERE id = ?', (scenario_id,))
+            logger.info(f"Deleted test scenario: {scenario_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to delete test scenario {scenario_id}: {e}")
+            return False
+    
+    def update_scenario_stats(self, scenario_id: str, success: bool, duration: float) -> bool:
+        """Update scenario execution statistics."""
+        try:
+            with self._get_connection() as conn:
+                # Get current stats
+                row = conn.execute('''
+                    SELECT execution_count, success_rate, average_duration 
+                    FROM test_scenarios WHERE id = ?
+                ''', (scenario_id,)).fetchone()
+                
+                if row:
+                    old_count = row['execution_count']
+                    old_success_rate = row['success_rate']
+                    old_avg_duration = row['average_duration']
+                    
+                    # Calculate new stats
+                    new_count = old_count + 1
+                    new_success_rate = ((old_success_rate * old_count) + (1 if success else 0)) / new_count
+                    new_avg_duration = ((old_avg_duration * old_count) + duration) / new_count
+                    
+                    # Update with new stats
+                    conn.execute('''
+                        UPDATE test_scenarios SET 
+                            execution_count = ?, success_rate = ?, average_duration = ?,
+                            last_executed = CURRENT_TIMESTAMP
+                        WHERE id = ?
+                    ''', (new_count, new_success_rate, new_avg_duration, scenario_id))
+                    
+                    return True
+        except Exception as e:
+            logger.error(f"Failed to update scenario stats for {scenario_id}: {e}")
+            return False

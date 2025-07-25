@@ -1,0 +1,26 @@
+{
+  "timestamp": "2025-07-25T13:14:59.785328",
+  "summary": {
+    "total_scenarios": 1,
+    "successful_scenarios": 1,
+    "failed_scenarios": 0,
+    "success_rate": 100.0,
+    "total_duration": 1.373891830444336,
+    "average_duration": 1.373891830444336
+  },
+  "scenarios": [
+    {
+      "id": "basic_commands_smoke_test",
+      "name": "Basic Commands Smoke Test",
+      "success": true,
+      "duration": 1.373891830444336,
+      "steps_executed": 5,
+      "steps_passed": 5,
+      "validation_results": {
+        "all_steps_pass": true,
+        "specific_output": true
+      },
+      "cleanup_performed": true
+    }
+  ]
+}
