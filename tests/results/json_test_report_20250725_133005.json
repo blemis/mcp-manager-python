@@ -1,0 +1,24 @@
+{
+  "timestamp": "2025-07-25T13:30:05.234806",
+  "summary": {
+    "total_scenarios": 1,
+    "successful_scenarios": 0,
+    "failed_scenarios": 1,
+    "success_rate": 0.0,
+    "total_duration": 0.0021278858184814453,
+    "average_duration": 0.0021278858184814453
+  },
+  "scenarios": [
+    {
+      "id": "default_basic_commands_test",
+      "name": "Default Basic Commands Test",
+      "success": false,
+      "duration": 0.0021278858184814453,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": false,
+      "error": "Validation failed: ['Low confidence score (0) - consider improving scenario quality', 'Cleanup required but no cleanup steps defined']"
+    }
+  ]
+}

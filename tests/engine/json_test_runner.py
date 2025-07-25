@@ -143,10 +143,11 @@ class JsonTestRunner:
                 "scenario": {
                     "id": f"default_{category.replace('-', '_')}_test",
                     "name": f"Default {category_info.name} Test",
-                    "description": f"Default test scenario for {category_info.description}",
+                    "description": f"Default test scenario for {category_info.description} - tests basic CLI functionality",
                     "created_by": "system",
                     "category": category,
                     "priority": "medium",
+                    "confidence_score": 0.8,
                     "tags": ["system-generated", category]
                 },
                 "mcp_requirements": {
@@ -171,7 +172,9 @@ class JsonTestRunner:
                             "description": "All test steps must complete successfully"
                         }
                     ],
-                    "cleanup_strategy": "minimal"
+                    "cleanup_strategy": "minimal",
+                    "cleanup_required": False,
+                    "cleanup_steps": []
                 },
                 "metadata": {
                     "created_date": datetime.now().isoformat(),
@@ -272,52 +275,13 @@ class JsonTestRunner:
                     duration=0.0,
                     step_results=[],
                     validation_results={},
-                        cleanup_performed=False,
-                        error_message="Failed to load scenario data"
-                    )
-                    batch_results.append(result)
-                    continue
+                    cleanup_performed=False,
+                    error_message=str(e)
+                )
+                all_results.append(result)
                 
-                # Execute the scenario
-                try:
-                    result = await self.engine.execute_scenario(scenario_data)
-                    batch_results.append(result)
-                    
-                    # Log result
-                    status_emoji = "✅" if result.success else "❌"
-                    logger.info(f"   {status_emoji} {result.scenario_name} ({result.duration:.2f}s)")
-                    
-                    # Stop on failure if requested
-                    if not result.success and stop_on_failure:
-                        logger.error("❌ Stopping execution due to failure")
-                        all_results.extend(batch_results)
-                        return all_results
-                        
-                except Exception as e:
-                    logger.error(f"❌ Scenario execution failed with exception: {e}")
-                    
-                    result = ScenarioResult(
-                        scenario_id=scenario_metadata.id,
-                        scenario_name=scenario_metadata.name,
-                        success=False,
-                        duration=0.0,
-                        step_results=[],
-                        validation_results={},
-                        cleanup_performed=False,
-                        error_message=str(e)
-                    )
-                    batch_results.append(result)
-                    
-                    if stop_on_failure:
-                        all_results.extend(batch_results)
-                        return all_results
-            
-            all_results.extend(batch_results)
-            
-            # Print batch summary
-            batch_success = sum(1 for r in batch_results if r.success)
-            batch_total = len(batch_results)
-            logger.info(f"📊 Batch {batch_num} complete: {batch_success}/{batch_total} passed")
+                if stop_on_failure:
+                    break
         
         total_duration = (datetime.now() - start_time).total_seconds()
         total_success = sum(1 for r in all_results if r.success)

@@ -1,0 +1,25 @@
+{
+  "timestamp": "2025-07-25T13:48:18.386761",
+  "summary": {
+    "total_scenarios": 1,
+    "successful_scenarios": 1,
+    "failed_scenarios": 0,
+    "success_rate": 100.0,
+    "total_duration": 0.9284539222717285,
+    "average_duration": 0.9284539222717285
+  },
+  "scenarios": [
+    {
+      "id": "default_server_management_test",
+      "name": "Default Server Management Test",
+      "success": true,
+      "duration": 0.9284539222717285,
+      "steps_executed": 1,
+      "steps_passed": 1,
+      "validation_results": {
+        "all_steps_pass": true
+      },
+      "cleanup_performed": true
+    }
+  ]
+}

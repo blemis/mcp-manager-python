@@ -85,7 +85,9 @@ class SuiteCRUDOperations:
                         role=row['role'],
                         priority=row['priority'],
                         config_overrides=json.loads(row['config_overrides']),
-                        added_at=datetime.fromisoformat(row['added_at'])
+                        added_at=datetime.fromisoformat(row['added_at']),
+                        server_type=row['server_type'] if 'server_type' in row.keys() else 'custom',
+                        server_command=row['server_command'] if 'server_command' in row.keys() else ''
                     )
                     memberships.append(membership)
                 

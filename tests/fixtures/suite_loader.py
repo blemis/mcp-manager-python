@@ -52,7 +52,11 @@ class SuiteLoader:
             # Deploy each server in the suite
             for membership in suite.memberships:
                 server_name = membership.server_name
-                config = membership.config_overrides
+                config = membership.config_overrides.copy()  # Make a copy to avoid modifying original
+                
+                # Add server installation info from membership
+                config["type"] = membership.server_type
+                config["command"] = membership.server_command
                 
                 try:
                     # Skip servers marked as non-existent (for negative testing)

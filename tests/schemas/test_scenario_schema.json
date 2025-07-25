@@ -39,7 +39,7 @@
         },
         "category": {
           "type": "string",
-          "enum": ["core", "workflow", "integration", "performance", "security", "regression", "smoke"],
+          "enum": ["core", "workflow", "integration", "performance", "security", "regression", "smoke", "basic-commands", "server-management", "suite-management", "quality-tracking", "error-handling", "workflows"],
           "description": "Test category for organization and filtering"
         },
         "confidence_score": {

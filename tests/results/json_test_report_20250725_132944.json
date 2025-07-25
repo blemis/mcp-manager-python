@@ -1,0 +1,24 @@
+{
+  "timestamp": "2025-07-25T13:29:44.385557",
+  "summary": {
+    "total_scenarios": 1,
+    "successful_scenarios": 0,
+    "failed_scenarios": 1,
+    "success_rate": 0.0,
+    "total_duration": 0.0020689964294433594,
+    "average_duration": 0.0020689964294433594
+  },
+  "scenarios": [
+    {
+      "id": "default_basic_commands_test",
+      "name": "Default Basic Commands Test",
+      "success": false,
+      "duration": 0.0020689964294433594,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": false,
+      "error": "Validation failed: [\"Schema validation error: 'basic-commands' is not one of ['core', 'workflow', 'integration', 'performance', 'security', 'regression', 'smoke']\", '  Path: scenario -> category']"
+    }
+  ]
+}
