@@ -111,61 +111,17 @@ def create_database():
     
     print("✅ Tables created")
     
-    # Insert sample data
-    print("📦 Adding sample data...")
-    
-    now = datetime.now().isoformat()
-    
-    # Sample servers
-    servers = [
-        ("dd-SQLite", "SQLite database operations and business intelligence", "docker-desktop", 
-         "docker-desktop://SQLite", "SQLite", None, None, None, None, 
-         json.dumps(["database", "sql", "docker-desktop"]), 
-         json.dumps({"source": "quick_init"}), now, now, now),
-        ("dd-Ref", "Powerful search tool connecting coding to documentation", "docker-desktop",
-         "docker-desktop://Ref", "Ref", None, None, None, None,
-         json.dumps(["search", "documentation", "docker-desktop"]),
-         json.dumps({"source": "quick_init"}), now, now, now)
-    ]
-    
-    conn.executemany("""
-        INSERT INTO mcp_server_registry (
-            server_name, description, server_type, install_command, package_name,
-            version, author, repository_url, documentation_url, tags,
-            discovery_metadata, last_discovered, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, servers)
-    
-    # Sample suite
-    conn.execute("""
-        INSERT INTO mcp_suites (
-            id, name, description, category, purpose, config, created_at, updated_at, created_by
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, ("core-testing", "Core Testing Suite", "Essential MCP servers for core functionality testing",
-          "core", "Automated testing", "{}", now, now, "quick_init"))
-    
-    # Suite memberships
-    memberships = [
-        ("core-testing", "dd-SQLite", "primary", 90, "{}", "Primary database server", now, "quick_init"),
-        ("core-testing", "dd-Ref", "secondary", 80, "{}", "Documentation and search", now, "quick_init")
-    ]
-    
-    conn.executemany("""
-        INSERT INTO suite_memberships (
-            suite_id, server_name, role, priority, suite_specific_config,
-            notes, added_at, added_by
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    """, memberships)
+    # Database is ready - NO hardcoded servers!
+    print("✅ Empty database created - ready for discovery system to populate")
     
     conn.commit()
     conn.close()
     
-    print("✅ Sample data added")
     print(f"📊 Database ready: {db_path}")
     print()
-    print("🧪 Test with:")
-    print("   sqlite3 data/mcp_manager.db 'SELECT * FROM mcp_server_registry;'")
-    print("   sqlite3 data/mcp_manager.db 'SELECT * FROM mcp_suites;'")
+    print("🧪 Next: Discovery system will populate servers automatically")
+    print("   Use: mcp-manager discover")
+    print("   Or: ./test unit (auto-populates during testing)")
     return True
 
 if __name__ == "__main__":

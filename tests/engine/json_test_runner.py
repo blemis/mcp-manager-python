@@ -77,8 +77,12 @@ class JsonTestRunner:
             from pathlib import Path
             import json
             
-            # Initialize database
-            test_db_path = Path(__file__).parent.parent / "fixtures" / "test_suites.db"
+            # Initialize database - use the new mcp_manager.db, not old test_suites.db
+            test_db_path = Path("data/mcp_manager.db")
+            if not test_db_path.exists():
+                logger.error(f"Database not found at {test_db_path} - run quick_init.py first")
+                return []
+            
             db = TestManagementDB(test_db_path)
             category_manager = TestCategoryManager(test_db_path)
             
@@ -103,12 +107,11 @@ class JsonTestRunner:
                 enabled_only=True
             )
             
-            # If no scenarios in database, create default ones for the category
-            if not db_scenarios and category:
-                logger.info(f"No scenarios found for category {category}, creating default scenario")
-                default_scenario = self._create_default_scenario_for_category(category, db, category_manager)
-                if default_scenario:
-                    db_scenarios = [default_scenario]
+            # NO FALLBACKS OR DEFAULTS - if no scenarios exist, fail immediately
+            if not db_scenarios:
+                logger.error(f"No scenarios found for category {category} - database must be populated with real scenarios")
+                logger.error("Use discovery system to populate database or create real test scenarios")
+                return []
             
             # Convert database scenarios to JSON format
             full_scenarios = []
@@ -138,98 +141,6 @@ class JsonTestRunner:
         except Exception as e:
             logger.error(f"Failed to discover scenarios from database: {e}")
             return []
-    
-    def _create_default_scenario_for_category(self, category: str, db, category_manager):
-        """Create a default test scenario for a category if none exists."""
-        try:
-            import json
-            from datetime import datetime
-            from src.mcp_manager.core.test_management.models import TestScenario
-            
-            # Get category info from database
-            category_info = db.get_test_category(category)
-            if not category_info:
-                logger.warning(f"Category {category} not found in database")
-                return None
-            
-            # Get the suite for this category
-            suite_id = db.get_suite_for_category(category)
-            if not suite_id:
-                logger.warning(f"No suite found for category {category}")
-                return None
-            
-            # Create basic scenario JSON
-            scenario_json = {
-                "schema_version": "1.0",
-                "scenario": {
-                    "id": f"default_{category.replace('-', '_')}_test",
-                    "name": f"Default {category_info.name} Test",
-                    "description": f"Default test scenario for {category_info.description} - tests basic CLI functionality",
-                    "created_by": "system",
-                    "category": category,
-                    "priority": "medium",
-                    "confidence_score": 0.8,
-                    "tags": ["system-generated", category]
-                },
-                "mcp_requirements": {
-                    "required_servers": [],
-                    "optional_servers": [],
-                    "scope": "user"
-                },
-                "test_steps": [
-                    {
-                        "step_id": 1,
-                        "action": "cli_command",
-                        "command": "list",
-                        "expect": "success",
-                        "timeout": 15,
-                        "description": f"Test basic functionality for {category}"
-                    }
-                ],
-                "validation": {
-                    "success_criteria": [
-                        {
-                            "type": "all_steps_pass",
-                            "description": "All test steps must complete successfully"
-                        }
-                    ],
-                    "cleanup_strategy": "minimal",
-                    "cleanup_required": False,
-                    "cleanup_steps": []
-                },
-                "metadata": {
-                    "created_date": datetime.now().isoformat(),
-                    "last_modified": datetime.now().isoformat(),
-                    "execution_count": 0,
-                    "success_rate": 0.0,
-                    "average_duration": 0.0
-                }
-            }
-            
-            # Create TestScenario object
-            test_scenario = TestScenario(
-                id=scenario_json["scenario"]["id"],
-                name=scenario_json["scenario"]["name"],
-                description=scenario_json["scenario"]["description"],
-                category=category,
-                priority="medium",
-                created_by="system",
-                scenario_json=json.dumps(scenario_json, indent=2),
-                tags=["system-generated", category],
-                suite_id=suite_id
-            )
-            
-            # Save to database
-            if db.create_test_scenario(test_scenario):
-                logger.info(f"Created default scenario for category {category}")
-                return test_scenario
-            else:
-                logger.error(f"Failed to create default scenario for category {category}")
-                return None
-                
-        except Exception as e:
-            logger.error(f"Error creating default scenario for {category}: {e}")
-            return None
     
     async def run_scenarios(self, 
                            scenarios: List[Dict[str, Any]],
