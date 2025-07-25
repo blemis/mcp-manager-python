@@ -13,6 +13,13 @@ from tests.utils.validators import OutputValidator, TestAssertions
 class TestBasicCommands:
     """Test basic CLI commands every user would try."""
     
+    @pytest.fixture(autouse=True)
+    def setup_suite(self, auto_suite_setup):
+        """Automatically setup appropriate suite for this test category."""
+        # The auto_suite_setup fixture automatically determines and loads 
+        # the correct suite based on this test file (test_basic_commands.py)
+        pass
+    
     def test_help_command(self, cli_runner):
         """Test main help command works and shows usage."""
         result = cli_runner.run_command("--help")

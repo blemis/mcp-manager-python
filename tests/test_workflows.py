@@ -13,6 +13,30 @@ from tests.utils.validators import OutputValidator, TestAssertions
 class TestUserOnboardingWorkflows:
     """Test complete user onboarding workflows."""
     
+    @pytest.fixture(autouse=True)
+    def setup_workflows_suite(self, suite_loader, suite_setup):
+        """Setup workflows test suite if available."""
+        if suite_loader and suite_setup:
+            import asyncio
+            
+            async def setup():
+                try:
+                    await suite_setup.create_workflows_test_suite()
+                    suite_data = await suite_loader.load_suite("workflows-test")
+                    print(f"🎯 Workflows Test Suite loaded: {len(suite_data.get('deployed_servers', {}))} servers")
+                    return suite_data
+                except Exception as e:
+                    print(f"⚠️  Could not load workflows suite: {e}")
+                    return None
+            
+            try:
+                self.suite_data = asyncio.run(setup())
+            except Exception:
+                self.suite_data = None
+        else:
+            self.suite_data = None
+    """Test complete user onboarding workflows."""
+    
     def test_new_user_discovery_to_installation(self, cli_runner, isolated_environment):
         """Test complete new user workflow: discover → install → configure."""
         # Step 1: New user explores available servers

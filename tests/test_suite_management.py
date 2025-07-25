@@ -13,6 +13,30 @@ from tests.utils.validators import OutputValidator, TestAssertions
 class TestSuiteCreation:
     """Test creating MCP server suites."""
     
+    @pytest.fixture(autouse=True)
+    def setup_suite_management_suite(self, suite_loader, suite_setup):
+        """Setup suite management test suite if available."""
+        if suite_loader and suite_setup:
+            import asyncio
+            
+            async def setup():
+                try:
+                    await suite_setup.create_suite_management_test_suite()
+                    suite_data = await suite_loader.load_suite("suite-management-test")
+                    print(f"🎯 Suite Management Test Suite loaded: {len(suite_data.get('deployed_servers', {}))} servers")
+                    return suite_data
+                except Exception as e:
+                    print(f"⚠️  Could not load suite management suite: {e}")
+                    return None
+            
+            try:
+                self.suite_data = asyncio.run(setup())
+            except Exception:
+                self.suite_data = None
+        else:
+            self.suite_data = None
+    """Test creating MCP server suites."""
+    
     def test_create_basic_suite(self, cli_runner, isolated_environment):
         """Test creating a basic suite with minimal parameters."""
         suite_name = "test-basic-suite"
@@ -100,6 +124,29 @@ class TestSuiteCreation:
 
 class TestSuiteServerManagement:
     """Test adding and removing servers from suites."""
+    
+    @pytest.fixture(autouse=True)
+    def setup_suite_management_suite(self, suite_loader, suite_setup):
+        """Setup suite management test suite if available."""
+        if suite_loader and suite_setup:
+            import asyncio
+            
+            async def setup():
+                try:
+                    await suite_setup.create_suite_management_test_suite()
+                    suite_data = await suite_loader.load_suite("suite-management-test")
+                    print(f"🎯 Suite Management Test Suite loaded: {len(suite_data.get('deployed_servers', {}))} servers")
+                    return suite_data
+                except Exception as e:
+                    print(f"⚠️  Could not load suite management suite: {e}")
+                    return None
+            
+            try:
+                self.suite_data = asyncio.run(setup())
+            except Exception:
+                self.suite_data = None
+        else:
+            self.suite_data = None
     
     def test_add_server_to_suite(self, cli_runner, isolated_environment):
         """Test adding servers to a suite."""
@@ -222,6 +269,29 @@ class TestSuiteServerManagement:
 class TestSuiteListing:
     """Test suite listing and filtering functionality."""
     
+    @pytest.fixture(autouse=True)
+    def setup_suite_management_suite(self, suite_loader, suite_setup):
+        """Setup suite management test suite if available."""
+        if suite_loader and suite_setup:
+            import asyncio
+            
+            async def setup():
+                try:
+                    await suite_setup.create_suite_management_test_suite()
+                    suite_data = await suite_loader.load_suite("suite-management-test")
+                    print(f"🎯 Suite Management Test Suite loaded: {len(suite_data.get('deployed_servers', {}))} servers")
+                    return suite_data
+                except Exception as e:
+                    print(f"⚠️  Could not load suite management suite: {e}")
+                    return None
+            
+            try:
+                self.suite_data = asyncio.run(setup())
+            except Exception:
+                self.suite_data = None
+        else:
+            self.suite_data = None
+    
     def test_list_empty_suites(self, cli_runner):
         """Test suite list with no suites."""
         result = cli_runner.run_command("suite list")
@@ -302,6 +372,29 @@ class TestSuiteListing:
 
 class TestSuiteDetails:
     """Test suite detail viewing functionality."""
+    
+    @pytest.fixture(autouse=True)
+    def setup_suite_management_suite(self, suite_loader, suite_setup):
+        """Setup suite management test suite if available."""
+        if suite_loader and suite_setup:
+            import asyncio
+            
+            async def setup():
+                try:
+                    await suite_setup.create_suite_management_test_suite()
+                    suite_data = await suite_loader.load_suite("suite-management-test")
+                    print(f"🎯 Suite Management Test Suite loaded: {len(suite_data.get('deployed_servers', {}))} servers")
+                    return suite_data
+                except Exception as e:
+                    print(f"⚠️  Could not load suite management suite: {e}")
+                    return None
+            
+            try:
+                self.suite_data = asyncio.run(setup())
+            except Exception:
+                self.suite_data = None
+        else:
+            self.suite_data = None
     
     def test_show_suite_details(self, cli_runner, isolated_environment):
         """Test showing detailed suite information."""

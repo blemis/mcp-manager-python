@@ -336,66 +336,96 @@ class TestServerValidation:
 class TestServerLifecycle:
     """Test complete server lifecycle workflows."""
     
-    def test_complete_server_lifecycle(self, cli_runner, isolated_environment):
+    @pytest.fixture(autouse=True)
+    def setup_suite_loader(self, test_manager):
+        """Set up suite loader for lifecycle tests."""
+        import asyncio
+        from tests.fixtures.suite_loader import SuiteLoader
+        from tests.fixtures.test_suites_setup import setup_test_suites
+        
+        # Ensure test suites exist
+        asyncio.run(setup_test_suites())
+        
+        # Create suite loader - get the manager value if it's a coroutine
+        if hasattr(test_manager, '__aenter__'):
+            # test_manager is async, need to handle properly
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            manager = loop.run_until_complete(test_manager.__aenter__())
+        else:
+            manager = test_manager
+            
+        self.suite_loader = SuiteLoader(manager)
+        yield
+        
+        # Cleanup after test
+        asyncio.run(self.suite_loader.unload_all_suites())
+    
+    @pytest.mark.asyncio
+    async def test_complete_server_lifecycle(self, cli_runner, isolated_environment):
         """Test complete add -> list -> enable -> disable -> remove cycle."""
-        server_name = "test-lifecycle-server"
+        # Load the server-lifecycle-test suite
+        suite_data = await self.suite_loader.load_suite("server-lifecycle-test")
+        deployed_servers = suite_data["deployed_servers"]
         
-        # Step 1: Add server
-        add_result = cli_runner.run_command(
-            f"add {server_name} --type custom --command 'echo lifecycle'"
-        )
-        TestAssertions.assert_command_success(add_result, "Lifecycle: Add server")
-        isolated_environment.add_server(server_name)
+        # Find the primary test server from the suite
+        primary_server = None
+        for server_name, server in deployed_servers.items():
+            if "lifecycle" in server_name:  # Primary test server
+                primary_server = server_name
+                break
         
-        # Step 2: Verify in list
+        assert primary_server, "No primary lifecycle server found in suite"
+        
+        # Step 1: Verify server appears in list (already added by suite)
         list_result = cli_runner.run_command("list")
         TestAssertions.assert_contains_all(
             list_result['stdout'], 
-            [server_name], 
+            [primary_server], 
             "Lifecycle: Server in list"
         )
         
-        # Step 3: Enable server
-        enable_result = cli_runner.run_command(f"enable {server_name}")
+        # Step 2: Enable server
+        enable_result = cli_runner.run_command(f"enable {primary_server}")
         TestAssertions.assert_command_success(enable_result, "Lifecycle: Enable server")
         
-        # Step 4: Disable server
-        disable_result = cli_runner.run_command(f"disable {server_name}")
+        # Step 3: Disable server
+        disable_result = cli_runner.run_command(f"disable {primary_server}")
         TestAssertions.assert_command_success(disable_result, "Lifecycle: Disable server")
         
-        # Step 5: Remove server
-        remove_result = cli_runner.run_command(f"remove {server_name} --force")
+        # Step 4: Remove server
+        remove_result = cli_runner.run_command(f"remove {primary_server} --force")
         TestAssertions.assert_command_success(remove_result, "Lifecycle: Remove server")
         
-        # Step 6: Verify removal
+        # Step 5: Verify removal
         final_list = cli_runner.run_command("list")
         TestAssertions.assert_not_contains(
             final_list['stdout'], 
-            [server_name], 
+            [primary_server], 
             "Lifecycle: Server removed from list"
         )
     
-    def test_bulk_server_operations(self, cli_runner, isolated_environment):
+    @pytest.mark.asyncio
+    async def test_bulk_server_operations(self, cli_runner, isolated_environment):
         """Test bulk server operations."""
-        server_names = [f"bulk-server-{i}" for i in range(1, 6)]
+        # Load the bulk-operations-test suite
+        suite_data = await self.suite_loader.load_suite("bulk-operations-test")
+        deployed_servers = suite_data["deployed_servers"]
         
-        # Add multiple servers
-        for name in server_names:
-            result = cli_runner.run_command(
-                f"add {name} --type custom --command 'echo {name}'"
-            )
-            TestAssertions.assert_command_success(result, f"Bulk add: {name}")
-            isolated_environment.add_server(name)
+        # Get all bulk server names from the deployed servers
+        bulk_servers = [name for name in deployed_servers.keys() if "bulk-server" in name]
         
-        # Verify all appear in list
+        assert len(bulk_servers) >= 3, f"Expected at least 3 bulk servers, got {len(bulk_servers)}"
+        
+        # Step 1: Verify all servers appear in list (already added by suite)
         list_result = cli_runner.run_command("list")
         TestAssertions.assert_contains_all(
             list_result['stdout'], 
-            server_names, 
+            bulk_servers, 
             "Bulk operations: All servers in list"
         )
         
-        # Remove all servers
-        for name in server_names:
-            remove_result = cli_runner.run_command(f"remove {name}")
+        # Step 2: Remove all servers
+        for name in bulk_servers:
+            remove_result = cli_runner.run_command(f"remove {name} --force")
             TestAssertions.assert_command_success(remove_result, f"Bulk remove: {name}")

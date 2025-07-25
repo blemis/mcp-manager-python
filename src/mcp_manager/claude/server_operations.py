@@ -104,18 +104,20 @@ class ServerOperations:
             name: Server name to remove
             
         Returns:
-            True if successful
+            True if successful, False if server not found
             
         Raises:
-            MCPManagerError: If removal fails
+            MCPManagerError: If removal fails due to system error
         """
         try:
+            # Don't specify scope - let Claude find it in any scope
             result = subprocess.run(
-                [self.claude_path, "mcp", "remove", "--scope", "user", name],
+                [self.claude_path, "mcp", "remove", name],
                 capture_output=True,
                 text=True,
                 timeout=30,
                 env=self.get_env(),
+                input="y\n",  # Provide confirmation input if prompted
             )
             
             if result.returncode == 0:
@@ -124,9 +126,17 @@ class ServerOperations:
                 })
                 return True
             else:
-                error_msg = result.stderr.strip()
-                logger.error(f"Failed to remove server '{name}': {error_msg}")
-                raise MCPManagerError(f"Failed to remove server: {error_msg}")
+                error_msg = result.stderr.strip() or result.stdout.strip()
+                
+                # Check for "not found" errors - handle gracefully
+                if ("not found" in error_msg.lower() or 
+                    ("no" in error_msg.lower() and "server" in error_msg.lower()) or
+                    "does not exist" in error_msg.lower()):
+                    logger.warning(f"Server '{name}' not found in Claude configuration")
+                    return False  # Return False instead of raising error for not found
+                else:
+                    logger.error(f"Failed to remove server '{name}': {error_msg}")
+                    raise MCPManagerError(f"Failed to remove server: {error_msg}")
                 
         except subprocess.TimeoutExpired:
             error_msg = f"Removing server '{name}' timed out"

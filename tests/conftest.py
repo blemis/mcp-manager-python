@@ -205,6 +205,101 @@ def test_data_manager(isolated_environment):
     return TestDataManager(isolated_environment)
 
 
+@pytest.fixture(scope="function")
+def test_manager(isolated_environment):
+    """Provide MCP manager instance for testing."""
+    from mcp_manager.core.simple_manager import SimpleMCPManager
+    import asyncio
+    
+    # Create manager with test configuration
+    manager = SimpleMCPManager()
+    
+    yield manager
+    
+    # Cleanup: remove any servers that were added during testing
+    async def cleanup():
+        try:
+            servers = await manager.list_servers()
+            for server in servers:
+                try:
+                    await manager.remove_server(server.name, server.scope)
+                except Exception:
+                    pass  # Ignore cleanup errors
+        except Exception:
+            pass  # Ignore cleanup errors
+    
+    try:
+        asyncio.run(cleanup())
+    except Exception:
+        pass  # Ignore cleanup errors
+
+
+@pytest.fixture(scope="function")
+def suite_loader(test_manager):
+    """Provide suite loader for ALL test files with verbose output."""
+    try:
+        from tests.fixtures.suite_loader import SuiteLoader
+        return SuiteLoader(test_manager)
+    except ImportError as e:
+        print(f"⚠️  Suite loader not available: {e}")
+        return None
+
+
+@pytest.fixture(scope="function")
+def suite_setup(suite_loader):
+    """Provide suite setup functionality for ALL test files."""
+    try:
+        from tests.fixtures.test_suites_setup import TestSuitesSetup
+        setup = TestSuitesSetup()
+        return setup
+    except ImportError as e:
+        print(f"⚠️  Suite setup not available: {e}")
+        return None
+
+
+@pytest.fixture(scope="function")
+def dynamic_suite_loader(test_manager):
+    """Provide dynamic suite loader that auto-determines correct suite for each test."""
+    try:
+        from tests.fixtures.dynamic_suite_loader import DynamicSuiteLoader
+        return DynamicSuiteLoader(test_manager)
+    except ImportError as e:
+        print(f"⚠️  Dynamic suite loader not available: {e}")
+        return None
+
+
+@pytest.fixture(scope="function")
+def auto_suite_setup(request, dynamic_suite_loader):
+    """Automatically load appropriate suite based on test context."""
+    if not dynamic_suite_loader:
+        return None
+    
+    # Get test instance (the 'self' of the test class)
+    test_instance = request.instance
+    if not test_instance:
+        return None
+    
+    # Auto-load suite
+    import asyncio
+    
+    async def load_suite():
+        try:
+            return await dynamic_suite_loader.auto_load_suite_for_test(test_instance)
+        except Exception as e:
+            print(f"⚠️  Auto suite loading failed: {e}")
+            return None
+    
+    try:
+        suite_data = asyncio.run(load_suite())
+        # Store in test instance for access in tests
+        if hasattr(test_instance, '__dict__'):
+            test_instance.auto_suite_data = suite_data
+        return suite_data
+    except Exception as e:
+        print(f"⚠️  Auto suite setup failed: {e}")
+        return None
+
+
 # Parametrized fixtures for comprehensive testing
 @pytest.fixture(params=[
     ("npm", "npx @pkg/server", ["--arg"]),

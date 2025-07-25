@@ -36,6 +36,7 @@ from mcp_manager.cli.commands.workflow import workflow_commands
 from mcp_manager.cli.commands.api import api_commands
 from mcp_manager.cli.commands.proxy import proxy_commands
 from mcp_manager.cli.commands.quality import quality_commands
+from mcp_manager.cli.test_admin import test_admin
 
 console = Console()
 logger = get_logger(__name__)
@@ -517,6 +518,9 @@ def register_commands():
     # Quality commands
     for cmd in quality_commands(cli_context):
         cli.add_command(cmd)
+    
+    # Test admin commands
+    cli.add_command(test_admin)
 
 
 # Register all commands

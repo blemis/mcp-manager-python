@@ -12,6 +12,30 @@ from tests.utils.validators import OutputValidator, TestAssertions
 class TestInvalidCommands:
     """Test handling of invalid commands and arguments."""
     
+    @pytest.fixture(autouse=True)
+    def setup_error_handling_suite(self, suite_loader, suite_setup):
+        """Setup error handling test suite if available."""
+        if suite_loader and suite_setup:
+            import asyncio
+            
+            async def setup():
+                try:
+                    await suite_setup.create_error_handling_test_suite()
+                    suite_data = await suite_loader.load_suite("error-handling-test")
+                    print(f"🎯 Error Handling Test Suite loaded: {len(suite_data.get('deployed_servers', {}))} servers")
+                    return suite_data
+                except Exception as e:
+                    print(f"⚠️  Could not load error handling suite: {e}")
+                    return None
+            
+            try:
+                self.suite_data = asyncio.run(setup())
+            except Exception:
+                self.suite_data = None
+        else:
+            self.suite_data = None
+    """Test handling of invalid commands and arguments."""
+    
     def test_completely_invalid_command(self, cli_runner):
         """Test completely invalid command names."""
         invalid_commands = [

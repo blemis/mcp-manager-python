@@ -13,6 +13,30 @@ from tests.utils.validators import OutputValidator, TestAssertions
 class TestQualityStatus:
     """Test quality tracking status functionality."""
     
+    @pytest.fixture(autouse=True)
+    def setup_quality_tracking_suite(self, suite_loader, suite_setup):
+        """Setup quality tracking test suite if available."""
+        if suite_loader and suite_setup:
+            import asyncio
+            
+            async def setup():
+                try:
+                    await suite_setup.create_quality_tracking_test_suite()
+                    suite_data = await suite_loader.load_suite("quality-tracking-test")
+                    print(f"🎯 Quality Tracking Test Suite loaded: {len(suite_data.get('deployed_servers', {}))} servers")
+                    return suite_data
+                except Exception as e:
+                    print(f"⚠️  Could not load quality tracking suite: {e}")
+                    return None
+            
+            try:
+                self.suite_data = asyncio.run(setup())
+            except Exception:
+                self.suite_data = None
+        else:
+            self.suite_data = None
+    """Test quality tracking status functionality."""
+    
     def test_quality_status_basic(self, cli_runner):
         """Test basic quality status command."""
         result = cli_runner.run_command("quality status")
