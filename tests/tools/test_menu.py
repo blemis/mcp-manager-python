@@ -136,8 +136,11 @@ class TestMenu:
         print("3. 🔧 Custom Test Selection")
         print("4. 📊 View Last Test Results")
         print("5. 📁 Show Output Files for Sharing")
-        print("6. ❓ Help & Documentation")
-        print("7. 🚪 Exit")
+        print("6. ⚖️  Compare Testing Systems (JSON vs Pytest)")
+        print("7. 🔄 Legacy Pytest Mode")
+        print("8. 💥 Nuke Config (Reset All)")
+        print("9. ❓ Help & Documentation")
+        print("10. 🚪 Exit")
         print()
     
     def print_collections_menu(self):
@@ -200,14 +203,15 @@ class TestMenu:
         print("Enter '0' to go back")
         print()
     
-    def run_tests(self, categories: List[str], description: str = "") -> bool:
+    def run_tests(self, categories: List[str], description: str = "", use_legacy: bool = False) -> bool:
         """Run the specified test categories."""
         if not categories:
             print(f"{self.colors['red']}❌ No test categories specified{self.colors['reset']}")
             return False
         
+        system_name = "Legacy Pytest" if use_legacy else "JSON Test Engine (Default)"
         print(f"{self.colors['bold']}{self.colors['blue']}")
-        print("🚀 STARTING TEST EXECUTION")
+        print(f"🚀 STARTING TEST EXECUTION - {system_name}")
         print("=" * 60)
         print(f"Categories: {', '.join(categories)}")
         if description:
@@ -215,8 +219,11 @@ class TestMenu:
         print("=" * 60)
         print(f"{self.colors['reset']}")
         
-        # Run the test runner
-        cmd = [sys.executable, "tests/test_runner.py"] + categories
+        # Choose test runner based on mode
+        if use_legacy:
+            cmd = [sys.executable, "tests/test_runner.py"] + categories
+        else:
+            cmd = [sys.executable, "tests/json_test_runner_cli.py"] + categories
         
         try:
             start_time = time.time()
@@ -324,6 +331,31 @@ class TestMenu:
             print(f"{self.colors['red']}❌ Error: {e}{self.colors['reset']}")
             print("   Try running: ./test files")
     
+    def nuke_config(self):
+        """Nuclear option - use the existing nuke command to reset all MCP configurations."""
+        print(f"{self.colors['bold']}{self.colors['red']}💥 NUCLEAR CONFIG RESET{self.colors['reset']}")
+        print("-" * 50)
+        print(f"{self.colors['yellow']}⚠️  This will use the built-in nuke command to remove ALL MCP servers.{self.colors['reset']}")
+        print()
+        
+        try:
+            # Use the existing nuke command with force flag to avoid double confirmation
+            result = subprocess.run(
+                [sys.executable, "-m", "mcp_manager.cli.main", "nuke", "--force"],
+                cwd=Path.cwd(),
+                text=True,
+                capture_output=False  # Show output directly
+            )
+            
+            if result.returncode == 0:
+                print(f"\n{self.colors['green']}✅ Nuclear reset completed successfully!{self.colors['reset']}")
+            else:
+                print(f"\n{self.colors['red']}❌ Nuclear reset failed with exit code {result.returncode}{self.colors['reset']}")
+                
+        except Exception as e:
+            print(f"{self.colors['red']}❌ Error running nuke command: {e}{self.colors['reset']}")
+            print("Try running manually: mcp-manager nuke")
+    
     def show_help(self):
         """Show help and documentation."""
         print(f"{self.colors['bold']}❓ HELP & DOCUMENTATION{self.colors['reset']}")
@@ -353,12 +385,15 @@ class TestMenu:
         print("• Use Custom Selection for specific feature testing")
         print("• Check Last Results to track test history")
         print("• Tests run in isolated environments (safe to execute)")
+        print("• Use 'Nuke Config' if you want to start completely fresh")
         print()
         
         print(f"{self.colors['cyan']}🔧 Manual Commands (if needed):{self.colors['reset']}")
-        print("• python tests/test_runner.py smoke")
-        print("• python tests/test_runner.py all")
-        print("• python -m pytest tests/ -v")
+        print("• python tests/json_test_runner_cli.py smoke  # JSON engine (default)")
+        print("• python tests/test_runner.py smoke           # Legacy pytest")
+        print("• ./test smoke --compare                      # Compare both systems")
+        print("• ./test smoke --json                         # Force JSON mode")
+        print("• mcp-manager remove --all                    # Manual config nuke")
         print()
     
     def get_user_input(self, prompt: str) -> str:
@@ -369,12 +404,28 @@ class TestMenu:
         """Wait for user to continue."""
         self.get_user_input("\n🔄 Press Enter to continue...")
     
-    def handle_collections_menu(self):
+    def handle_collections_menu(self, use_legacy: bool = False):
         """Handle the collections menu selection."""
         while True:
             self.clear_screen()
             self.print_header()
-            self.print_collections_menu()
+            mode_str = "(Legacy Pytest Mode)" if use_legacy else "(JSON Test Engine - Default)"
+            print(f"{self.colors['bold']}🚀 TEST COLLECTIONS {mode_str}{self.colors['reset']}")
+            print("-" * 50)
+            
+            for i, (key, collection) in enumerate(self.collections.items(), 1):
+                color = collection['color']
+                name = collection['name']
+                desc = collection['description']
+                categories_str = ', '.join(collection['categories'])
+                
+                print(f"{color}{i}. {name}{self.colors['reset']}")
+                print(f"   {desc}")
+                print(f"   Categories: {categories_str}")
+                print()
+            
+            print("0. ← Back to Main Menu")
+            print()
             
             choice = self.get_user_input("Select collection (0-4):")
             
@@ -396,7 +447,7 @@ class TestMenu:
                     confirm = self.get_user_input("\nProceed with this test collection? (y/N):").lower()
                     
                     if confirm in ['y', 'yes']:
-                        success = self.run_tests(collection['categories'], collection['description'])
+                        success = self.run_tests(collection['categories'], collection['description'], use_legacy)
                         self.wait_for_continue()
                     return
                 else:
@@ -407,12 +458,32 @@ class TestMenu:
                 print(f"{self.colors['red']}❌ Please enter a valid number{self.colors['reset']}")
                 self.wait_for_continue()
     
-    def handle_categories_menu(self):
+    def handle_categories_menu(self, use_legacy: bool = False):
         """Handle individual categories menu selection."""
         while True:
             self.clear_screen()
             self.print_header()
-            self.print_categories_menu()
+            mode_str = "(Legacy Pytest Mode)" if use_legacy else "(JSON Test Engine - Default)"
+            print(f"{self.colors['bold']}🎯 INDIVIDUAL TEST CATEGORIES {mode_str}{self.colors['reset']}")
+            print("-" * 50)
+            
+            for i, (key, category) in enumerate(self.test_categories.items(), 1):
+                color = category['color']
+                name = category['name']
+                desc = category['description']
+                priority = category['priority']
+                
+                priority_color = self.colors['red'] if priority == 'CRITICAL' else \
+                               self.colors['yellow'] if priority == 'HIGH' else \
+                               self.colors['green']
+                
+                print(f"{color}{i:2d}. {name}{self.colors['reset']} "
+                      f"{priority_color}[{priority}]{self.colors['reset']}")
+                print(f"     {desc}")
+                print()
+            
+            print(" 0. ← Back to Main Menu")
+            print()
             
             choice = self.get_user_input("Select category (0-9):")
             
@@ -433,7 +504,7 @@ class TestMenu:
                     confirm = self.get_user_input("\nProceed with this test category? (y/N):").lower()
                     
                     if confirm in ['y', 'yes']:
-                        success = self.run_tests([key], category['description'])
+                        success = self.run_tests([key], category['description'], use_legacy)
                         self.wait_for_continue()
                     return
                 else:
@@ -444,12 +515,27 @@ class TestMenu:
                 print(f"{self.colors['red']}❌ Please enter a valid number{self.colors['reset']}")
                 self.wait_for_continue()
     
-    def handle_custom_menu(self):
+    def handle_custom_menu(self, use_legacy: bool = False):
         """Handle custom test selection."""
         while True:
             self.clear_screen()
             self.print_header()
-            self.print_custom_menu()
+            mode_str = "(Legacy Pytest Mode)" if use_legacy else "(JSON Test Engine - Default)"
+            print(f"{self.colors['bold']}🔧 CUSTOM TEST SELECTION {mode_str}{self.colors['reset']}")
+            print("-" * 50)
+            print("Select multiple categories by entering numbers separated by spaces")
+            print("Example: 1 3 5 (runs smoke + server + quality tests)")
+            print()
+            
+            for i, (key, category) in enumerate(self.test_categories.items(), 1):
+                color = category['color']
+                name = category['name']
+                print(f"{color}{i:2d}. {name}{self.colors['reset']}")
+            
+            print()
+            print("Enter 'all' for all categories")
+            print("Enter '0' to go back")
+            print()
             
             choice = self.get_user_input("Enter category numbers (space-separated) or 'all':")
             
@@ -487,10 +573,87 @@ class TestMenu:
                 
                 if confirm in ['y', 'yes']:
                     description = f"Custom selection: {', '.join(selected_names)}"
-                    success = self.run_tests(selected_categories, description)
+                    success = self.run_tests(selected_categories, description, use_legacy)
                     self.wait_for_continue()
             
             return
+    
+    def handle_comparison_menu(self):
+        """Handle comparison menu for pytest vs JSON testing."""
+        self.clear_screen()
+        self.print_header()
+        print(f"{self.colors['bold']}⚖️  TESTING SYSTEM COMPARISON{self.colors['reset']}")
+        print("-" * 50)
+        print("Compare JSON Test Engine vs Legacy Pytest systems")
+        print()
+        
+        print("Available categories for comparison:")
+        for i, (key, category) in enumerate(self.test_categories.items(), 1):
+            print(f"{i:2d}. {category['name']}")
+        
+        print()
+        choice = self.get_user_input("Select category to compare (1-9) or 'all':")
+        
+        if choice.lower() == 'all':
+            category_keys = list(self.test_categories.keys())
+        else:
+            try:
+                idx = int(choice) - 1
+                categories_list = list(self.test_categories.keys())
+                if 0 <= idx < len(categories_list):
+                    category_keys = [categories_list[idx]]
+                else:
+                    print(f"{self.colors['red']}❌ Invalid selection{self.colors['reset']}")
+                    self.wait_for_continue()
+                    return
+            except ValueError:
+                print(f"{self.colors['red']}❌ Invalid input{self.colors['reset']}")
+                self.wait_for_continue()
+                return
+        
+        # Run comparison using the shell script functionality
+        for category in category_keys:
+            print(f"\n{self.colors['cyan']}🔄 Comparing {category} tests...{self.colors['reset']}")
+            try:
+                result = subprocess.run(
+                    ["./test", category, "--compare"],
+                    cwd=Path.cwd(),
+                    text=True
+                )
+            except Exception as e:
+                print(f"{self.colors['red']}❌ Comparison failed: {e}{self.colors['reset']}")
+        
+        self.wait_for_continue()
+    
+    def handle_legacy_mode(self):
+        """Handle legacy pytest mode menu."""
+        while True:
+            self.clear_screen()
+            self.print_header()
+            print(f"{self.colors['bold']}{self.colors['red']}🔄 LEGACY PYTEST MODE{self.colors['reset']}")
+            print("-" * 50)
+            print("1. 🚀 Quick Collections (Pytest)")
+            print("2. 🎯 Individual Categories (Pytest)")
+            print("3. 🔧 Custom Selection (Pytest)")
+            print("0. ← Back to Main Menu")
+            print()
+            
+            choice = self.get_user_input("Select legacy option (0-3):")
+            
+            if choice == '0':
+                return
+            elif choice == '1':
+                self.handle_collections_menu(use_legacy=True)
+                return
+            elif choice == '2':
+                self.handle_categories_menu(use_legacy=True)
+                return
+            elif choice == '3':
+                self.handle_custom_menu(use_legacy=True)
+                return
+            else:
+                print(f"{self.colors['red']}❌ Invalid selection{self.colors['reset']}")
+                self.wait_for_continue()
     
     def run(self):
         """Run the interactive test menu."""
@@ -500,7 +663,7 @@ class TestMenu:
                 self.print_header()
                 self.print_main_menu()
                 
-                choice = self.get_user_input("Select option (1-7):")
+                choice = self.get_user_input("Select option (1-10):")
                 
                 if choice == '1':
                     self.handle_collections_menu()
@@ -519,16 +682,34 @@ class TestMenu:
                     self.show_output_files()
                     self.wait_for_continue()
                 elif choice == '6':
+                    self.handle_comparison_menu()
+                elif choice == '7':
+                    self.clear_screen()
+                    self.print_header()
+                    print(f"{self.colors['bold']}{self.colors['red']}🔄 LEGACY PYTEST MODE{self.colors['reset']}")
+                    print("-" * 50)
+                    print(f"{self.colors['yellow']}⚠️  You are now using the legacy pytest system.{self.colors['reset']}")
+                    print("This mode is provided for backward compatibility.")
+                    print("The JSON test engine is recommended for new testing.")
+                    print()
+                    self.wait_for_continue()
+                    self.handle_legacy_mode()
+                elif choice == '8':
+                    self.clear_screen()
+                    self.print_header()
+                    self.nuke_config()
+                    self.wait_for_continue()
+                elif choice == '9':
                     self.clear_screen()
                     self.print_header()
                     self.show_help()
                     self.wait_for_continue()
-                elif choice == '7':
+                elif choice == '10':
                     print(f"\n{self.colors['cyan']}👋 Thanks for using MCP Manager Test Suite!{self.colors['reset']}")
                     print("🚀 Keep testing, keep improving! ✨")
                     break
                 else:
-                    print(f"{self.colors['red']}❌ Invalid selection. Please choose 1-7.{self.colors['reset']}")
+                    print(f"{self.colors['red']}❌ Invalid selection. Please choose 1-10.{self.colors['reset']}")
                     self.wait_for_continue()
                     
         except KeyboardInterrupt:

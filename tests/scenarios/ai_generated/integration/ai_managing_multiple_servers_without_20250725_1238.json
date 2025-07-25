@@ -1,0 +1,90 @@
+{
+  "schema_version": "1.0",
+  "scenario": {
+    "id": "ai_managing_multiple_servers_without_20250725_1238",
+    "name": "Test managing multiple mcp servers without affecting the suite test",
+    "description": "AI-generated test scenario: Test managing multiple MCP servers without affecting the suite",
+    "created_by": "ai",
+    "category": "integration",
+    "confidence_score": 0.7999999999999999,
+    "ai_reasoning": "Generated scenario for: 'Test managing multiple MCP servers without affecting the suite'. Identified 0 key concepts: . Categorized as 'integration' based on content analysis.",
+    "tags": [
+      "ai-generated",
+      "integration"
+    ],
+    "priority": "medium"
+  },
+  "mcp_requirements": {
+    "required_servers": [],
+    "optional_servers": [],
+    "scope": "user",
+    "deduplication_key": "ai_generated_0_servers",
+    "resource_requirements": {
+      "min_memory_mb": 64,
+      "max_execution_time_seconds": 60,
+      "parallel_safe": true
+    }
+  },
+  "test_steps": [
+    {
+      "step_id": 1,
+      "action": "cli_command",
+      "command": "status",
+      "expect": "success",
+      "timeout": 15,
+      "description": "Basic functionality test based on description"
+    }
+  ],
+  "validation": {
+    "success_criteria": [
+      {
+        "type": "all_steps_pass",
+        "description": "All test steps must complete successfully"
+      },
+      {
+        "type": "specific_output",
+        "description": "Commands produce expected output",
+        "value": "success"
+      }
+    ],
+    "failure_conditions": [
+      {
+        "type": "timeout",
+        "description": "Test execution exceeds maximum allowed time",
+        "value": "15"
+      },
+      {
+        "type": "error_output",
+        "description": "Unexpected error messages in output",
+        "value": "error"
+      }
+    ],
+    "cleanup_strategy": "minimal",
+    "cleanup_timing": "after_test",
+    "preserve_state": [
+      "suite_servers",
+      "user_config",
+      "project_config",
+      "logs",
+      "cache"
+    ],
+    "cleanup_required": true,
+    "cleanup_steps": [
+      {
+        "action": "remove_test_servers",
+        "target": "test_only",
+        "server_pattern": "tmp-*",
+        "condition": "always",
+        "ignore_errors": true
+      }
+    ]
+  },
+  "metadata": {
+    "created_date": "2025-07-25T12:38:06.959737",
+    "last_modified": "2025-07-25T12:38:06.959739",
+    "execution_count": 0,
+    "success_rate": 0.0,
+    "average_duration": 0.0,
+    "related_scenarios": []
+  }
+}

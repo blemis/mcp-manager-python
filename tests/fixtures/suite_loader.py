@@ -226,6 +226,18 @@ class SuiteLoader:
             # Handle name override for testing invalid names
             actual_name = config.get("test_name_override", server_name)
             
+            # Check if server already exists
+            if self.mcp_manager.server_exists(actual_name):
+                print(f"      🔄 Server already exists: {actual_name}")
+                # Get existing server and return it
+                existing_server = self.mcp_manager.get_server(actual_name)
+                if existing_server:
+                    logger.debug(f"Reusing existing server: {actual_name}")
+                    return existing_server
+                else:
+                    logger.warning(f"Server {actual_name} exists but could not retrieve details")
+                    return None
+            
             # Convert scope string to enum
             scope_str = config.get("scope", "user")
             scope = ServerScope.USER if scope_str == "user" else ServerScope.PROJECT

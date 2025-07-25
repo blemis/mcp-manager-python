@@ -1,0 +1,194 @@
+{
+  "schema_version": "1.0",
+  "scenario": {
+    "id": "server_management_comprehensive",
+    "name": "Comprehensive Server Management Test",
+    "description": "Full lifecycle testing of MCP server management including installation, configuration, listing, and removal. Tests both npm and Docker Desktop server types.",
+    "created_by": "migration",
+    "category": "core",
+    "confidence_score": 0.95,
+    "ai_reasoning": "Migrated from existing server management tests. Critical functionality for MCP server lifecycle management.",
+    "tags": ["server", "lifecycle", "npm", "docker", "management"],
+    "priority": "high"
+  },
+  "mcp_requirements": {
+    "required_servers": [
+      {
+        "name": "filesystem-server",
+        "type": "npm",
+        "priority": "high",
+        "config": {
+          "directory": "/tmp/mcp-test"
+        }
+      }
+    ],
+    "optional_servers": [
+      {
+        "name": "sqlite-server",
+        "type": "docker-desktop",
+        "purpose": "Testing Docker Desktop integration"
+      }
+    ],
+    "scope": "user",
+    "deduplication_key": "server_lifecycle_management",
+    "resource_requirements": {
+      "min_memory_mb": 128,
+      "max_execution_time_seconds": 120,
+      "parallel_safe": false
+    }
+  },
+  "test_steps": [
+    {
+      "step_id": 1,
+      "action": "setup",
+      "parameters": {
+        "action_type": "clean_environment",
+        "backup_config": true
+      },
+      "expect": "success",
+      "timeout": 30,
+      "description": "Clean test environment and backup existing config"
+    },
+    {
+      "step_id": 2,
+      "action": "cli_command",
+      "command": "discover --query filesystem --type npm --limit 5",
+      "expect": "success",
+      "timeout": 30,
+      "description": "Discover filesystem servers from npm registry"
+    },
+    {
+      "step_id": 3,
+      "action": "validation",
+      "parameters": {
+        "validate_type": "output_contains",
+        "search_terms": ["filesystem", "Install ID"]
+      },
+      "expect": "contains",
+      "expect_value": "filesystem",
+      "timeout": 5,
+      "description": "Verify filesystem servers found in discovery"
+    },
+    {
+      "step_id": 4,
+      "action": "cli_command",
+      "command": "install-package modelcontextprotocol-filesystem",
+      "expect": "success",
+      "timeout": 60,
+      "description": "Install filesystem server via install-package command"
+    },
+    {
+      "step_id": 5,
+      "action": "cli_command",
+      "command": "list --scope user",
+      "expect": "success",
+      "timeout": 15,
+      "description": "List servers to verify installation"
+    },
+    {
+      "step_id": 6,
+      "action": "validation",
+      "parameters": {
+        "validate_type": "server_installed",
+        "server_name": "filesystem-server"
+      },
+      "expect": "contains",
+      "expect_value": "filesystem",
+      "timeout": 5,
+      "description": "Verify filesystem server appears in list"
+    },
+    {
+      "step_id": 7,
+      "action": "cli_command",
+      "command": "add custom-test-server \"echo test\"",
+      "expect": "success",
+      "timeout": 15,
+      "description": "Add a custom server for testing"
+    },
+    {
+      "step_id": 8,
+      "action": "cli_command",
+      "command": "list",
+      "expect": "success",
+      "timeout": 15,
+      "description": "Verify both servers are listed"
+    },
+    {
+      "step_id": 9,
+      "action": "cli_command",
+      "command": "remove custom-test-server",
+      "expect": "success",
+      "timeout": 15,
+      "description": "Remove custom server"
+    },
+    {
+      "step_id": 10,
+      "action": "cli_command",
+      "command": "remove filesystem-server",
+      "expect": "success",
+      "timeout": 30,
+      "description": "Remove filesystem server"
+    },
+    {
+      "step_id": 11,
+      "action": "validation",
+      "parameters": {
+        "validate_type": "server_removed",
+        "server_name": "filesystem-server"
+      },
+      "expect": "not_contains",
+      "expect_value": "filesystem-server",
+      "timeout": 5,
+      "description": "Verify servers are removed from list"
+    }
+  ],
+  "validation": {
+    "success_criteria": [
+      {
+        "type": "all_steps_pass",
+        "description": "All server management operations complete successfully"
+      },
+      {
+        "type": "state_change",
+        "description": "Server installation and removal reflected in configuration",
+        "value": "config_updated"
+      }
+    ],
+    "failure_conditions": [
+      {
+        "type": "timeout",
+        "description": "Server operations take too long",
+        "value": "120"
+      },
+      {
+        "type": "error_output",
+        "description": "Installation or removal commands fail",
+        "value": "error"
+      },
+      {
+        "type": "unexpected_state",
+        "description": "Servers not properly installed or removed",
+        "value": "state_mismatch"
+      }
+    ],
+    "cleanup_required": true,
+    "cleanup_steps": [
+      {
+        "action": "remove_servers",
+        "ignore_errors": true
+      },
+      {
+        "action": "reset_config",
+        "ignore_errors": true
+      }
+    ]
+  },
+  "metadata": {
+    "created_date": "2025-07-25T15:25:00Z",
+    "last_modified": "2025-07-25T15:25:00Z",
+    "execution_count": 0,
+    "success_rate": 0.0,
+    "average_duration": 0.0,
+    "related_scenarios": ["basic_commands_smoke", "discovery_comprehensive", "docker_desktop_integration"]
+  }
+}
