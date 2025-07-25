@@ -300,7 +300,7 @@ def remove(name: str, scope: Optional[str], force: bool):
                 console.print("[dim]Removal cancelled[/dim]")
                 return
         
-        success = manager.remove_server(name, scope_enum)
+        success = asyncio.run(manager.remove_server(name, scope_enum))
         
         if success:
             console.print(f"[green]✅ Removed server '{name}'[/green]")
@@ -437,7 +437,7 @@ def enable(name: str):
     manager = cli_context.get_manager()
     
     try:
-        success = manager.enable_server(name)
+        success = asyncio.run(manager.enable_server(name))
         if success:
             console.print(f"[green]✅ Enabled server '{name}'[/green]")
         else:
@@ -456,7 +456,7 @@ def disable(name: str):
     manager = cli_context.get_manager()
     
     try:
-        success = manager.disable_server(name)
+        success = asyncio.run(manager.disable_server(name))
         if success:
             console.print(f"[green]✅ Disabled server '{name}'[/green]")
         else:
