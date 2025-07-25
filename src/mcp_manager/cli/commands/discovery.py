@@ -176,7 +176,7 @@ def discovery_commands(cli_context):
             
             # Check for similar servers
             similar_servers = await manager.check_for_similar_servers(
-                server_name, matching_server.server_type, matching_server.command, matching_server.args
+                server_name, matching_server.server_type, matching_server.install_command, matching_server.install_args
             )
             
             if similar_servers:
@@ -201,8 +201,8 @@ def discovery_commands(cli_context):
                 server = await manager.add_server(
                     name=server_name,
                     server_type=matching_server.server_type,
-                    command=matching_server.command,
-                    args=matching_server.args,
+                    command=matching_server.install_command,
+                    args=matching_server.install_args,
                     env=config or {}
                 )
                 
@@ -278,8 +278,8 @@ def discovery_commands(cli_context):
                 server = await manager.add_server(
                     name=server_name,
                     server_type=server_result.server_type,
-                    command=server_result.command,
-                    args=server_result.args,
+                    command=server_result.install_command,
+                    args=server_result.install_args,
                     env=config or {}
                 )
                 
