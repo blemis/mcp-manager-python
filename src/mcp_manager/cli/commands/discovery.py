@@ -197,13 +197,18 @@ def discovery_commands(cli_context):
             )
             
             try:
+                # Separate args and env from config
+                config = config or {}
+                env_vars = {k: v for k, v in config.items() if k != 'args' and isinstance(v, str)}
+                additional_args = config.get('args', []) if isinstance(config.get('args'), list) else []
+                
                 # Add server to manager
                 server = await manager.add_server(
                     name=server_name,
                     server_type=matching_server.server_type,
                     command=matching_server.install_command,
-                    args=matching_server.install_args,
-                    env=config or {}
+                    args=(matching_server.install_args or []) + additional_args,
+                    env=env_vars
                 )
                 
                 console.print(f"[green]✅ Successfully installed '{server_name}'[/green]")
@@ -274,13 +279,18 @@ def discovery_commands(cli_context):
             )
             
             try:
+                # Separate args and env from config
+                config = config or {}
+                env_vars = {k: v for k, v in config.items() if k != 'args' and isinstance(v, str)}
+                additional_args = config.get('args', []) if isinstance(config.get('args'), list) else []
+                
                 # Add server to manager
                 server = await manager.add_server(
                     name=server_name,
                     server_type=server_result.server_type,
                     command=server_result.install_command,
-                    args=server_result.install_args,
-                    env=config or {}
+                    args=(server_result.install_args or []) + additional_args,
+                    env=env_vars
                 )
                 
                 console.print(f"[green]✅ Successfully installed '{server_name}'[/green]")
