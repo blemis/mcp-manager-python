@@ -98,6 +98,11 @@ class TestBasicCommands:
 class TestDiscoveryCommands:
     """Test server discovery functionality."""
     
+    @pytest.fixture(autouse=True)
+    def setup_suite(self, auto_suite_setup):
+        """Automatically setup appropriate suite for this test category."""
+        pass
+    
     def test_basic_discover(self, cli_runner):
         """Test basic discover command works."""
         result = cli_runner.run_command("discover")
@@ -145,6 +150,11 @@ class TestDiscoveryCommands:
 class TestSystemInformation:
     """Test system information and status commands."""
     
+    @pytest.fixture(autouse=True)
+    def setup_suite(self, auto_suite_setup):
+        """Automatically setup appropriate suite for this test category."""
+        pass
+    
     def test_system_info_command(self, cli_runner):
         """Test system-info command shows environment details."""
         result = cli_runner.run_command("system-info")
@@ -175,6 +185,11 @@ class TestSystemInformation:
 @pytest.mark.smoke
 class TestSmokeTests:
     """Smoke tests - critical functionality that must always work."""
+    
+    @pytest.fixture(autouse=True)
+    def setup_suite(self, auto_suite_setup):
+        """Automatically setup appropriate suite for this test category."""
+        pass
     
     def test_application_starts(self, cli_runner):
         """Test the application starts and responds to basic commands."""
