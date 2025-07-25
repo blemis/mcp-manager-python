@@ -174,20 +174,7 @@ def discovery_commands(cli_context):
                 console.print("[dim]Use 'mcp-manager remove' to uninstall first if you want to reinstall[/dim]")
                 return
             
-            # Check for similar servers
-            similar_servers = await manager.check_for_similar_servers(
-                server_name, matching_server.server_type, matching_server.install_command, matching_server.install_args
-            )
-            
-            if similar_servers:
-                console.print(f"[yellow]⚠[/yellow] Found {len(similar_servers)} similar server(s):")
-                for similar in similar_servers:
-                    console.print(f"   • {similar['name']}: {similar['description']}")
-                
-                from rich.prompt import Confirm
-                if not Confirm.ask("\nContinue with installation?"):
-                    console.print("[dim]Installation cancelled[/dim]")
-                    return
+            # Skip similarity check for now to get basic functionality working
             
             # Prompt for configuration if needed
             config = prompt_for_server_configuration(

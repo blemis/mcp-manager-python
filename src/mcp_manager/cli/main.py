@@ -139,7 +139,7 @@ def list_cmd(scope: Optional[str], output_format: str):
     manager = cli_context.get_manager()
     
     try:
-        servers = manager.list_servers()
+        servers = asyncio.run(manager.list_servers())
         
         if output_format == "json":
             import json
