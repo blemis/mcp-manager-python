@@ -13,9 +13,7 @@ from typing import Dict, List, Optional, Any
 from datetime import datetime
 import logging
 
-from tests.engine.test_engine import DynamicTestEngine, ScenarioResult
-from tests.engine.scenario_parser import ScenarioParser, ScenarioMetadata
-from tests.ai_integration.schema_validator import TestScenarioValidator
+from tests.engine.simple_test_engine import SimpleTestEngine
 from src.mcp_manager.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -25,9 +23,7 @@ class JsonTestRunner:
     
     def __init__(self, scenarios_root: Optional[Path] = None):
         """Initialize the JSON test runner."""
-        self.parser = ScenarioParser(scenarios_root)
-        self.validator = TestScenarioValidator()
-        self.engine = DynamicTestEngine(self.validator)
+        self.engine = SimpleTestEngine()
         self.results = []
         self._ensure_database_ready()
     

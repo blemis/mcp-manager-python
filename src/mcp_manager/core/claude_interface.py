@@ -234,12 +234,13 @@ class ClaudeInterface:
                 logger.debug(f"Removed server '{name}' from Claude")
                 return True
             else:
-                logger.error(f"Failed to remove server '{name}': {result.stderr}")
-                raise MCPManagerError(f"Failed to remove server: {result.stderr}")
+                # Claude returned error - server likely doesn't exist, return False instead of raising
+                logger.debug(f"Server '{name}' not found or could not be removed: {result.stderr}")
+                return False
                 
         except Exception as e:
             logger.error(f"Failed to remove server '{name}': {e}")
-            raise MCPManagerError(f"Failed to remove server: {e}")
+            return False
     
     def get_server(self, name: str) -> Optional[Server]:
         """

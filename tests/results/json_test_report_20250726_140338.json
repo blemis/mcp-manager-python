@@ -1,0 +1,163 @@
+{
+  "timestamp": "2025-07-26T14:03:38.174783",
+  "summary": {
+    "total_scenarios": 15,
+    "successful_scenarios": 15,
+    "failed_scenarios": 0,
+    "success_rate": 100.0,
+    "total_duration": 9.284050703048706,
+    "average_duration": 0.6189367135365804
+  },
+  "scenarios": [
+    {
+      "id": "add_server_invalid_type",
+      "name": "add_server_invalid_type: Test adding server with invalid type",
+      "success": true,
+      "duration": 0.6233642101287842,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": true
+    },
+    {
+      "id": "add_server_minimal",
+      "name": "add_server_minimal: Test adding a custom server with minimal options",
+      "success": true,
+      "duration": 0.6211960315704346,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": true
+    },
+    {
+      "id": "add_server_with_env",
+      "name": "add_server_with_env: Test adding a server with environment variables",
+      "success": true,
+      "duration": 0.6196990013122559,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": true
+    },
+    {
+      "id": "disable_command_help",
+      "name": "disable_command_help: Test disable command help (collection-agnostic)",
+      "success": true,
+      "duration": 0.6284801959991455,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": true
+    },
+    {
+      "id": "disable_nonexistent_server",
+      "name": "disable_nonexistent_server: Test disabling a server that doesn't exist",
+      "success": true,
+      "duration": 0.6161830425262451,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": true
+    },
+    {
+      "id": "enable_command_help",
+      "name": "enable_command_help: Test enable command help (collection-agnostic)",
+      "success": true,
+      "duration": 0.6158740520477295,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": true
+    },
+    {
+      "id": "enable_nonexistent_server",
+      "name": "enable_nonexistent_server: Test enabling a server that doesn't exist",
+      "success": true,
+      "duration": 0.615612268447876,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": true
+    },
+    {
+      "id": "help_command",
+      "name": "help_command: Test main help command displays correctly",
+      "success": true,
+      "duration": 0.6152160167694092,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": true
+    },
+    {
+      "id": "list_empty_servers",
+      "name": "list_empty_servers: Test list command with no servers configured",
+      "success": true,
+      "duration": 0.6213407516479492,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": true
+    },
+    {
+      "id": "list_json_output",
+      "name": "list_json_output: Test list command with JSON output format",
+      "success": true,
+      "duration": 0.6237137317657471,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": true
+    },
+    {
+      "id": "list_with_existing_servers",
+      "name": "list_with_existing_servers: Test list command with existing database servers",
+      "success": true,
+      "duration": 0.6124300956726074,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": true
+    },
+    {
+      "id": "list_with_scope_filter",
+      "name": "list_with_scope_filter: Test list command with scope filter",
+      "success": true,
+      "duration": 0.6192560195922852,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": true
+    },
+    {
+      "id": "nuke_dry_run",
+      "name": "nuke_dry_run: Test nuclear cleanup without force flag (should prompt)",
+      "success": true,
+      "duration": 0.6149072647094727,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": true
+    },
+    {
+      "id": "remove_nonexistent_server",
+      "name": "remove_nonexistent_server: Test removing a server that doesn't exist",
+      "success": true,
+      "duration": 0.6180469989776611,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": true
+    },
+    {
+      "id": "version_command",
+      "name": "version_command: Test version display",
+      "success": true,
+      "duration": 0.6187310218811035,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": true
+    }
+  ]
+}

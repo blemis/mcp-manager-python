@@ -305,7 +305,7 @@ def remove(name: str, scope: Optional[str], force: bool):
         if success:
             console.print(f"[green]✅ Removed server '{name}'[/green]")
         else:
-            console.print(f"[red]❌ Server '{name}' not found or could not be removed[/red]")
+            console.print(f"[red]❌ Server '{name}' not found and could not be removed[/red]")
             sys.exit(1)
             
     except Exception as e:
@@ -441,7 +441,7 @@ def enable(name: str):
         if success:
             console.print(f"[green]✅ Enabled server '{name}'[/green]")
         else:
-            console.print(f"[red]❌ Server '{name}' not found or could not be enabled[/red]")
+            console.print(f"[red]❌ Server '{name}' not found and could not be enabled[/red]")
             sys.exit(1)
     except Exception as e:
         console.print(f"[red]Failed to enable server: {e}[/red]")
@@ -460,7 +460,7 @@ def disable(name: str):
         if success:
             console.print(f"[green]✅ Disabled server '{name}'[/green]")
         else:
-            console.print(f"[red]❌ Server '{name}' not found or could not be disabled[/red]")
+            console.print(f"[red]❌ Server '{name}' not found and could not be disabled[/red]")
             sys.exit(1)
     except Exception as e:
         console.print(f"[red]Failed to disable server: {e}[/red]")

@@ -23,63 +23,17 @@ class TestMenu:
     """Professional interactive test menu system."""
     
     def __init__(self):
-        # Legacy test categories for backward compatibility
-        self.legacy_test_categories = {
-            'smoke': {
-                'name': 'Smoke Tests',
-                'description': 'Critical functionality that must work (4 tests, ~30s)',
-                'priority': 'CRITICAL',
-                'color': '\033[91m'  # Red
-            },
-            'unit': {
-                'name': 'Unit Tests', 
-                'description': 'Fast isolated tests (25 tests, ~25s)',
-                'priority': 'HIGH',
-                'color': '\033[92m'  # Green
-            },
-            'server': {
-                'name': 'Server Management',
-                'description': 'Server CRUD operations (35+ tests, ~5min)',
-                'priority': 'HIGH',
-                'color': '\033[94m'  # Blue
-            },
-            'suite': {
-                'name': 'Suite Management',
-                'description': 'Suite operations + critical bug tests (40+ tests, ~8min)',
-                'priority': 'HIGH',
-                'color': '\033[95m'  # Magenta
-            },
-            'quality': {
-                'name': 'Quality Tracking',
-                'description': 'Feedback, rankings, reports (25+ tests, ~5min)',
-                'priority': 'MEDIUM',
-                'color': '\033[96m'  # Cyan
-            },
-            'error': {
-                'name': 'Error Handling',
-                'description': 'Edge cases and robustness (30+ tests, ~6min)',
-                'priority': 'HIGH',
-                'color': '\033[93m'  # Yellow
-            },
-            'workflow': {
-                'name': 'User Workflows',
-                'description': 'End-to-end user journeys (20+ tests, ~15min)',
-                'priority': 'MEDIUM',
-                'color': '\033[97m'  # White
-            },
-            'integration': {
-                'name': 'Integration Tests',
-                'description': 'Component interactions (15+ tests, ~10min)',
-                'priority': 'MEDIUM',
-                'color': '\033[90m'  # Gray
-            },
-            'regression': {
-                'name': 'Regression Tests',
-                'description': 'Known bug prevention (10+ tests, ~3min)',
-                'priority': 'HIGH',
-                'color': '\033[91m'  # Red
-            }
-        }
+        # Check if we're in the right directory
+        root_dir = Path(__file__).parent.parent.parent
+        if not (root_dir / "tests/runner.py").exists():
+            print("❌ Error: Please run this from the mcp-manager project root directory")
+            print("   Expected to find: tests/runner.py")
+            sys.exit(1)
+        
+        # Change to project root directory
+        os.chdir(root_dir)
+        
+        # No hardcoded legacy categories - load everything dynamically
         
         # Initialize collections first (will be updated after loading dynamic categories)
         self.collections = {
@@ -124,11 +78,8 @@ class TestMenu:
         }
     
     def _load_dynamic_test_categories(self) -> Dict[str, Dict]:
-        """Load test categories dynamically using hybrid DB+JSON approach."""
+        """Load test categories dynamically from JSON files."""
         categories = {}
-        
-        # Start with legacy categories for backward compatibility
-        categories.update(self.legacy_test_categories)
         
         try:
             # Use hybrid loader for fast DB-based queries
@@ -186,10 +137,11 @@ class TestMenu:
         print("5. 📊 View Last Test Results")
         print("6. 📁 Show Output Files for Sharing")
         print("7. ⚖️  Compare Testing Systems (JSON vs Pytest)")
-        print("8. 🔄 Legacy Pytest Mode")
-        print("9. 💥 Nuke Config (Reset All)")
-        print("10. ❓ Help & Documentation")
-        print("11. 🚪 Exit")
+        print("8. 🐛 Bug Report Mode (Failure Summary)")
+        print("9. 🔄 Legacy Pytest Mode")
+        print("10. 💥 Nuke Config (Reset All)")
+        print("11. ❓ Help & Documentation")
+        print("12. 🚪 Exit")
         print()
     
     def print_collections_menu(self):
@@ -275,8 +227,8 @@ class TestMenu:
             print("=" * 50)
             print(f"{self.colors['reset']}")
             
-            # Use the JSON test runner for modern concise output
-            cmd = [sys.executable, "tests/json_test_runner_cli.py"] + json_categories
+            # Use the new clean test runner
+            cmd = [sys.executable, "tests/runner.py"] + json_categories
             
             try:
                 start_time = time.time()
@@ -951,6 +903,187 @@ class TestMenu:
         
         self.wait_for_continue()
     
+    def handle_bug_report_menu(self):
+        """Handle bug report mode for systematic error tracking."""
+        while True:
+            self.clear_screen()
+            self.print_header()
+            print(f"{self.colors['bold']}{self.colors['red']}🐛 BUG REPORT MODE{self.colors['reset']}")
+            print("-" * 50)
+            print("Generate focused failure summaries for systematic bug fixing")
+            print()
+            print("1. 🚨 Run Tests with Failure Summary")
+            print("2. 📄 Generate Detailed Bug Report")
+            print("3. 🎯 Test Specific Category for Bugs")
+            print("4. 💾 Save Bug Report to File")
+            print("0. ← Back to Main Menu")
+            print()
+            
+            choice = self.get_user_input("Select bug report option (0-4):")
+            
+            if choice == '0':
+                return
+            elif choice == '1':
+                self.run_tests_with_summary()
+                return
+            elif choice == '2':
+                self.generate_detailed_bug_report()
+                return
+            elif choice == '3':
+                self.test_category_for_bugs()
+                return
+            elif choice == '4':
+                self.save_bug_report_to_file()
+                return
+            else:
+                print(f"{self.colors['red']}❌ Invalid selection{self.colors['reset']}")
+                self.wait_for_continue()
+    
+    def run_tests_with_summary(self):
+        """Run tests and show only failure summary."""
+        self.clear_screen()
+        self.print_header()
+        print(f"{self.colors['bold']}🚨 RUN TESTS WITH FAILURE SUMMARY{self.colors['reset']}")
+        print("-" * 50)
+        print("Select a category to test and see only failure summaries")
+        print()
+        
+        # Show categories
+        for i, (key, category) in enumerate(self.test_categories.items(), 1):
+            print(f"{i:2d}. {category['name']}")
+        
+        print()
+        choice = self.get_user_input("Select category (1-9):")
+        
+        try:
+            idx = int(choice) - 1
+            categories_list = list(self.test_categories.keys())
+            if 0 <= idx < len(categories_list):
+                category = categories_list[idx]
+                
+                print(f"\n{self.colors['cyan']}🚀 Running {category} tests with failure summary...{self.colors['reset']}")
+                
+                # Use the runner with --summary flag
+                cmd = [sys.executable, "tests/runner.py", category, "--summary"]
+                result = subprocess.run(cmd, cwd=Path.cwd(), text=True)
+                
+                self.wait_for_continue()
+            else:
+                print(f"{self.colors['red']}❌ Invalid selection{self.colors['reset']}")
+                self.wait_for_continue()
+        except ValueError:
+            print(f"{self.colors['red']}❌ Invalid input{self.colors['reset']}")
+            self.wait_for_continue()
+    
+    def generate_detailed_bug_report(self):
+        """Generate a detailed bug report from last test results."""
+        self.clear_screen()
+        self.print_header()
+        print(f"{self.colors['bold']}📄 GENERATE DETAILED BUG REPORT{self.colors['reset']}")
+        print("-" * 50)
+        print("This will run tests and automatically generate a detailed JSON report")
+        print()
+        
+        category = self.get_user_input("Enter category to test (e.g., 'core', 'smoke'):")
+        
+        if not category:
+            print(f"{self.colors['red']}❌ No category specified{self.colors['reset']}")
+            self.wait_for_continue()
+            return
+        
+        print(f"\n{self.colors['cyan']}🚀 Running {category} tests and generating detailed report...{self.colors['reset']}")
+        
+        # Run tests and auto-generate report
+        cmd = [sys.executable, "tests/runner.py", category]
+        result = subprocess.run(cmd, cwd=Path.cwd(), text=True)
+        
+        print(f"\n{self.colors['green']}✅ Detailed bug report automatically saved if failures occurred{self.colors['reset']}")
+        self.wait_for_continue()
+    
+    def test_category_for_bugs(self):
+        """Test a specific category just for bug identification."""
+        self.clear_screen()
+        self.print_header()
+        print(f"{self.colors['bold']}🎯 TEST CATEGORY FOR BUGS{self.colors['reset']}")
+        print("-" * 50)
+        print("Run tests on a specific category to identify and report bugs")
+        print()
+        
+        # Show available categories
+        for i, (key, category) in enumerate(self.test_categories.items(), 1):
+            priority = category.get('priority', 'medium').upper()
+            priority_color = self.colors['red'] if priority == 'CRITICAL' else \
+                           self.colors['yellow'] if priority == 'HIGH' else \
+                           self.colors['green']
+            
+            print(f"{i:2d}. {category['name']} {priority_color}[{priority}]{self.colors['reset']}")
+        
+        print()
+        choice = self.get_user_input("Select category for bug testing (1-9):")
+        
+        try:
+            idx = int(choice) - 1
+            categories_list = list(self.test_categories.keys())
+            if 0 <= idx < len(categories_list):
+                category = categories_list[idx]
+                category_name = self.test_categories[category]['name']
+                
+                print(f"\n{self.colors['yellow']}🔄 Testing {category_name} for bugs...{self.colors['reset']}")
+                print("This will show both full results and failure summary")
+                print()
+                
+                # Run tests normally first
+                cmd = [sys.executable, "tests/runner.py", category]
+                result = subprocess.run(cmd, cwd=Path.cwd(), text=True)
+                
+                # Then show summary if there were failures
+                if result.returncode != 0:
+                    print(f"\n{self.colors['red']}🚨 FAILURES DETECTED - Showing failure summary:{self.colors['reset']}")
+                    print("=" * 60)
+                    
+                    cmd_summary = [sys.executable, "tests/runner.py", category, "--summary"]
+                    subprocess.run(cmd_summary, cwd=Path.cwd(), text=True)
+                else:
+                    print(f"\n{self.colors['green']}✅ No bugs found in {category_name}!{self.colors['reset']}")
+                
+                self.wait_for_continue()
+            else:
+                print(f"{self.colors['red']}❌ Invalid selection{self.colors['reset']}")
+                self.wait_for_continue()
+        except ValueError:
+            print(f"{self.colors['red']}❌ Invalid input{self.colors['reset']}")
+            self.wait_for_continue()
+    
+    def save_bug_report_to_file(self):
+        """Save a bug report to a specific file."""
+        self.clear_screen()
+        self.print_header()
+        print(f"{self.colors['bold']}💾 SAVE BUG REPORT TO FILE{self.colors['reset']}")
+        print("-" * 50)
+        print("Run tests and save detailed failure report to a custom file")
+        print()
+        
+        category = self.get_user_input("Enter category to test:")
+        if not category:
+            print(f"{self.colors['red']}❌ No category specified{self.colors['reset']}")
+            self.wait_for_continue()
+            return
+        
+        filename = self.get_user_input("Enter filename for bug report (e.g., 'bug_report.json'):")
+        if not filename:
+            print(f"{self.colors['red']}❌ No filename specified{self.colors['reset']}")
+            self.wait_for_continue()
+            return
+        
+        print(f"\n{self.colors['cyan']}🚀 Running {category} tests and saving report to {filename}...{self.colors['reset']}")
+        
+        # Run tests with custom report file
+        cmd = [sys.executable, "tests/runner.py", category, "--save-report", filename]
+        result = subprocess.run(cmd, cwd=Path.cwd(), text=True)
+        
+        print(f"\n{self.colors['green']}✅ Bug report saved to: {filename}{self.colors['reset']}")
+        self.wait_for_continue()
+
     def handle_legacy_mode(self):
         """Handle legacy pytest mode menu."""
         while True:
@@ -1012,6 +1145,8 @@ class TestMenu:
                 elif choice == '7':
                     self.handle_comparison_menu()
                 elif choice == '8':
+                    self.handle_bug_report_menu()
+                elif choice == '9':
                     self.clear_screen()
                     self.print_header()
                     print(f"{self.colors['bold']}{self.colors['red']}🔄 LEGACY PYTEST MODE{self.colors['reset']}")
@@ -1022,22 +1157,22 @@ class TestMenu:
                     print()
                     self.wait_for_continue()
                     self.handle_legacy_mode()
-                elif choice == '9':
+                elif choice == '10':
                     self.clear_screen()
                     self.print_header()
                     self.nuke_config()
                     self.wait_for_continue()
-                elif choice == '10':
+                elif choice == '11':
                     self.clear_screen()
                     self.print_header()
                     self.show_help()
                     self.wait_for_continue()
-                elif choice == '11':
+                elif choice == '12':
                     print(f"\n{self.colors['cyan']}👋 Thanks for using MCP Manager Test Suite!{self.colors['reset']}")
                     print("🚀 Keep testing, keep improving! ✨")
                     break
                 else:
-                    print(f"{self.colors['red']}❌ Invalid selection. Please choose 1-11.{self.colors['reset']}")
+                    print(f"{self.colors['red']}❌ Invalid selection. Please choose 1-12.{self.colors['reset']}")
                     self.wait_for_continue()
                     
         except KeyboardInterrupt:
@@ -1048,17 +1183,7 @@ class TestMenu:
 
 def main():
     """Main entry point."""
-    # Check if we're in the right directory
-    root_dir = Path(__file__).parent.parent.parent
-    if not (root_dir / "tests/test_runner.py").exists():
-        print("❌ Error: Please run this from the mcp-manager project root directory")
-        print("   Expected to find: tests/test_runner.py")
-        sys.exit(1)
-    
-    # Change to project root directory
-    os.chdir(root_dir)
-    
-    # Create and run the menu
+    # Create and run the menu (directory check is now in __init__)
     menu = TestMenu()
     menu.run()
 

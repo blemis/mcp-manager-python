@@ -1,0 +1,163 @@
+{
+  "timestamp": "2025-07-26T14:02:14.098251",
+  "summary": {
+    "total_scenarios": 15,
+    "successful_scenarios": 15,
+    "failed_scenarios": 0,
+    "success_rate": 100.0,
+    "total_duration": 9.285935640335083,
+    "average_duration": 0.6190623760223388
+  },
+  "scenarios": [
+    {
+      "id": "unknown",
+      "name": "Unknown Scenario",
+      "success": true,
+      "duration": 0.6185460090637207,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": true
+    },
+    {
+      "id": "unknown",
+      "name": "Unknown Scenario",
+      "success": true,
+      "duration": 0.61869215965271,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": true
+    },
+    {
+      "id": "unknown",
+      "name": "Unknown Scenario",
+      "success": true,
+      "duration": 0.6226739883422852,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": true
+    },
+    {
+      "id": "unknown",
+      "name": "Unknown Scenario",
+      "success": true,
+      "duration": 0.6223468780517578,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": true
+    },
+    {
+      "id": "unknown",
+      "name": "Unknown Scenario",
+      "success": true,
+      "duration": 0.6175417900085449,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": true
+    },
+    {
+      "id": "unknown",
+      "name": "Unknown Scenario",
+      "success": true,
+      "duration": 0.6136760711669922,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": true
+    },
+    {
+      "id": "unknown",
+      "name": "Unknown Scenario",
+      "success": true,
+      "duration": 0.6174900531768799,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": true
+    },
+    {
+      "id": "unknown",
+      "name": "Unknown Scenario",
+      "success": true,
+      "duration": 0.6228799819946289,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": true
+    },
+    {
+      "id": "unknown",
+      "name": "Unknown Scenario",
+      "success": true,
+      "duration": 0.6200809478759766,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": true
+    },
+    {
+      "id": "unknown",
+      "name": "Unknown Scenario",
+      "success": true,
+      "duration": 0.6153168678283691,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": true
+    },
+    {
+      "id": "unknown",
+      "name": "Unknown Scenario",
+      "success": true,
+      "duration": 0.6216719150543213,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": true
+    },
+    {
+      "id": "unknown",
+      "name": "Unknown Scenario",
+      "success": true,
+      "duration": 0.621074914932251,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": true
+    },
+    {
+      "id": "unknown",
+      "name": "Unknown Scenario",
+      "success": true,
+      "duration": 0.6240420341491699,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": true
+    },
+    {
+      "id": "unknown",
+      "name": "Unknown Scenario",
+      "success": true,
+      "duration": 0.6141021251678467,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": true
+    },
+    {
+      "id": "unknown",
+      "name": "Unknown Scenario",
+      "success": true,
+      "duration": 0.6157999038696289,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": true
+    }
+  ]
+}

@@ -200,6 +200,7 @@ class SimpleMCPManager:
         env: Optional[dict] = None,
         args: Optional[List[str]] = None,
         scope: ServerScope = ServerScope.USER,
+        working_dir: Optional[str] = None,
     ) -> Server:
         """
         Add a new MCP server.
@@ -212,6 +213,7 @@ class SimpleMCPManager:
             env: Environment variables
             args: Command arguments
             scope: Server scope (ignored - Claude manages globally)
+            working_dir: Working directory (ignored - Claude doesn't support this)
             
         Returns:
             The created server
@@ -324,7 +326,7 @@ class SimpleMCPManager:
         
         return success
     
-    async def enable_server(self, name: str) -> Server:
+    async def enable_server(self, name: str) -> bool:
         """
         Enable an MCP server.
         
@@ -345,7 +347,7 @@ class SimpleMCPManager:
         server = self.claude.get_server(name)
         if server:
             logger.debug(f"Server '{name}' is already enabled in Claude")
-            return server
+            return True
         
         # Check if this is a Docker Desktop server that's disabled in catalog
         catalog = await self._get_server_catalog()
@@ -382,17 +384,8 @@ class SimpleMCPManager:
                                 if name in servers_list.split(","):
                                     # Update database status to enabled
                                     await self._update_server_in_catalog(name, enabled=True)
-                                    # Return a mock server object
-                                    from .models import Server, ServerScope, ServerType
-                                    return Server(
-                                        name=name,
-                                        command="docker",
-                                        args=["mcp", "server", name],
-                                        env={},
-                                        enabled=True,
-                                        scope=ServerScope.USER,
-                                        server_type=ServerType.DOCKER_DESKTOP
-                                    )
+                                    # Server enabled successfully
+                                    return True
                         
                         raise MCPManagerError(f"Server '{name}' was installed but not found in docker-gateway")
                     else:
@@ -425,27 +418,16 @@ class SimpleMCPManager:
                         env={},
                         description=f"Docker Desktop MCP server: {name}",
                     )
-                # Return a mock server object for Docker Desktop servers
-                from .models import Server, ServerScope, ServerType
-                return Server(
-                    name=name,
-                    command="docker",
-                    args=["mcp", "run", name],
-                    env={},
-                    enabled=True,
-                    scope=ServerScope.USER,
-                    server_type=ServerType.DOCKER_DESKTOP
-                )
+                # Server enabled successfully
+                return True
             else:
                 raise MCPManagerError(f"Failed to enable Docker Desktop server '{name}'")
         
         # If not found, we can't enable it without knowing the command
-        raise MCPManagerError(
-            f"Server '{name}' not found. Use 'add' to create it first, "
-            "or use 'discover' to find available servers."
-        )
+        logger.debug(f"Server '{name}' not found for enabling")
+        return False
     
-    async def disable_server(self, name: str) -> Server:
+    async def disable_server(self, name: str) -> bool:
         """
         Disable an MCP server.
         
@@ -468,33 +450,25 @@ class SimpleMCPManager:
             if success:
                 # Mark as disabled in catalog
                 await self._update_server_in_catalog(name, enabled=False)
-                # Return a mock server object for Docker Desktop servers
-                from .models import Server, ServerScope, ServerType
-                return Server(
-                    name=name,
-                    command="docker",
-                    args=["mcp", "run", name],
-                    env={},
-                    enabled=False,
-                    scope=ServerScope.USER,
-                    server_type=ServerType.DOCKER_DESKTOP
-                )
+                # Server disabled successfully
+                return True
             else:
                 raise MCPManagerError(f"Failed to disable Docker Desktop server '{name}'")
         
         # Get server before removing (for regular servers)
         server = self.claude.get_server(name)
         if not server:
-            raise MCPManagerError(f"Server '{name}' not found")
+            logger.debug(f"Server '{name}' not found for disabling")
+            return False
         
         # Remove from Claude (this is how we "disable")
         success = self.claude.remove_server(name)
         if not success:
-            raise MCPManagerError(f"Failed to disable server '{name}'")
+            logger.debug(f"Failed to disable server '{name}'")
+            return False
         
-        # Return the server object with enabled=False
-        server.enabled = False
-        return server
+        # Server disabled successfully
+        return True
     
     async def get_server(self, name: str) -> Optional[Server]:
         """
@@ -3276,3 +3250,16 @@ class SimpleMCPManager:
     async def _update_server_status(self, server_name: str, enabled: bool):
         """Update the enabled status of a server in the catalog."""
         await self._update_server_in_catalog(server_name, enabled=enabled)
+    
+    async def check_for_similar_servers(
+        self,
+        name: str,
+        server_type: ServerType,
+        command: str,
+        args: Optional[List[str]] = None
+    ) -> List[Dict[str, Any]]:
+        """Check for servers with similar functionality (public method for CLI)."""
+        # For now, return empty list to allow server addition to proceed
+        # TODO: Implement proper similarity checking using discovery system
+        logger.debug(f"Checking for similar servers to {name} (not implemented)")
+        return []

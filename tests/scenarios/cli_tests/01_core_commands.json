@@ -90,17 +90,16 @@
       "cleanup_commands": ["mcp-manager remove env-server --force"]
     },
     {
-      "test_name": "list_with_existing_servers",
-      "description": "Test list command with existing database servers",
+      "test_name": "list_after_adding_servers",
+      "description": "Test list command shows servers after adding them", 
       "command": "mcp-manager list",
       "expected_output_contains": [
-        "MCP Servers",
-        "Ref",
-        "filesystem",
-        "aws-diagram"
+        "test-server",
+        "env-server"
       ],
       "expected_exit_code": 0,
-      "timeout": 10
+      "timeout": 10,
+      "depends_on": ["add_server_minimal", "add_server_with_env"]
     },
     {
       "test_name": "enable_command_help",
@@ -154,7 +153,7 @@
     {
       "test_name": "nuke_dry_run",
       "description": "Test nuclear cleanup without force flag (should prompt)",
-      "command": "echo 'n' | mcp-manager nuke",
+      "command": "printf 'n\\n' | mcp-manager nuke",
       "expected_output_contains": ["WARNING", "Operation cancelled"],
       "expected_exit_code": 0,
       "timeout": 15
