@@ -127,16 +127,19 @@ class AITestScenarioGenerator:
     def _create_comprehensive_prompt(self, command: str, description: str, analysis: Dict[str, Any]) -> str:
         """Create comprehensive AI prompt for test generation."""
         
-        available_servers = ["Ref", "filesystem", "aws-diagram"]
+        # Note: Tests should be collection-agnostic and work with any server mix
         
         prompt = f"""
-You are a senior QA engineer creating comprehensive test scenarios for the MCP Manager CLI.
+You are a senior QA engineer creating collection-agnostic test scenarios for the MCP Manager CLI.
+
+CRITICAL: All tests must be collection-agnostic and work with any existing server collections 
+(NPX/Docker Desktop/Docker Hub mix) or empty state. Do NOT hardcode specific server names.
 
 COMMAND TO TEST: {command}
 DESCRIPTION: {description}
 COMPLEXITY LEVEL: {analysis.get('complexity_level', 'medium')}
 CATEGORY HINTS: {', '.join(analysis.get('category_hints', []))}
-INTEGRATION NEEDS: {', '.join(analysis.get('integration_requirements', []))}
+INTEGRATION APPROACH: Test CLI functionality without depending on specific servers
 
 AVAILABLE DATABASE SERVERS: {', '.join(available_servers)}
 
@@ -144,9 +147,26 @@ Create a comprehensive JSON test suite following this exact schema:
 
 {{
   "test_suite_name": "Descriptive Test Suite Name",
-  "test_suite_description": "Detailed description of what this test suite covers",
+  "test_suite_description": "Collection-agnostic tests for [feature description]",
   "category": "appropriate_category_from_hints",
   "priority": "critical|high|medium|low",
+  "collection_requirements": {{
+    "collection_type": "any",
+    "server_types": [],
+    "min_servers": 0
+  }},
+  "metadata": {{
+    "created_date": "2025-01-26",
+    "created_by": "ai",
+    "tags": ["cli", "category", "collection-agnostic"],
+    "estimated_duration_seconds": 60,
+    "compatibility": {{
+      "npm_servers": true,
+      "docker_desktop_servers": true,
+      "docker_hub_servers": true,
+      "empty_state": true
+    }}
+  }},
   "test_scenarios": [
     {{
       "test_name": "unique_descriptive_name",
@@ -162,13 +182,13 @@ Create a comprehensive JSON test suite following this exact schema:
 }}
 
 REQUIREMENTS:
-1. Generate 10-20 test scenarios including:
-   - Basic functionality test
-   - Help command test (--help)
-   - Error handling tests (invalid args, missing params)
+1. Generate 10-20 COLLECTION-AGNOSTIC test scenarios including:
+   - Basic functionality test (works with any collection state)
+   - Help command test (--help) - always works
+   - Error handling tests (invalid args, missing params) - server-independent
    - Edge cases and boundary conditions
-   - Integration tests with existing servers when relevant
-   - Negative test cases
+   - Tests that work with empty, populated, or mixed collections
+   - Negative test cases (command failures, not server failures)
    - Performance/timeout scenarios
 
 2. Use realistic expectations:
@@ -176,10 +196,11 @@ REQUIREMENTS:
    - Exit codes: 0 for success, 1 for expected errors, 2 for argument errors
    - Output validation should be specific but not overly restrictive
 
-3. Leverage existing database servers when appropriate:
-   - Use "Ref", "filesystem", "aws-diagram" for integration tests
-   - Include setup/cleanup only when necessary
-   - Prefer database servers over creating temporary ones
+3. NEVER hardcode specific server names or assume specific servers exist:
+   - Test CLI functionality, not specific server configurations
+   - Use commands like "list", "status", "help" that work regardless of collection state
+   - Avoid setup/cleanup commands that create/modify servers
+   - Test the CLI interface itself, not the servers it manages
 
 4. Test naming convention:
    - Use descriptive, unique names

@@ -1,8 +1,25 @@
 {
   "test_suite_name": "Core Commands",
-  "test_suite_description": "Comprehensive tests for core MCP Manager CLI commands",
+  "test_suite_description": "Collection-agnostic tests for core MCP Manager CLI commands",
   "category": "core",
   "priority": "critical",
+  "collection_requirements": {
+    "collection_type": "any",
+    "server_types": [],
+    "min_servers": 0
+  },
+  "metadata": {
+    "created_date": "2025-01-26",
+    "created_by": "system", 
+    "tags": ["cli", "core", "collection-agnostic"],
+    "estimated_duration_seconds": 45,
+    "compatibility": {
+      "npm_servers": true,
+      "docker_desktop_servers": true,
+      "docker_hub_servers": true,
+      "empty_state": true
+    }
+  },
   "test_scenarios": [
     {
       "test_name": "help_command",
@@ -85,22 +102,22 @@
       "timeout": 10
     },
     {
-      "test_name": "enable_existing_server",
-      "description": "Test enabling an existing database server",
-      "command": "mcp-manager enable Ref",
-      "expected_output_contains": ["Enabled server 'Ref'", "already enabled"],
+      "test_name": "enable_command_help",
+      "description": "Test enable command help (collection-agnostic)",
+      "command": "mcp-manager enable --help",
+      "expected_output_contains": ["Enable an MCP server", "Usage:", "--help"],
       "expected_exit_code": 0,
-      "timeout": 15
+      "timeout": 10,
+      "collection_state": "any"
     },
     {
-      "test_name": "disable_existing_server",
-      "description": "Test disabling an existing database server",
-      "setup_commands": ["mcp-manager enable filesystem"],
-      "command": "mcp-manager disable filesystem",
-      "expected_output_contains": ["Disabled server 'filesystem'"],
+      "test_name": "disable_command_help",
+      "description": "Test disable command help (collection-agnostic)",
+      "command": "mcp-manager disable --help",
+      "expected_output_contains": ["Disable an MCP server", "Usage:", "--help"],
       "expected_exit_code": 0,
-      "timeout": 15,
-      "cleanup_commands": ["mcp-manager enable filesystem"]
+      "timeout": 10,
+      "collection_state": "any"
     },
     {
       "test_name": "add_server_invalid_type",

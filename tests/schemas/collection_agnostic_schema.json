@@ -1,0 +1,162 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Collection-Agnostic Test Scenario Schema",
+  "description": "Schema for test scenarios that work with any existing collections or empty state",
+  "type": "object",
+  "required": [
+    "test_suite_name",
+    "test_suite_description", 
+    "category",
+    "priority",
+    "test_scenarios"
+  ],
+  "properties": {
+    "test_suite_name": {
+      "type": "string",
+      "description": "Name of the test suite"
+    },
+    "test_suite_description": {
+      "type": "string", 
+      "description": "Description of what this test suite covers"
+    },
+    "category": {
+      "type": "string",
+      "enum": ["core", "discovery", "suite", "ai_analytics", "system", "interface", "api", "proxy", "workflow", "test_admin"],
+      "description": "Test category for organization"
+    },
+    "priority": {
+      "type": "string",
+      "enum": ["critical", "high", "medium", "low"],
+      "description": "Test priority level"
+    },
+    "collection_requirements": {
+      "type": "object",
+      "description": "Optional requirements for collections to use with these tests",
+      "properties": {
+        "collection_type": {
+          "type": "string",
+          "enum": ["any", "empty", "populated", "mixed"],
+          "default": "any",
+          "description": "Type of collection state needed"
+        },
+        "min_servers": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Minimum number of servers needed (optional)"
+        },
+        "server_types": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["npm", "docker-desktop", "docker-hub", "custom"]
+          },
+          "description": "Server types that should be present (optional)"
+        },
+        "collection_name": {
+          "type": "string",
+          "description": "Specific collection name to use (optional)"
+        }
+      }
+    },
+    "test_scenarios": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "test_name",
+          "description", 
+          "command",
+          "expected_exit_code",
+          "timeout"
+        ],
+        "properties": {
+          "test_name": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$",
+            "description": "Unique test scenario name (lowercase, underscores only)"
+          },
+          "description": {
+            "type": "string",
+            "description": "What this test validates"
+          },
+          "command": {
+            "type": "string", 
+            "description": "CLI command to execute"
+          },
+          "expected_output_contains": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Strings that should be present in output"
+          },
+          "expected_output_not_contains": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Strings that should NOT be present in output"
+          },
+          "expected_exit_code": {
+            "type": "integer",
+            "description": "Expected command exit code"
+          },
+          "timeout": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 300,
+            "description": "Command timeout in seconds"
+          },
+          "collection_state": {
+            "type": "string",
+            "enum": ["any", "empty", "populated", "specific"],
+            "default": "any",
+            "description": "Required collection state for this test"
+          },
+          "prerequisite_commands": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Commands to run before test (if collection allows)"
+          },
+          "cleanup_commands": {
+            "type": "array", 
+            "items": {"type": "string"},
+            "description": "Commands to run after test (if collection allows)"
+          },
+          "skip_if_no_servers": {
+            "type": "boolean",
+            "default": false,
+            "description": "Skip this test if no servers are configured"
+          },
+          "requires_specific_collection": {
+            "type": "string",
+            "description": "Name of specific collection this test requires"
+          }
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional metadata for test management",
+      "properties": {
+        "created_date": {"type": "string"},
+        "created_by": {
+          "type": "string",
+          "enum": ["admin", "ai", "user", "migration", "system"]
+        },
+        "last_updated": {"type": "string"},
+        "tags": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "estimated_duration_seconds": {"type": "integer"},
+        "compatibility": {
+          "type": "object",
+          "properties": {
+            "npm_servers": {"type": "boolean", "default": true},
+            "docker_desktop_servers": {"type": "boolean", "default": true}, 
+            "docker_hub_servers": {"type": "boolean", "default": true},
+            "empty_state": {"type": "boolean", "default": true}
+          }
+        }
+      }
+    }
+  }
+}

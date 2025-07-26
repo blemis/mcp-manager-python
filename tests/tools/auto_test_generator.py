@@ -38,7 +38,7 @@ class AutoTestGenerator:
     def __init__(self):
         self.tests_dir = Path(__file__).parent.parent / "scenarios" / "cli_tests"
         self.master_config_path = self.tests_dir / "master_test_config.json"
-        self.schema_path = Path(__file__).parent.parent / "schemas" / "test_scenario_schema.json"
+        self.schema_path = Path(__file__).parent.parent / "schemas" / "collection_agnostic_schema.json"
         
     def load_master_config(self) -> Dict[str, Any]:
         """Load the master test configuration."""
@@ -195,6 +195,23 @@ class AutoTestGenerator:
             "test_suite_description": description,
             "category": category,
             "priority": priority,
+            "collection_requirements": {
+                "collection_type": "any",
+                "server_types": [],
+                "min_servers": 0
+            },
+            "metadata": {
+                "created_date": datetime.now().strftime("%Y-%m-%d"),
+                "created_by": "user",
+                "tags": ["cli", category, "collection-agnostic"],
+                "estimated_duration_seconds": len(scenarios) * 3,
+                "compatibility": {
+                    "npm_servers": True,
+                    "docker_desktop_servers": True,
+                    "docker_hub_servers": True,
+                    "empty_state": True
+                }
+            },
             "test_scenarios": scenarios
         }
     

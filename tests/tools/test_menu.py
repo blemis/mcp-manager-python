@@ -120,65 +120,26 @@ class TestMenu:
         }
     
     def _load_dynamic_test_categories(self) -> Dict[str, Dict]:
-        """Load test categories dynamically from JSON test files and master config."""
+        """Load test categories dynamically using hybrid DB+JSON approach."""
         categories = {}
         
         # Start with legacy categories for backward compatibility
         categories.update(self.legacy_test_categories)
         
         try:
-            # Load master test configuration
-            master_config_path = Path("tests/scenarios/cli_tests/master_test_config.json")
+            # Use hybrid loader for fast DB-based queries
+            from tests.tools.hybrid_test_loader import get_hybrid_loader
+            loader = get_hybrid_loader()
             
-            if master_config_path.exists():
-                with open(master_config_path, 'r') as f:
-                    master_config = json.load(f)
-                
-                # Create categories from JSON test suites
-                for suite in master_config.get('test_suites', []):
-                    category = suite.get('category', 'custom')
-                    priority = suite.get('priority', 'medium').upper()
-                    test_count = suite.get('test_count', 0)
-                    description = suite.get('description', '')
-                    
-                    # Estimate duration based on test count
-                    estimated_duration = max(10, test_count * 3)  # 3 seconds per test minimum
-                    duration_str = f"~{estimated_duration}s" if estimated_duration < 60 else f"~{estimated_duration//60}min"
-                    
-                    # Get color based on priority
-                    color_map = {
-                        'CRITICAL': '\033[91m',  # Red
-                        'HIGH': '\033[94m',      # Blue  
-                        'MEDIUM': '\033[96m',    # Cyan
-                        'LOW': '\033[90m'        # Gray
-                    }
-                    
-                    # Create full description
-                    full_description = f"{description} ({test_count} tests, {duration_str})"
-                    
-                    # Create friendly name from test suite name
-                    suite_name = suite.get('test_suite_name', category)
-                    if not suite_name or suite_name == category:
-                        # Fallback to file name processing
-                        file_name = suite.get('file', category)
-                        suite_name = file_name.replace('.json', '').replace('_', ' ').replace('-', ' ')
-                        suite_name = ' '.join(word.capitalize() for word in suite_name.split()[1:])  # Skip number prefix
-                    
-                    categories[category] = {
-                        'name': suite_name,
-                        'description': full_description,
-                        'priority': priority,
-                        'color': color_map.get(priority, '\033[96m'),
-                        'file': suite.get('file'),
-                        'test_count': test_count,
-                        'is_json': True
-                    }
-                
-                # Update collections to include new categories
-                self._update_collections_with_json_categories(categories)
+            # Get categories from DB (synced with JSON files)
+            db_categories = loader.get_dynamic_test_categories()
+            categories.update(db_categories)
+            
+            # Update collections to include new categories
+            self._update_collections_with_json_categories(categories)
                 
         except Exception as e:
-            print(f"Warning: Failed to load dynamic test categories: {e}")
+            print(f"Warning: Failed to load dynamic test categories from DB: {e}")
             print("Falling back to legacy categories")
         
         return categories
