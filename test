@@ -4,8 +4,8 @@
 #
 # Usage:
 #   ./test                    # Interactive menu
-#   ./test smoke             # Quick smoke test (pytest)
-#   ./test smoke --json      # Quick smoke test (JSON)  
+#   ./test smoke             # Quick smoke test (JSON default)
+#   ./test smoke --pytest   # Quick smoke test (legacy pytest)  
 #   ./test smoke --compare   # Run both and compare results
 #   ./test unit              # Unit tests
 #   ./test all               # All tests

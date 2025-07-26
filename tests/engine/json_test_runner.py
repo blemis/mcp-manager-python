@@ -167,14 +167,21 @@ class JsonTestRunner:
         
         all_results = []
         start_time = datetime.now()
+        total_scenarios = len(scenarios)
         
-        # Execute scenarios directly (no batching needed for now)
-        for scenario_data in scenarios:
-            scenario_info = scenario_data.get('scenario', {})
-            scenario_id = scenario_info.get('id', 'unknown')
-            scenario_name = scenario_info.get('name', 'Unknown Scenario')
+        # Execute scenarios with progress indicator
+        for i, scenario_data in enumerate(scenarios, 1):
+            # Handle both old and new test formats
+            if 'scenario' in scenario_data:
+                scenario_info = scenario_data.get('scenario', {})
+                scenario_id = scenario_info.get('id', 'unknown')
+                scenario_name = scenario_info.get('name', 'Unknown Scenario')
+            else:
+                scenario_id = scenario_data.get('test_name', 'unknown')
+                scenario_name = scenario_data.get('test_name', 'Unknown Test')
             
-            logger.info(f"🎯 Running: {scenario_name}")
+            # Show simple counter progress
+            print(f"\r🔄 Running test {i}/{total_scenarios}: {scenario_name[:50]}...", end="", flush=True)
             
             try:
                 # Execute the scenario using the test engine
@@ -192,6 +199,10 @@ class JsonTestRunner:
                         db.update_scenario_stats(scenario_id, result.success, result.duration)
                     except Exception as e:
                         logger.debug(f"Failed to update stats for {scenario_id}: {e}")
+                
+                # Show completion status briefly
+                status = "✅" if result.success else "❌"
+                print(f"\r🔄 Test {i}/{total_scenarios}: {scenario_name[:50]} {status}", end="", flush=True)
                 
                 if stop_on_failure and not result.success:
                     logger.warning("🛑 Stopping execution due to failure")
@@ -214,6 +225,10 @@ class JsonTestRunner:
                 
                 if stop_on_failure:
                     break
+        
+        # Clear progress line
+        print(f"\r{' ' * 80}", end="")
+        print(f"\r", end="")
         
         total_duration = (datetime.now() - start_time).total_seconds()
         total_success = sum(1 for r in all_results if r.success)
@@ -289,7 +304,7 @@ class JsonTestRunner:
         return output_path
     
     def print_detailed_results(self, results: Optional[List[ScenarioResult]] = None):
-        """Print detailed test results similar to pytest format."""
+        """Print concise test results - one line per test."""
         if results is None:
             results = self.results
         
@@ -297,35 +312,23 @@ class JsonTestRunner:
             print("📋 No test results to display")
             return
         
-        print("\n🧪 JSON Test Execution Details")
-        print("=" * 80)
+        print("\n🧪 Test Results")
+        print("=" * 60)
         
         for result in results:
-            # Print test name and description
+            # Print test name, description and status on one line
             status_icon = "✅" if result.success else "❌"
             status_text = "PASSED" if result.success else "FAILED"
+            status_color = "\033[32m" if result.success else "\033[91m"
             
-            print(f"{result.scenario_name} ", end="")
+            # Get test description from the scenario data if available
+            description = getattr(result, 'description', '') or result.scenario_name
             
-            # Show MCP server deployments if any
-            if result.step_results:
-                setup_steps = [s for s in result.step_results if 'setup' in s.expected_outcome.lower() or 'deploy' in s.output.lower()]
-                if setup_steps:
-                    print(f"🎯 Auto-loading suite for {result.scenario_name}")
-                    for step in setup_steps:
-                        if "Successfully deployed server" in step.output:
-                            server_name = step.output.split("Successfully deployed server: ")[-1].split()[0] if "Successfully deployed server: " in step.output else "test-server"
-                            print(f"📦 Loading test suite: {server_name}")
-                            print(f"   Description: {result.scenario_name}")
-                            print(f"   ➕ Adding MCP server: {server_name}")
-                            print(f"      ✅ Successfully deployed server: {server_name}")
-                            print(f"✅ Suite '{server_name}' loaded successfully!")
+            print(f"{status_icon} {result.scenario_name:<30} {description:<40} {status_color}{status_text}\033[0m")
             
-            print(f"\033[32m{status_text}\033[0m" if result.success else f"\033[91m{status_text}\033[0m")
-            
-            # Show error details for failed tests
+            # Show error details for failed tests only
             if not result.success and result.error_message:
-                print(f"   Error: {result.error_message}")
+                print(f"   ❌ Error: {result.error_message}")
         
         # Print summary statistics
         total = len(results)

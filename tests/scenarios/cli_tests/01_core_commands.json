@@ -1,4 +1,5 @@
 {
+  "schema_version": "1.0",
   "test_suite_name": "Core Commands",
   "test_suite_description": "Collection-agnostic tests for core MCP Manager CLI commands",
   "category": "core",

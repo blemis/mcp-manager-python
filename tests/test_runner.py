@@ -281,11 +281,17 @@ class ProfessionalTestRunner:
         failed_categories = total_categories - passed_categories
         success_rate = (passed_categories / total_categories * 100) if total_categories > 0 else 0
         
+        # Calculate individual test statistics
+        total_tests = sum(r.get('test_count', 0) for r in results)
+        passed_tests = sum(r.get('passed_tests', 0) for r in results if r['success'])
+        failed_tests = total_tests - passed_tests
+        test_success_rate = (passed_tests / total_tests * 100) if total_tests > 0 else 0
+        
         print(f"📈 Overall Statistics:")
-        print(f"   Total Categories: {total_categories}")
-        print(f"   Passed: {passed_categories}")
-        print(f"   Failed: {failed_categories}")
-        print(f"   Success Rate: {success_rate:.1f}%")
+        print(f"   Total Tests: {total_tests}")
+        print(f"   Passed: {passed_tests}")
+        print(f"   Failed: {failed_tests}")
+        print(f"   Success Rate: {test_success_rate:.1f}%")
         print(f"   Total Time: {total_time:.1f}s")
         
         # Detailed results
@@ -373,7 +379,8 @@ class ProfessionalTestRunner:
             print("=" * 80)
             return
         
-        print(f"🚨 {len(failed_results)} CATEGORIES FAILED - Share these files:")
+        failed_test_count = sum(r.get('failed_tests', 0) for r in failed_results)
+        print(f"🚨 {failed_test_count} TESTS FAILED - Share these files:")
         print("-" * 60)
         
         # Essential files for debugging

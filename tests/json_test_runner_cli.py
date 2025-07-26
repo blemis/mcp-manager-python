@@ -25,41 +25,39 @@ class JsonTestRunnerCLI:
     def __init__(self):
         self.runner = JsonTestRunner()
         
-        # Category mapping from CLI names to database category IDs
-        self.category_mapping = {
-            'unit': 'basic-commands',      # Unit tests map to basic-commands category
-            'smoke': 'basic-commands',     # Smoke tests also use basic commands
-            'server': 'server-management', # Server tests map to server-management category
-            'suite': 'suite-management',   # Suite tests map to suite-management category
-            'quality': 'quality-tracking', # Quality tests map to quality-tracking category
-            'error': 'error-handling',     # Error tests map to error-handling category
-            'workflow': 'workflows',       # Workflow tests map to workflows category
-        }
+        # Initialize hybrid loader for dynamic category lookup
+        from tests.tools.hybrid_test_loader import get_hybrid_loader
+        self.hybrid_loader = get_hybrid_loader()
     
-    def map_category(self, category: str) -> str:
-        """Map legacy category names to JSON category names."""
-        if category in self.category_mapping:
-            mapped = self.category_mapping[category]
-            print(f"🔄 Mapping category '{category}' -> '{mapped}' for JSON compatibility")
-            return mapped
-        return category
+    def get_category_for_request(self, requested_category: str) -> str:
+        """Map request to actual category - categories are just buckets."""
+        # Get all available categories
+        available_categories = self.hybrid_loader.get_dynamic_test_categories()
+        
+        # For 'smoke' or 'unit', use core tests (basic functionality)
+        if requested_category in ['smoke', 'unit']:
+            if 'core' in available_categories:
+                return 'core'
+        
+        # Direct match
+        if requested_category in available_categories:
+            return requested_category
+            
+        # Default to core if nothing matches
+        return 'core' if 'core' in available_categories else list(available_categories.keys())[0]
     
     async def run_category(self, category: str, **kwargs) -> bool:
-        """Run tests in a specific category using the EXISTING suite system."""
-        original_category = category
-        mapped_category = self.map_category(category)
+        """Run tests - just load the JSON file and run the tests."""
+        target_category = self.get_category_for_request(category)
         
-        print(f"\n🧪 Running {original_category.upper()} JSON Tests")
-        if mapped_category != original_category:
-            print(f"    (Using JSON category: {mapped_category})")
+        print(f"\n🧪 Running {category.upper()} Tests")
         print("=" * 60)
         
-        # Use the SAME suite loading system as pytest
-        await self._load_suite_for_category(mapped_category)
+        # Load scenarios directly from the category
+        scenarios = self.hybrid_loader.get_tests_by_category(target_category)
         
-        scenarios = self.runner.discover_scenarios(category=mapped_category)
         if not scenarios:
-            print(f"❌ No scenarios found for category: {original_category} (mapped to: {mapped_category})")
+            print(f"❌ No test scenarios found for: {category}")
             return False
         
         print(f"📋 Found {len(scenarios)} scenarios")

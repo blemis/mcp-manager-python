@@ -89,7 +89,7 @@
       "file": "09_workflow_commands.json",
       "category": "workflow",
       "priority": "medium",
-      "test_count": 16,
+      "test_count": 15,
       "description": "Workflow management and complex operations"
     },
     {

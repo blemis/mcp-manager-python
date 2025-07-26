@@ -14,6 +14,10 @@ from pathlib import Path
 from typing import Dict, List, Optional
 import time
 
+# Add project root to path for imports
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
+
 
 class TestMenu:
     """Professional interactive test menu system."""
@@ -254,15 +258,9 @@ class TestMenu:
             print(f"{self.colors['red']}❌ No test categories specified{self.colors['reset']}")
             return False
         
-        # Determine which categories are JSON-based vs legacy
-        json_categories = []
+        # All categories are now JSON-based (no more legacy categories)
+        json_categories = categories
         legacy_categories = []
-        
-        for category in categories:
-            if category in self.test_categories and self.test_categories[category].get('is_json'):
-                json_categories.append(category)
-            else:
-                legacy_categories.append(category)
         
         success = True
         
@@ -277,8 +275,8 @@ class TestMenu:
             print("=" * 50)
             print(f"{self.colors['reset']}")
             
-            # Use the modern test runner for JSON categories
-            cmd = [sys.executable, "run_cli_tests.py"] + [f"--category={cat}" for cat in json_categories]
+            # Use the JSON test runner for modern concise output
+            cmd = [sys.executable, "tests/json_test_runner_cli.py"] + json_categories
             
             try:
                 start_time = time.time()
@@ -791,17 +789,18 @@ class TestMenu:
             print(f"{self.colors['bold']}🎯 INDIVIDUAL TEST CATEGORIES {mode_str}{self.colors['reset']}")
             print("-" * 50)
             
-            for i, (key, category) in enumerate(self.test_categories.items(), 1):
-                color = category['color']
-                name = category['name']
-                desc = category['description']
-                priority = category['priority']
+            # Use only JSON categories from hybrid loader
+            json_categories = self.test_categories
+            for i, (key, category) in enumerate(json_categories.items(), 1):
+                name = category.get('name', key.title())
+                desc = category.get('description', f'Tests for {name}')
+                priority = category.get('priority', 'medium').upper()
                 
                 priority_color = self.colors['red'] if priority == 'CRITICAL' else \
                                self.colors['yellow'] if priority == 'HIGH' else \
                                self.colors['green']
                 
-                print(f"{color}{i:2d}. {name}{self.colors['reset']} "
+                print(f"{self.colors['blue']}{i:2d}. {name}{self.colors['reset']} "
                       f"{priority_color}[{priority}]{self.colors['reset']}")
                 print(f"     {desc}")
                 print()
@@ -809,13 +808,13 @@ class TestMenu:
             print(" 0. ← Back to Main Menu")
             print()
             
-            max_category = len(self.test_categories)
+            max_category = len(json_categories)
             choice = self.get_user_input(f"Select category (0-{max_category}):")
             
             if choice == '0':
                 return
             
-            categories_list = list(self.test_categories.items())
+            categories_list = list(json_categories.items())
             
             try:
                 idx = int(choice) - 1
@@ -823,13 +822,15 @@ class TestMenu:
                     key, category = categories_list[idx]
                     
                     # Confirm selection
-                    print(f"\n{self.colors['yellow']}🔄 You selected: {category['name']}{self.colors['reset']}")
-                    print(f"   {category['description']}")
+                    name = category.get('name', key.title())
+                    desc = category.get('description', f'Tests for {name}')
+                    print(f"\n{self.colors['yellow']}🔄 You selected: {name}{self.colors['reset']}")
+                    print(f"   {desc}")
                     
-                    confirm = self.get_user_input("\nProceed with this test category? (y/N):").lower()
+                    confirm = self.get_user_input("\nProceed with this test category? (Y/n):").lower()
                     
-                    if confirm in ['y', 'yes']:
-                        success = self.run_tests([key], category['description'], use_legacy)
+                    if confirm in ['y', 'yes', '']:
+                        success = self.run_tests([key], desc, use_legacy)
                         self.wait_for_continue()
                     return
                 else:
