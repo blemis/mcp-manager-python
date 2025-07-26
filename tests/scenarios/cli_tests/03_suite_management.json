@@ -7,6 +7,11 @@
     {
       "test_name": "suite_list_empty",
       "description": "Test listing suites when none exist",
+      "setup_commands": [
+        "mcp-manager suite delete test-suite --force 2>/dev/null || true",
+        "mcp-manager suite delete dev-tools --force 2>/dev/null || true",
+        "mcp-manager suite delete custom-test-suite --force 2>/dev/null || true"
+      ],
       "command": "mcp-manager suite list",
       "expected_output_contains": [
         "No suites configured",

@@ -89,41 +89,55 @@ class TestRunner:
         
         return categories
     
+    def execute_command(self, command: str, timeout: int = 30) -> subprocess.CompletedProcess:
+        """Execute a single command with proper shell handling."""
+        # Check if command contains shell operators
+        if any(op in command for op in ['&&', '||', '|', ';', '>', '<']):
+            # Use shell=True for commands with shell operators
+            return subprocess.run(
+                command,
+                shell=True,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                cwd=project_root
+            )
+        else:
+            # Use shlex.split() for simple commands to handle quoting properly
+            return subprocess.run(
+                shlex.split(command),
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                cwd=project_root
+            )
+    
     def execute_test(self, test_data: Dict[str, Any]) -> TestResult:
-        """Execute a single test scenario."""
+        """Execute a single test scenario with setup and cleanup."""
         test_name = test_data.get('test_name', 'unknown_test')
         description = test_data.get('description', 'No description')
         command = test_data.get('command', '')
         expected_exit_code = test_data.get('expected_exit_code', 0) 
         expected_output = test_data.get('expected_output_contains', [])
         timeout = test_data.get('timeout', 30)
+        setup_commands = test_data.get('setup_commands', [])
+        cleanup_commands = test_data.get('cleanup_commands', [])
         
-        logger.debug(f"🎯 Executing: {command}")
+        logger.debug(f"🎯 Executing test: {test_name}")
+        
+        # Execute setup commands
+        for setup_cmd in setup_commands:
+            logger.debug(f"🔧 Setup: {setup_cmd}")
+            try:
+                self.execute_command(setup_cmd, timeout)
+            except Exception as e:
+                logger.warning(f"Setup command failed: {setup_cmd} - {e}")
         
         start_time = time.time()
         
         try:
-            # Execute the actual command using proper shell parsing
-            # Check if command contains shell operators
-            if any(op in command for op in ['&&', '||', '|', ';', '>', '<']):
-                # Use shell=True for commands with shell operators
-                result = subprocess.run(
-                    command,
-                    shell=True,
-                    capture_output=True,
-                    text=True,
-                    timeout=timeout,
-                    cwd=project_root
-                )
-            else:
-                # Use shlex.split() for simple commands to handle quoting properly
-                result = subprocess.run(
-                    shlex.split(command),
-                    capture_output=True,
-                    text=True,
-                    timeout=timeout,
-                    cwd=project_root
-                )
+            # Execute the actual test command
+            result = self.execute_command(command, timeout)
             
             duration = time.time() - start_time
             exit_code = result.returncode
@@ -156,7 +170,7 @@ class TestRunner:
                     error_parts.append(f"Stderr: {stderr[:200]}")
                 error_message = "; ".join(error_parts)
             
-            return TestResult(
+            result_obj = TestResult(
                 test_name=test_name,
                 description=description,
                 command=command,
@@ -173,7 +187,7 @@ class TestRunner:
             
         except subprocess.TimeoutExpired:
             duration = time.time() - start_time
-            return TestResult(
+            result_obj = TestResult(
                 test_name=test_name,
                 description=description,
                 command=command,
@@ -190,7 +204,7 @@ class TestRunner:
             
         except Exception as e:
             duration = time.time() - start_time
-            return TestResult(
+            result_obj = TestResult(
                 test_name=test_name,
                 description=description,
                 command=command,
@@ -204,6 +218,16 @@ class TestRunner:
                 missing_output=expected_output,
                 error_message=f"Execution failed: {e}"
             )
+        
+        # Execute cleanup commands regardless of test outcome
+        for cleanup_cmd in cleanup_commands:
+            logger.debug(f"🧹 Cleanup: {cleanup_cmd}")
+            try:
+                self.execute_command(cleanup_cmd, timeout)
+            except Exception as e:
+                logger.warning(f"Cleanup command failed: {cleanup_cmd} - {e}")
+        
+        return result_obj
     
     def run_category(self, category: str, show_progress: bool = True) -> List[TestResult]:
         """Run all tests in a category."""
