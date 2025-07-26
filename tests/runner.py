@@ -10,6 +10,7 @@ import subprocess
 import time
 import json
 import sys
+import shlex
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
@@ -102,14 +103,27 @@ class TestRunner:
         start_time = time.time()
         
         try:
-            # Execute the actual command
-            result = subprocess.run(
-                command.split(),
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-                cwd=project_root
-            )
+            # Execute the actual command using proper shell parsing
+            # Check if command contains shell operators
+            if any(op in command for op in ['&&', '||', '|', ';', '>', '<']):
+                # Use shell=True for commands with shell operators
+                result = subprocess.run(
+                    command,
+                    shell=True,
+                    capture_output=True,
+                    text=True,
+                    timeout=timeout,
+                    cwd=project_root
+                )
+            else:
+                # Use shlex.split() for simple commands to handle quoting properly
+                result = subprocess.run(
+                    shlex.split(command),
+                    capture_output=True,
+                    text=True,
+                    timeout=timeout,
+                    cwd=project_root
+                )
             
             duration = time.time() - start_time
             exit_code = result.returncode

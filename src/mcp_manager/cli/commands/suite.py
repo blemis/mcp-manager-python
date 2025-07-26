@@ -16,12 +16,19 @@ console = Console()
 def suite_commands(cli_context):
     """Add suite commands to the CLI."""
     
-    @click.command("install-suite-temp")
+    
+    @click.group("suite")
+    def suite():
+        """Manage MCP server suites for task-specific configurations."""
+        pass
+    
+    
+    @suite.command("install")
     @click.argument("suite_name") 
     @click.option("--force", "-f", is_flag=True, help="Skip confirmation prompts")
     @click.option("--dry-run", is_flag=True, help="Show what would be installed without installing")
     @handle_errors
-    def install_suite_temp(suite_name: str, force: bool, dry_run: bool):
+    def suite_install(suite_name: str, force: bool, dry_run: bool):
         """Install MCP servers tagged with a specific suite name.
         
         Process:
@@ -169,12 +176,6 @@ def suite_commands(cli_context):
                 console.print(f"[red]❌ Failed to install suite: {e}[/red]")
         
         asyncio.run(install_suite_async())
-    
-    
-    @click.group("suite")
-    def suite():
-        """Manage MCP server suites for task-specific configurations."""
-        pass
     
     
     @suite.command("list")
@@ -473,11 +474,13 @@ def suite_commands(cli_context):
                 console.print(f"Expanded Server Count: [cyan]{summary.get('expanded_server_count', 0)}[/cyan] [dim](Docker Desktop servers counted individually)[/dim]")
                 console.print(f"Active Suites: [cyan]{summary.get('active_suites', 0)}[/cyan]")
                 
+                console.print(f"\n[bold cyan]By Category:[/bold cyan]")
                 categories = summary.get('categories', {})
                 if categories:
-                    console.print(f"\n[bold cyan]By Category:[/bold cyan]")
                     for category, count in categories.items():
                         console.print(f"  • {category}: [yellow]{count}[/yellow] suites")
+                else:
+                    console.print("  • [dim]No categories configured[/dim]")
                 
                 popular_servers = summary.get('popular_servers', [])
                 if popular_servers:

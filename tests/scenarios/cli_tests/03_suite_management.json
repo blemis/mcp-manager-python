@@ -186,7 +186,7 @@
         "mcp-manager add install-server --type custom --command echo --args install",
         "mcp-manager suite add install-test install-server --role member"
       ],
-      "command": "mcp-manager install-suite-temp install-test --dry-run",
+      "command": "mcp-manager suite install install-test --dry-run",
       "expected_output_contains": [
         "Dry run",
         "showing what would be installed",
@@ -202,7 +202,7 @@
     {
       "test_name": "install_suite_temp_nonexistent",
       "description": "Test installing a nonexistent suite",
-      "command": "mcp-manager install-suite-temp nonexistent-suite",
+      "command": "mcp-manager suite install nonexistent-suite",
       "expected_output_contains": [
         "Suite 'nonexistent-suite' not found",
         "Available suites:"
