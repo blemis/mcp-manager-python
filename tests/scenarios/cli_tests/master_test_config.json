@@ -1,0 +1,175 @@
+{
+  "test_suite_collection": "MCP Manager CLI Complete Test Suite",
+  "description": "Comprehensive test coverage for all MCP Manager CLI commands and functionality",
+  "version": "1.0.0",
+  "created_date": "2025-01-26",
+  "test_infrastructure": {
+    "database_required": true,
+    "required_servers": [
+      {
+        "name": "Ref",
+        "type": "docker-desktop",
+        "description": "Docker Desktop MCP server for reference operations"
+      },
+      {
+        "name": "filesystem", 
+        "type": "docker-desktop",
+        "description": "Docker Desktop MCP server for filesystem operations"
+      },
+      {
+        "name": "aws-diagram",
+        "type": "docker-desktop", 
+        "description": "Docker Desktop MCP server for AWS diagram creation"
+      }
+    ],
+    "setup_requirements": [
+      "Database must be initialized with quick_init.py",
+      "Docker Desktop MCP servers must be enabled",
+      "Test runner must have database access"
+    ]
+  },
+  "test_suites": [
+    {
+      "file": "01_core_commands.json",
+      "category": "core",
+      "priority": "critical",
+      "test_count": 15,
+      "description": "Core CLI commands (list, add, remove, enable, disable, nuke)"
+    },
+    {
+      "file": "02_discovery_commands.json", 
+      "category": "discovery",
+      "priority": "high",
+      "test_count": 15,
+      "description": "Server discovery and package installation commands"
+    },
+    {
+      "file": "03_suite_management.json",
+      "category": "suite",
+      "priority": "high", 
+      "test_count": 16,
+      "description": "Suite creation, management, and server assignment"
+    },
+    {
+      "file": "04_ai_analytics_commands.json",
+      "category": "ai_analytics",
+      "priority": "high",
+      "test_count": 18,
+      "description": "AI curation, analytics, tools, and quality commands"
+    },
+    {
+      "file": "05_system_commands.json",
+      "category": "system", 
+      "priority": "high",
+      "test_count": 11,
+      "description": "System information, configuration, and monitoring"
+    },
+    {
+      "file": "06_tui_interface_commands.json",
+      "category": "interface",
+      "priority": "medium",
+      "test_count": 4,
+      "description": "Terminal user interface and interactive commands"
+    },
+    {
+      "file": "07_api_commands.json",
+      "category": "api",
+      "priority": "high", 
+      "test_count": 7,
+      "description": "API server management and endpoints"
+    },
+    {
+      "file": "08_proxy_commands.json",
+      "category": "proxy",
+      "priority": "medium",
+      "test_count": 8,
+      "description": "MCP proxy server management"
+    },
+    {
+      "file": "09_workflow_commands.json",
+      "category": "workflow",
+      "priority": "medium",
+      "test_count": 16,
+      "description": "Workflow management and complex operations"
+    },
+    {
+      "file": "10_test_admin_commands.json",
+      "category": "test_admin",
+      "priority": "low",
+      "test_count": 8,
+      "description": "Administrative testing and development commands"
+    }
+  ],
+  "execution_order": [
+    "01_core_commands.json",
+    "02_discovery_commands.json", 
+    "05_system_commands.json",
+    "03_suite_management.json",
+    "04_ai_analytics_commands.json",
+    "07_api_commands.json",
+    "08_proxy_commands.json",
+    "09_workflow_commands.json",
+    "06_tui_interface_commands.json",
+    "10_test_admin_commands.json"
+  ],
+  "test_statistics": {
+    "total_test_files": 10,
+    "total_test_scenarios": 118,
+    "estimated_execution_time_minutes": 25,
+    "coverage_areas": [
+      "Core server management",
+      "Discovery and installation", 
+      "Suite management",
+      "AI and analytics",
+      "System operations",
+      "User interfaces",
+      "API functionality",
+      "Proxy management",
+      "Workflow operations",
+      "Administrative tools"
+    ]
+  },
+  "usage_instructions": {
+    "run_all_tests": "python tests/json_test_runner_cli.py",
+    "run_specific_category": "python tests/json_test_runner_cli.py --category core",
+    "run_critical_tests": "python tests/json_test_runner_cli.py --priority critical",
+    "run_smoke_tests": "python tests/json_test_runner_cli.py --smoke",
+    "list_available_tests": "python tests/json_test_runner_cli.py --list"
+  },
+  "extensibility": {
+    "adding_new_tests": {
+      "step_1": "Create new JSON file following the schema in tests/scenarios/cli_tests/",
+      "step_2": "Add entry to this master_test_config.json test_suites array",
+      "step_3": "Update execution_order if needed",
+      "step_4": "Tests will be automatically discovered and executed"
+    },
+    "test_schema": {
+      "required_fields": [
+        "test_suite_name",
+        "test_suite_description", 
+        "category",
+        "priority",
+        "test_scenarios"
+      ],
+      "scenario_fields": [
+        "test_name",
+        "description",
+        "command",
+        "expected_output_contains",
+        "expected_exit_code",
+        "timeout"
+      ],
+      "optional_fields": [
+        "setup_commands",
+        "cleanup_commands",
+        "mcp_requirements"
+      ]
+    }
+  },
+  "maintenance": {
+    "update_frequency": "After each new CLI feature addition",
+    "validation_required": "All tests must pass before merging new features",
+    "performance_monitoring": "Track execution time trends",
+    "coverage_goals": "100% CLI command coverage maintained"
+  }
+}

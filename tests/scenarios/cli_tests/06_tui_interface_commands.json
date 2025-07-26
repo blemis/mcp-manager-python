@@ -1,0 +1,53 @@
+{
+  "test_suite_name": "TUI and Interface Commands",
+  "test_suite_description": "Tests for terminal user interface and interactive commands",
+  "category": "interface",
+  "priority": "medium",
+  "test_scenarios": [
+    {
+      "test_name": "tui_help",
+      "description": "Test TUI command help",
+      "command": "mcp-manager tui --help",
+      "expected_output_contains": [
+        "Launch terminal user interface",
+        "tui"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 10
+    },
+    {
+      "test_name": "tui_simple_help",
+      "description": "Test simple TUI command help",
+      "command": "mcp-manager tui-simple --help",
+      "expected_output_contains": [
+        "Launch simple terminal interface",
+        "tui-simple"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 10
+    },
+    {
+      "test_name": "tui_textual_help",
+      "description": "Test Textual TUI command help",
+      "command": "mcp-manager tui-textual --help",
+      "expected_output_contains": [
+        "Launch advanced Textual-based TUI",
+        "tui-textual"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 10
+    },
+    {
+      "test_name": "interactive_menu_help",
+      "description": "Test interactive menu help via main command",
+      "command": "mcp-manager --help",
+      "expected_output_contains": [
+        "--menu",
+        "Launch interactive menu",
+        "When called without a command, launches an interactive menu"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 10
+    }
+  ]
+}

@@ -1,0 +1,185 @@
+{
+  "test_suite_name": "Workflow Management Commands",
+  "test_suite_description": "Tests for workflow management and complex operations",
+  "category": "workflow",
+  "priority": "medium",
+  "test_scenarios": [
+    {
+      "test_name": "workflow_help",
+      "description": "Test workflow command group help",
+      "command": "mcp-manager workflow --help",
+      "expected_output_contains": [
+        "Workflow management",
+        "list",
+        "create",
+        "activate",
+        "deactivate",
+        "switch",
+        "show",
+        "delete",
+        "status",
+        "template"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 10
+    },
+    {
+      "test_name": "workflow_list_empty",
+      "description": "Test workflow list when no workflows exist",
+      "command": "mcp-manager workflow list",
+      "expected_output_contains": [
+        "Available Workflows",
+        "No workflows configured",
+        "workflow create"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 15
+    },
+    {
+      "test_name": "workflow_create_help",
+      "description": "Test workflow create command help",
+      "command": "mcp-manager workflow create --help",
+      "expected_output_contains": [
+        "Create a new workflow",
+        "--description",
+        "--template"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 10
+    },
+    {
+      "test_name": "workflow_create_basic",
+      "description": "Test creating a basic workflow",
+      "command": "mcp-manager workflow create test-workflow --description \"Test workflow for testing\"",
+      "expected_output_contains": [
+        "Workflow 'test-workflow' created",
+        "successfully"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 15,
+      "cleanup_commands": ["mcp-manager workflow delete test-workflow --force"]
+    },
+    {
+      "test_name": "workflow_create_with_template",
+      "description": "Test creating workflow with template",
+      "command": "mcp-manager workflow create dev-workflow --description \"Development workflow\" --template dev",
+      "expected_output_contains": [
+        "Workflow 'dev-workflow' created",
+        "template"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 15,
+      "cleanup_commands": ["mcp-manager workflow delete dev-workflow --force"]
+    },
+    {
+      "test_name": "workflow_show_help",
+      "description": "Test workflow show command help",
+      "command": "mcp-manager workflow show --help",
+      "expected_output_contains": [
+        "Show workflow details",
+        "show"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 10
+    },
+    {
+      "test_name": "workflow_show_nonexistent",
+      "description": "Test showing nonexistent workflow",
+      "command": "mcp-manager workflow show nonexistent-workflow",
+      "expected_output_contains": [
+        "Workflow 'nonexistent-workflow' not found",
+        "Available workflows:"
+      ],
+      "expected_exit_code": 1,
+      "timeout": 15
+    },
+    {
+      "test_name": "workflow_status_basic",
+      "description": "Test workflow system status",
+      "command": "mcp-manager workflow status",
+      "expected_output_contains": [
+        "Workflow System Status",
+        "Status"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 15
+    },
+    {
+      "test_name": "workflow_activate_help",
+      "description": "Test workflow activate command help",
+      "command": "mcp-manager workflow activate --help",
+      "expected_output_contains": [
+        "Activate a workflow",
+        "activate"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 10
+    },
+    {
+      "test_name": "workflow_deactivate_help",
+      "description": "Test workflow deactivate command help",
+      "command": "mcp-manager workflow deactivate --help",
+      "expected_output_contains": [
+        "Deactivate current workflow",
+        "deactivate"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 10
+    },
+    {
+      "test_name": "workflow_switch_help",
+      "description": "Test workflow switch command help",
+      "command": "mcp-manager workflow switch --help",
+      "expected_output_contains": [
+        "Switch to different workflow",
+        "switch"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 10
+    },
+    {
+      "test_name": "workflow_delete_help",
+      "description": "Test workflow delete command help",
+      "command": "mcp-manager workflow delete --help",
+      "expected_output_contains": [
+        "Delete a workflow",
+        "--force"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 10
+    },
+    {
+      "test_name": "workflow_template_help",
+      "description": "Test workflow template command help",
+      "command": "mcp-manager workflow template --help",
+      "expected_output_contains": [
+        "Manage workflow templates",
+        "template"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 10
+    },
+    {
+      "test_name": "workflow_deactivate_when_none_active",
+      "description": "Test deactivating when no workflow is active",
+      "command": "mcp-manager workflow deactivate",
+      "expected_output_contains": [
+        "No active workflow",
+        "already deactivated"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 15
+    },
+    {
+      "test_name": "workflow_activate_nonexistent",
+      "description": "Test activating nonexistent workflow",
+      "command": "mcp-manager workflow activate nonexistent-workflow",
+      "expected_output_contains": [
+        "Workflow 'nonexistent-workflow' not found",
+        "Available workflows:"
+      ],
+      "expected_exit_code": 1,
+      "timeout": 15
+    }
+  ]
+}
