@@ -586,4 +586,4 @@ def suite_commands(cli_context):
         
         asyncio.run(remove_suite_servers())
     
-    return [install_suite, suite]
+    return [suite]
