@@ -263,7 +263,7 @@ class SuiteLoader:
                 description=config.get("description", f"Test server from suite")
             )
             
-            # Deploy to MCP manager
+            # Deploy to MCP manager (only pass valid parameters)
             success = await self.mcp_manager.add_server(
                 name=server.name,
                 server_type=server.server_type,  
@@ -271,7 +271,6 @@ class SuiteLoader:
                 args=server.args,
                 env=server.env,
                 scope=server.scope,
-                working_dir=server.working_dir,
                 description=server.description
             )
             
