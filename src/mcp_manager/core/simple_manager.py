@@ -17,6 +17,7 @@ import time
 from mcp_manager.core.claude_interface import ClaudeInterface
 from mcp_manager.core.exceptions import MCPManagerError
 from mcp_manager.core.models import Server, ServerType, ServerScope, SystemInfo
+from mcp_manager.core.database.server_state import MCPServerStateManager, ServerInfo
 from mcp_manager.utils.config import get_config
 from mcp_manager.utils.logging import get_logger
 
@@ -50,6 +51,10 @@ class SimpleMCPManager:
     def __init__(self):
         """Initialize the manager."""
         self.claude = ClaudeInterface()
+        self.db_manager = MCPServerStateManager()
+        
+        # Run migration on first use if needed
+        self._ensure_migration()
     
     @classmethod
     def _mark_operation_start(cls):
@@ -70,12 +75,37 @@ class SimpleMCPManager:
     
     def list_servers_fast(self) -> List[Server]:
         """
-        Fast server listing from config files only (no claude mcp list call).
+        Fast server listing from database (<50ms target).
+        
+        Uses the hybrid architecture database for ultra-fast access
+        without connecting to Claude or checking live status.
         
         Returns:
-            List of servers from Claude's configuration files
+            List of servers from database registry
         """
-        return self.claude.list_servers()
+        try:
+            # Use the hybrid architecture fast method
+            db_servers = self.db_manager.list_servers_fast()
+            
+            # Convert to our Server model format
+            servers = []
+            for db_server in db_servers:
+                servers.append(Server(
+                    name=db_server.name,
+                    command=db_server.command,
+                    args=db_server.args,
+                    env=db_server.env,
+                    enabled=db_server.enabled,
+                    scope=ServerScope.USER if db_server.scope == "user" else ServerScope.GLOBAL,
+                    server_type=ServerType(db_server.server_type.value)
+                ))
+            
+            return servers
+            
+        except Exception as e:
+            logger.error(f"Fast server list from database failed: {e}")
+            # Fallback to Claude config if database fails
+            return self.claude.list_servers()
     
     async def list_servers(self) -> List[Server]:
         """
@@ -317,13 +347,71 @@ class SimpleMCPManager:
             logger.debug(f"Server '{name}' is already enabled in Claude")
             return server
         
-        # Check if this is a Docker Desktop server
+        # Check if this is a Docker Desktop server that's disabled in catalog
+        catalog = await self._get_server_catalog()
+        if name in catalog["servers"] and catalog["servers"][name].get("type") == "docker-desktop" and not catalog["servers"][name].get("enabled", True):
+            # This is a disabled Docker Desktop server - reinstall it using install-package workflow
+            logger.debug(f"Reinstalling disabled Docker Desktop server: {name}")
+            
+            # Use subprocess to call our own install-package command
+            import subprocess
+            import sys
+            
+            install_id = f"dd-{name}"
+            try:
+                result = subprocess.run(
+                    [sys.executable, "-m", "mcp_manager.cli.main", "install-package", install_id],
+                    capture_output=True,
+                    text=True,
+                    timeout=60
+                )
+                
+                if result.returncode == 0:
+                    logger.debug(f"Successfully reinstalled {name} via install-package")
+                    # Wait a moment for Claude to sync
+                    import asyncio
+                    await asyncio.sleep(2)
+                    
+                    # For Docker Desktop servers, check if they're in docker-gateway
+                    gateway_server = self.claude.get_server("docker-gateway")
+                    if gateway_server and gateway_server.args:
+                        # Check if our server is in the gateway
+                        for i, arg in enumerate(gateway_server.args):
+                            if arg == "--servers" and i + 1 < len(gateway_server.args):
+                                servers_list = gateway_server.args[i + 1]
+                                if name in servers_list.split(","):
+                                    # Update database status to enabled
+                                    await self._update_server_in_catalog(name, enabled=True)
+                                    # Return a mock server object
+                                    from .models import Server, ServerScope, ServerType
+                                    return Server(
+                                        name=name,
+                                        command="docker",
+                                        args=["mcp", "server", name],
+                                        env={},
+                                        enabled=True,
+                                        scope=ServerScope.USER,
+                                        server_type=ServerType.DOCKER_DESKTOP
+                                    )
+                        
+                        raise MCPManagerError(f"Server '{name}' was installed but not found in docker-gateway")
+                    else:
+                        raise MCPManagerError(f"docker-gateway not found after installing '{name}'")
+                else:
+                    logger.error(f"install-package failed: {result.stderr}")
+                    raise MCPManagerError(f"Failed to reinstall Docker Desktop server '{name}': {result.stderr}")
+                    
+            except subprocess.TimeoutExpired:
+                raise MCPManagerError(f"Timeout while reinstalling Docker Desktop server '{name}'")
+            except Exception as e:
+                raise MCPManagerError(f"Failed to reinstall Docker Desktop server '{name}': {e}")
+        
+        # Check if this is a Docker Desktop server (new install)
         if await self._is_docker_desktop_server(name):
             logger.debug(f"Enabling Docker Desktop server: {name}")
             success = await self._enable_docker_desktop_server_simple(name)
             if success:
                 # Mark as enabled in catalog or add if not exists
-                catalog = await self._get_server_catalog()
                 if name in catalog["servers"]:
                     await self._update_server_in_catalog(name, enabled=True)
                 else:
@@ -1994,69 +2082,111 @@ class SimpleMCPManager:
             logger.debug(f"Failed to get available Docker servers: {e}")
             return []
     
-    async def _get_server_catalog(self) -> Dict[str, Any]:
-        """Get the local server catalog that tracks installed servers."""
+    def _ensure_migration(self):
+        """Ensure migration from JSON catalog to database has been run."""
         try:
-            from pathlib import Path
-            import json
+            from mcp_manager.core.database.migration import ServerStateMigration
+            migration = ServerStateMigration()
+            if migration.needs_migration():
+                logger.info("Running automatic migration from JSON catalog to database...")
+                success = migration.migrate()
+                if not success:
+                    logger.error("Migration failed! Some functionality may not work correctly.")
+        except Exception as e:
+            logger.error(f"Migration check failed: {e}")
+
+    async def _get_server_catalog(self) -> Dict[str, Any]:
+        """Get server data from database (legacy method for compatibility)."""
+        try:
+            servers = self.db_manager.list_servers_fast()
+            catalog = {"servers": {}}
             
-            config_dir = Path.home() / ".config" / "mcp-manager"
-            config_dir.mkdir(parents=True, exist_ok=True)
-            catalog_file = config_dir / "server_catalog.json"
+            for server in servers:
+                catalog["servers"][server.name] = {
+                    "type": server.server_type.value,
+                    "enabled": server.enabled,
+                    "command": server.command,
+                    "args": server.args,
+                    "env": server.env,
+                    "description": server.description,
+                    "install_id": server.install_id,
+                    "installed_at": server.created_at.isoformat() if server.created_at else None,
+                    "updated_at": server.updated_at.isoformat() if server.updated_at else None
+                }
             
-            if catalog_file.exists():
-                with open(catalog_file) as f:
-                    return json.load(f)
-            return {"servers": {}}
+            return catalog
             
         except Exception as e:
-            logger.debug(f"Failed to get server catalog: {e}")
+            logger.error(f"Failed to get server catalog from database: {e}")
             return {"servers": {}}
     
     async def _save_server_catalog(self, catalog: Dict[str, Any]):
-        """Save the server catalog to disk."""
-        try:
-            from pathlib import Path
-            import json
-            
-            config_dir = Path.home() / ".config" / "mcp-manager"
-            config_dir.mkdir(parents=True, exist_ok=True)
-            catalog_file = config_dir / "server_catalog.json"
-            
-            with open(catalog_file, "w") as f:
-                json.dump(catalog, f, indent=2)
-                
-        except Exception as e:
-            logger.debug(f"Failed to save server catalog: {e}")
+        """Legacy method - no longer saves to file, database is source of truth."""
+        # This method is kept for compatibility but does nothing
+        # The database is automatically updated through other methods
+        pass
     
     async def _add_server_to_catalog(self, name: str, server_type: str, enabled: bool = True, **metadata):
-        """Add a server to the local catalog."""
-        catalog = await self._get_server_catalog()
-        catalog["servers"][name] = {
-            "type": server_type,
-            "enabled": enabled,
-            "installed_at": datetime.now().isoformat(),
-            **metadata
-        }
-        await self._save_server_catalog(catalog)
-        logger.debug(f"Added server {name} to catalog with enabled={enabled}")
+        """Add a server to the database."""
+        try:
+            from mcp_manager.core.database.server_state import ServerType as DBServerType
+            from datetime import datetime, timezone
+            
+            # Map string types to enum
+            type_mapping = {
+                "npm": DBServerType.NPM,
+                "docker": DBServerType.DOCKER,
+                "docker-desktop": DBServerType.DOCKER_DESKTOP,
+                "custom": DBServerType.CUSTOM
+            }
+            
+            db_server_type = type_mapping.get(server_type, DBServerType.CUSTOM)
+            
+            server_info = ServerInfo(
+                name=name,
+                server_type=db_server_type,
+                command=metadata.get("command", ""),
+                args=metadata.get("args", []),
+                env=metadata.get("env", {}),
+                enabled=enabled,
+                scope=metadata.get("scope", "user"),
+                description=metadata.get("description"),
+                install_id=metadata.get("install_id"),
+                package=metadata.get("package"),
+                created_at=datetime.now(timezone.utc)
+            )
+            
+            success = self.db_manager.add_server(server_info)
+            if success:
+                logger.debug(f"Added server {name} to database with enabled={enabled}")
+            else:
+                logger.error(f"Failed to add server {name} to database")
+                
+        except Exception as e:
+            logger.error(f"Failed to add server {name} to catalog: {e}")
     
     async def _update_server_in_catalog(self, name: str, **updates):
-        """Update server status in the catalog."""
-        catalog = await self._get_server_catalog()
-        if name in catalog["servers"]:
-            catalog["servers"][name].update(updates)
-            catalog["servers"][name]["updated_at"] = datetime.now().isoformat()
-            await self._save_server_catalog(catalog)
-            logger.debug(f"Updated server {name} in catalog: {updates}")
+        """Update a server's database entry."""
+        try:
+            if "enabled" in updates:
+                success = self.db_manager.update_server_status(name, updates["enabled"])
+                if success:
+                    logger.debug(f"Updated server {name} in database: {updates}")
+                else:
+                    logger.error(f"Failed to update server {name} status in database")
+        except Exception as e:
+            logger.error(f"Failed to update server {name} in catalog: {e}")
     
     async def _remove_server_from_catalog(self, name: str):
-        """Remove a server from the catalog completely."""
-        catalog = await self._get_server_catalog()
-        if name in catalog["servers"]:
-            del catalog["servers"][name]
-            await self._save_server_catalog(catalog)
-            logger.debug(f"Removed server {name} from catalog")
+        """Remove a server from the database."""
+        try:
+            success = self.db_manager.remove_server(name)
+            if success:
+                logger.debug(f"Removed server {name} from database")
+            else:
+                logger.error(f"Failed to remove server {name} from database")
+        except Exception as e:
+            logger.error(f"Failed to remove server {name} from catalog: {e}")
     
     async def _get_disabled_servers(self) -> List[str]:
         """Get list of servers that are in catalog but disabled."""
