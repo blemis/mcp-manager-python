@@ -1,0 +1,196 @@
+{
+  "timestamp": "2025-07-26 16:11:43",
+  "category": "suite",
+  "summary": {
+    "total_tests": 16,
+    "passed": 15,
+    "failed": 1,
+    "success_rate": "93.8%",
+    "total_duration": "3.47s"
+  },
+  "failed_tests": [
+    {
+      "test_name": "suite_list_empty",
+      "description": "Test listing suites when none exist",
+      "command": "mcp-manager suite list",
+      "error_message": "Missing output: ['No suites configured', 'Create your first suite with:', 'mcp-manager suite create']",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "stdout": "\n                          MCP Server Suites (2 total)                           \n\u250f\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2533\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2533\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2533\u2501\u2501\u2533\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2513\n\u2503 Suite ID    \u2503 Name             \u2503 Categ\u2026 \u2503  \u2503 Description                     \u2503\n\u2521\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2547\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2547\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2547\u2501\u2501\u2547\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2529\n\u2502 db-proof-s\u2026 \u2502 DB Proof Suite   \u2502 custom \u2502  \u2502 Proving real DB operations      \u2502\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u253c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u253c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u253c\u2500\u2500\u253c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502 database-t\u2026 \u2502 Database Test    \u2502 custom \u2502  \u2502 Testing DB operations           \u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n\n\ud83d\udca1 To install a suite: mcp-manager install-suite --suite-name <suite-id>\n\ud83d\udca1 To view suite details: mcp-manager suite show <suite-id>\n",
+      "stderr": "",
+      "expected_output": [
+        "No suites configured",
+        "Create your first suite with:",
+        "mcp-manager suite create"
+      ],
+      "missing_output": [
+        "No suites configured",
+        "Create your first suite with:",
+        "mcp-manager suite create"
+      ],
+      "duration": 0.18339896202087402
+    }
+  ],
+  "all_results": [
+    {
+      "test_name": "suite_list_empty",
+      "description": "Test listing suites when none exist",
+      "command": "mcp-manager suite list",
+      "success": false,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.18339896202087402,
+      "error_message": "Missing output: ['No suites configured', 'Create your first suite with:', 'mcp-manager suite create']"
+    },
+    {
+      "test_name": "suite_create_basic",
+      "description": "Test creating a basic suite",
+      "command": "mcp-manager suite create \"Test Suite\" --description \"A test suite\"",
+      "success": true,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.18653488159179688,
+      "error_message": null
+    },
+    {
+      "test_name": "suite_create_with_category",
+      "description": "Test creating a suite with category",
+      "command": "mcp-manager suite create \"Dev Tools\" --description \"Development tools\" --category development",
+      "success": true,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.18016791343688965,
+      "error_message": null
+    },
+    {
+      "test_name": "suite_create_custom_id",
+      "description": "Test creating a suite with custom ID",
+      "command": "mcp-manager suite create \"Custom Suite\" --suite-id custom-test-suite",
+      "success": true,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.18245506286621094,
+      "error_message": null
+    },
+    {
+      "test_name": "suite_list_with_suites",
+      "description": "Test listing suites after creating some",
+      "command": "mcp-manager suite list",
+      "success": true,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.1868600845336914,
+      "error_message": null
+    },
+    {
+      "test_name": "suite_list_by_category",
+      "description": "Test listing suites filtered by category",
+      "command": "mcp-manager suite list --category development",
+      "success": true,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.17650675773620605,
+      "error_message": null
+    },
+    {
+      "test_name": "suite_show_basic",
+      "description": "Test showing suite details",
+      "command": "mcp-manager suite show show-test",
+      "success": true,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.1756138801574707,
+      "error_message": null
+    },
+    {
+      "test_name": "suite_show_nonexistent",
+      "description": "Test showing details of nonexistent suite",
+      "command": "mcp-manager suite show nonexistent-suite",
+      "success": true,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.1769850254058838,
+      "error_message": null
+    },
+    {
+      "test_name": "suite_add_server_basic",
+      "description": "Test adding an existing database server to a suite",
+      "command": "mcp-manager suite add server-test Ref --role member --priority 50",
+      "success": true,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.17364192008972168,
+      "error_message": null
+    },
+    {
+      "test_name": "suite_add_server_different_roles",
+      "description": "Test adding existing database servers with different roles",
+      "command": "mcp-manager suite add role-test filesystem --role primary --priority 90 && mcp-manager suite add role-test aws-diagram --role optional --priority 10",
+      "success": true,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.35523104667663574,
+      "error_message": null
+    },
+    {
+      "test_name": "suite_remove_server",
+      "description": "Test removing a server from a suite",
+      "command": "mcp-manager suite remove remove-test remove-server",
+      "success": true,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.1753859519958496,
+      "error_message": null
+    },
+    {
+      "test_name": "suite_delete_basic",
+      "description": "Test deleting a suite with force flag",
+      "command": "mcp-manager suite delete delete-test --force",
+      "success": true,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.18113303184509277,
+      "error_message": null
+    },
+    {
+      "test_name": "suite_summary",
+      "description": "Test suite summary command",
+      "command": "mcp-manager suite summary",
+      "success": true,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.6147599220275879,
+      "error_message": null
+    },
+    {
+      "test_name": "install_suite_temp_dry_run",
+      "description": "Test installing a suite with dry run",
+      "command": "mcp-manager suite install install-test --dry-run",
+      "success": true,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.17377519607543945,
+      "error_message": null
+    },
+    {
+      "test_name": "install_suite_temp_nonexistent",
+      "description": "Test installing a nonexistent suite",
+      "command": "mcp-manager suite install nonexistent-suite",
+      "success": true,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.17909812927246094,
+      "error_message": null
+    },
+    {
+      "test_name": "suite_help_commands",
+      "description": "Test suite command help",
+      "command": "mcp-manager suite --help",
+      "success": true,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.17335796356201172,
+      "error_message": null
+    }
+  ]
+}

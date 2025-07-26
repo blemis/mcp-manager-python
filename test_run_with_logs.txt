@@ -1,0 +1,24 @@
+
+🧪 Running SUITE Tests
+============================================================
+📋 Found 16 scenarios
+🔄 Running test 1/16: suite_list_empty...🔄 Test 1/16: suite_list_empty ✅🔄 Running test 2/16: suite_create_basic...🔄 Test 2/16: suite_create_basic ✅🔄 Running test 3/16: suite_create_with_category...🔄 Test 3/16: suite_create_with_category ✅🔄 Running test 4/16: suite_create_custom_id...🔄 Test 4/16: suite_create_custom_id ✅🔄 Running test 5/16: suite_list_with_suites...🔄 Test 5/16: suite_list_with_suites ✅🔄 Running test 6/16: suite_list_by_category...🔄 Test 6/16: suite_list_by_category ✅🔄 Running test 7/16: suite_show_basic...🔄 Test 7/16: suite_show_basic ✅🔄 Running test 8/16: suite_show_nonexistent...🔄 Test 8/16: suite_show_nonexistent ✅🔄 Running test 9/16: suite_add_server_basic...🔄 Test 9/16: suite_add_server_basic ✅🔄 Running test 10/16: suite_add_server_different_roles...🔄 Test 10/16: suite_add_server_different_roles ✅🔄 Running test 11/16: suite_remove_server...🔄 Test 11/16: suite_remove_server ✅🔄 Running test 12/16: suite_delete_basic...🔄 Test 12/16: suite_delete_basic ✅🔄 Running test 13/16: suite_summary...🔄 Test 13/16: suite_summary ✅🔄 Running test 14/16: install_suite_temp_dry_run...🔄 Test 14/16: install_suite_temp_dry_run ✅🔄 Running test 15/16: install_suite_temp_nonexistent...🔄 Test 15/16: install_suite_temp_nonexistent ✅🔄 Running test 16/16: suite_help_commands...🔄 Test 16/16: suite_help_commands ✅                                                                                
+================================================================================
+✅ suite_list_empty               Test listing suites when none exist      [32mPASSED[0m
+✅ suite_create_basic             Test creating a basic suite              [32mPASSED[0m
+✅ suite_create_with_category     Test creating a suite with category      [32mPASSED[0m
+✅ suite_create_custom_id         Test creating a suite with custom ID     [32mPASSED[0m
+✅ suite_list_with_suites         Test listing suites after creating some  [32mPASSED[0m
+✅ suite_list_by_category         Test listing suites filtered by category [32mPASSED[0m
+✅ suite_show_basic               Test showing suite details               [32mPASSED[0m
+✅ suite_show_nonexistent         Test showing details of nonexistent suite [32mPASSED[0m
+✅ suite_add_server_basic         Test adding an existing database server to a suite [32mPASSED[0m
+✅ suite_add_server_different_roles Test adding existing database servers with different roles [32mPASSED[0m
+✅ suite_remove_server            Test removing a server from a suite      [32mPASSED[0m
+✅ suite_delete_basic             Test deleting a suite with force flag    [32mPASSED[0m
+✅ suite_summary                  Test suite summary command               [32mPASSED[0m
+✅ install_suite_temp_dry_run     Test installing a suite with dry run     [32mPASSED[0m
+✅ install_suite_temp_nonexistent Test installing a nonexistent suite      [32mPASSED[0m
+✅ suite_help_commands            Test suite command help                  [32mPASSED[0m
+
+[33m========================= [32m16 passed[0m[33m in 3.49s[0m
