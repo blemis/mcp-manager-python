@@ -12,13 +12,13 @@
         "description": "Docker Desktop MCP server for reference operations"
       },
       {
-        "name": "filesystem", 
+        "name": "filesystem",
         "type": "docker-desktop",
         "description": "Docker Desktop MCP server for filesystem operations"
       },
       {
         "name": "aws-diagram",
-        "type": "docker-desktop", 
+        "type": "docker-desktop",
         "description": "Docker Desktop MCP server for AWS diagram creation"
       }
     ],
@@ -37,7 +37,7 @@
       "description": "Core CLI commands (list, add, remove, enable, disable, nuke)"
     },
     {
-      "file": "02_discovery_commands.json", 
+      "file": "02_discovery_commands.json",
       "category": "discovery",
       "priority": "high",
       "test_count": 15,
@@ -46,7 +46,7 @@
     {
       "file": "03_suite_management.json",
       "category": "suite",
-      "priority": "high", 
+      "priority": "high",
       "test_count": 16,
       "description": "Suite creation, management, and server assignment"
     },
@@ -59,7 +59,7 @@
     },
     {
       "file": "05_system_commands.json",
-      "category": "system", 
+      "category": "system",
       "priority": "high",
       "test_count": 11,
       "description": "System information, configuration, and monitoring"
@@ -74,7 +74,7 @@
     {
       "file": "07_api_commands.json",
       "category": "api",
-      "priority": "high", 
+      "priority": "high",
       "test_count": 7,
       "description": "API server management and endpoints"
     },
@@ -98,11 +98,19 @@
       "priority": "low",
       "test_count": 8,
       "description": "Administrative testing and development commands"
+    },
+    {
+      "file": "11_custom_commands.json",
+      "category": "custom",
+      "priority": "medium",
+      "test_count": 1,
+      "description": "Test export data functionality",
+      "test_suite_name": "Test Export Feature"
     }
   ],
   "execution_order": [
     "01_core_commands.json",
-    "02_discovery_commands.json", 
+    "02_discovery_commands.json",
     "05_system_commands.json",
     "03_suite_management.json",
     "04_ai_analytics_commands.json",
@@ -110,15 +118,16 @@
     "08_proxy_commands.json",
     "09_workflow_commands.json",
     "06_tui_interface_commands.json",
-    "10_test_admin_commands.json"
+    "10_test_admin_commands.json",
+    "11_custom_commands.json"
   ],
   "test_statistics": {
-    "total_test_files": 10,
-    "total_test_scenarios": 118,
+    "total_test_files": 11,
+    "total_test_scenarios": 119,
     "estimated_execution_time_minutes": 25,
     "coverage_areas": [
       "Core server management",
-      "Discovery and installation", 
+      "Discovery and installation",
       "Suite management",
       "AI and analytics",
       "System operations",
@@ -146,7 +155,7 @@
     "test_schema": {
       "required_fields": [
         "test_suite_name",
-        "test_suite_description", 
+        "test_suite_description",
         "category",
         "priority",
         "test_scenarios"

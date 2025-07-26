@@ -21,6 +21,10 @@ class AITestScenarioGenerator:
     def __init__(self):
         self.ai_system = None
         self._initialize_ai()
+        
+        # Initialize hybrid loader for DB+file operations
+        from tests.tools.hybrid_test_loader import get_hybrid_loader
+        self.hybrid_loader = get_hybrid_loader()
     
     def _initialize_ai(self):
         """Initialize AI system if available."""
@@ -407,9 +411,58 @@ Return ONLY the additional scenarios in this format:
 
 # Integration with auto test generator
 async def ai_generate_tests_advanced(command: str, description: str = "") -> Dict[str, Any]:
-    """Advanced AI test generation function for integration."""
+    """Advanced AI test generation function for integration with hybrid DB+file system."""
     generator = AITestScenarioGenerator()
-    return await generator.generate_comprehensive_tests(command, description)
+    
+    # Generate test data using AI
+    test_data = await generator.generate_comprehensive_tests(command, description)
+    
+    # Validate against collection-agnostic schema
+    if not _validate_against_schema(test_data):
+        raise ValueError("AI-generated test data does not match collection-agnostic schema")
+    
+    # Auto-sync with hybrid system if test data is valid
+    try:
+        # Check if similar tests already exist to avoid duplicates
+        existing_tests = generator.hybrid_loader.search_tests(
+            query=command.split()[-1],  # Search by command keyword
+            collection_compatible=True
+        )
+        
+        if existing_tests:
+            logger.info(f"Found {len(existing_tests)} existing similar test suites")
+            # Could prompt user or auto-merge here
+        
+        logger.info("AI-generated tests ready for hybrid DB+file integration")
+        
+    except Exception as e:
+        logger.warning(f"Could not check for existing tests: {e}")
+    
+    return test_data
+
+
+def _validate_against_schema(test_data: Dict[str, Any]) -> bool:
+    """Validate test data against collection-agnostic schema."""
+    required_fields = [
+        'test_suite_name', 'test_suite_description', 'category', 'priority',
+        'collection_requirements', 'metadata', 'test_scenarios'
+    ]
+    
+    for field in required_fields:
+        if field not in test_data:
+            logger.error(f"Missing required field: {field}")
+            return False
+    
+    # Validate scenarios
+    scenarios = test_data.get('test_scenarios', [])
+    for scenario in scenarios:
+        required_scenario_fields = ['test_name', 'description', 'command', 'expected_exit_code', 'timeout']
+        for field in required_scenario_fields:
+            if field not in scenario:
+                logger.error(f"Scenario missing field: {field}")
+                return False
+    
+    return True
 
 
 async def ai_enhance_tests(test_file_path: Path) -> Dict[str, Any]:

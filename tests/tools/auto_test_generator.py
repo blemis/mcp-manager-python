@@ -40,6 +40,10 @@ class AutoTestGenerator:
         self.master_config_path = self.tests_dir / "master_test_config.json"
         self.schema_path = Path(__file__).parent.parent / "schemas" / "collection_agnostic_schema.json"
         
+        # Initialize hybrid loader for DB+file operations
+        from tests.tools.hybrid_test_loader import get_hybrid_loader
+        self.hybrid_loader = get_hybrid_loader()
+        
     def load_master_config(self) -> Dict[str, Any]:
         """Load the master test configuration."""
         with open(self.master_config_path, 'r') as f:
@@ -417,20 +421,34 @@ Generate the complete JSON test suite:
         }
     
     def create_test_file(self, test_data: Dict[str, Any]) -> Path:
-        """Create the JSON test file."""
+        """Create the JSON test file and sync with DB."""
         file_number = self.get_next_test_file_number()
         category = test_data.get('category', 'custom')
         filename = f"{file_number:02d}_{category}_commands.json"
         file_path = self.tests_dir / filename
         
+        # Validate against schema first
+        if not self.validate_test_file(test_data):
+            raise ValueError("Test data does not match collection-agnostic schema")
+        
+        # Create JSON file
         with open(file_path, 'w') as f:
             json.dump(test_data, f, indent=2)
         
-        print(f"✅ Created test file: {filename}")
+        # Index in database for fast access
+        try:
+            success = self.hybrid_loader.catalog.index_test_file(file_path)
+            if success:
+                print(f"✅ Created test file: {filename} (indexed in DB)")
+            else:
+                print(f"⚠️  Created test file: {filename} (DB indexing failed)")
+        except Exception as e:
+            print(f"⚠️  Created test file: {filename} (DB error: {e})")
+        
         return file_path
     
     def update_master_config(self, test_file_path: Path, test_data: Dict[str, Any]):
-        """Update master configuration with new test file."""
+        """Update master configuration with new test file and verify DB sync."""
         config = self.load_master_config()
         
         # Add new test suite entry
@@ -439,7 +457,8 @@ Generate the complete JSON test suite:
             "category": test_data.get('category', 'custom'),
             "priority": test_data.get('priority', 'medium'),
             "test_count": len(test_data.get('test_scenarios', [])),
-            "description": test_data.get('test_suite_description', '')
+            "description": test_data.get('test_suite_description', ''),
+            "test_suite_name": test_data.get('test_suite_name', '')
         }
         
         config['test_suites'].append(new_entry)
@@ -447,10 +466,27 @@ Generate the complete JSON test suite:
         
         # Update statistics
         config['test_statistics']['total_test_files'] += 1
-        config['test_statistics']['total_test_scenarios'] += new_entry['test_count']
+        config['test_statistics']['total_test_scenarios'] = sum(
+            suite.get('test_count', 0) for suite in config['test_suites']
+        )
         
+        # Save updated master config
         self.save_master_config(config)
-        print(f"✅ Updated master configuration")
+        
+        # Verify DB sync
+        try:
+            integrity = self.hybrid_loader.validate_test_integrity()
+            if not integrity['in_sync']:
+                print("⚠️  Warning: DB may be out of sync with files")
+                if integrity.get('modified_files'):
+                    print(f"   Modified files: {integrity['modified_files']}")
+                # Force refresh catalog
+                self.hybrid_loader.refresh_catalog()
+                print("✅ Catalog refreshed to maintain sync")
+        except Exception as e:
+            print(f"⚠️  Could not verify DB sync: {e}")
+        
+        print(f"✅ Master config updated with {test_file_path.name}")
     
     def validate_test_file(self, test_data: Dict[str, Any]) -> bool:
         """Validate test file against schema."""
