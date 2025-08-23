@@ -746,7 +746,7 @@ class ServerDiscovery:
         # Check known servers database
         if server_name in known_servers:
             requirements = known_servers[server_name]["requirements"]
-            return "docker", ["run", "-i", "--rm", "--pull", "always"], requirements
+            return "docker", ["run", "-i", "--rm", "--pull", "always", f"{package_name}:latest"], requirements
         
         
         # Default fallback

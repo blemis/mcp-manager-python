@@ -256,19 +256,44 @@ def discovery_commands(cli_context):
             try:
                 # Separate args and env from config
                 config = config or {}
-                env_vars = {k: v for k, v in config.items() if k != 'args' and isinstance(v, str)}
+                env_vars = {k: v for k, v in config.items() if k not in ['args', 'final_args'] and isinstance(v, str)}
                 additional_args = config.get('args', []) if isinstance(config.get('args'), list) else []
+                final_args = config.get('final_args', []) if isinstance(config.get('final_args'), list) else []
                 
                 # Convert scope string to enum
                 from mcp_manager.core.models import ServerScope
                 scope_enum = ServerScope(scope) if scope else ServerScope.USER
+                
+                # Build final args properly for Docker
+                base_args = matching_server.install_args or []
+                if matching_server.server_type == ServerType.DOCKER and additional_args:
+                    # Insert additional args (volume mounts, etc.) before image name
+                    command_args = []
+                    image_inserted = False
+                    for arg in base_args:
+                        if arg.endswith(':latest') or '/' in arg and ':' in arg:
+                            # This is the image name - insert additional args before it
+                            command_args.extend(additional_args)
+                            command_args.append(arg)
+                            image_inserted = True
+                        else:
+                            command_args.append(arg)
+                    
+                    # If we didn't find an image name, append additional args at the end
+                    if not image_inserted:
+                        command_args.extend(additional_args)
+                    
+                    # Add final args (like directory path) after image name
+                    command_args.extend(final_args)
+                else:
+                    command_args = base_args + additional_args + final_args
                 
                 # Add server to manager
                 server = await manager.add_server(
                     name=server_name,
                     server_type=matching_server.server_type,
                     command=matching_server.install_command,
-                    args=(matching_server.install_args or []) + additional_args,
+                    args=command_args,
                     env=env_vars,
                     scope=scope_enum
                 )
@@ -344,19 +369,44 @@ def discovery_commands(cli_context):
             try:
                 # Separate args and env from config
                 config = config or {}
-                env_vars = {k: v for k, v in config.items() if k != 'args' and isinstance(v, str)}
+                env_vars = {k: v for k, v in config.items() if k not in ['args', 'final_args'] and isinstance(v, str)}
                 additional_args = config.get('args', []) if isinstance(config.get('args'), list) else []
+                final_args = config.get('final_args', []) if isinstance(config.get('final_args'), list) else []
                 
                 # Convert scope string to enum
                 from mcp_manager.core.models import ServerScope
                 scope_enum = ServerScope(scope) if scope else ServerScope.USER
+                
+                # Build final args properly for Docker
+                base_args = server_result.install_args or []
+                if server_result.server_type == ServerType.DOCKER and additional_args:
+                    # Insert additional args (volume mounts, etc.) before image name
+                    command_args = []
+                    image_inserted = False
+                    for arg in base_args:
+                        if arg.endswith(':latest') or '/' in arg and ':' in arg:
+                            # This is the image name - insert additional args before it
+                            command_args.extend(additional_args)
+                            command_args.append(arg)
+                            image_inserted = True
+                        else:
+                            command_args.append(arg)
+                    
+                    # If we didn't find an image name, append additional args at the end
+                    if not image_inserted:
+                        command_args.extend(additional_args)
+                    
+                    # Add final args (like directory path) after image name
+                    command_args.extend(final_args)
+                else:
+                    command_args = base_args + additional_args + final_args
                 
                 # Add server to manager
                 server = await manager.add_server(
                     name=server_name,
                     server_type=server_result.server_type,
                     command=server_result.install_command,
-                    args=(server_result.install_args or []) + additional_args,
+                    args=command_args,
                     env=env_vars,
                     scope=scope_enum
                 )

@@ -160,8 +160,9 @@ def prompt_for_server_configuration(server_name: str, server_type: ServerType, p
             if server_type == ServerType.DOCKER_DESKTOP:
                 config['directory'] = value
             else:
-                # For Docker containers, add volume mount (directory path is already in base command)
+                # For Docker containers, add volume mount and directory path as final arg
                 config['args'].extend(['-v', f'{value}:{value}'])
+                config['final_args'] = [value]  # Directory path goes after image name
                 
         elif server_key == 'sqlite':
             # Create database file if it doesn't exist
