@@ -338,6 +338,57 @@ def list_cmd(scope: Optional[str], output_format: str):
         sys.exit(1)
 
 
+@cli.command("cleanup-duplicates")
+@click.option("--dry-run", is_flag=True, help="Show what duplicates would be removed without making changes")
+@handle_errors
+def cleanup_duplicates(dry_run: bool):
+    """Detect and remove duplicate MCP servers based on functionality similarity."""
+    
+    async def cleanup_async():
+        try:
+            manager, context = cli_context.auto_sync_and_get_manager(silent=True)
+            console.print(f"[dim]Checking for duplicates in: {context.description}[/dim]")
+            
+            if dry_run:
+                console.print("[yellow]🔍 DRY RUN MODE - No changes will be made[/yellow]")
+                console.print("")
+            
+            console.print("🔄 Analyzing servers for functionality duplicates...")
+            
+            # Run duplicate detection
+            if not dry_run:
+                results = await manager.detect_and_remove_duplicates()
+            else:
+                # TODO: Implement dry-run mode that shows what would be removed
+                results = {"duplicates_removed": 0, "removal_details": []}
+                console.print("[dim]Dry-run duplicate detection not yet implemented[/dim]")
+            
+            console.print("")
+            console.print("📊 Duplicate Cleanup Results:")
+            console.print("")
+            
+            if results["duplicates_removed"] > 0:
+                console.print(f"[green]✅ Removed {results['duplicates_removed']} duplicate servers[/green]")
+                console.print("")
+                
+                for detail in results.get("removal_details", []):
+                    console.print(f"[red]❌ Removed:[/red] {detail['removed']}")
+                    console.print(f"[green]✅ Kept:[/green] {detail['kept']}")
+                    console.print(f"[dim]   Similarity: {detail['similarity_score']}% - {', '.join(detail.get('reasons', []))[:80]}[/dim]")
+                    console.print("")
+            else:
+                console.print("[green]✅ No duplicate servers found![/green]")
+            
+            if "error" in results:
+                console.print(f"[red]❌ Error during cleanup: {results['error']}[/red]")
+            
+        except Exception as e:
+            console.print(f"[red]Failed to cleanup duplicates: {e}[/red]")
+            sys.exit(1)
+    
+    asyncio.run(cleanup_async())
+
+
 @cli.command("sync-fix")
 @click.option("--dry-run", is_flag=True, help="Show what would be fixed without making changes")
 @handle_errors

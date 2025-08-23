@@ -20,6 +20,7 @@ from mcp_manager.core.models import Server, ServerType, ServerScope, SystemInfo
 from mcp_manager.core.database.server_state import MCPServerStateManager, ServerInfo
 from mcp_manager.utils.config import get_config
 from mcp_manager.utils.logging import get_logger
+from mcp_manager.utils.docker_detection import DockerDesktopDetector
 
 logger = get_logger(__name__)
 
@@ -222,6 +223,29 @@ class SimpleMCPManager:
         self._mark_operation_start()
         logger.debug(f"Adding server '{name}' to Claude")
         
+        # CHECK FOR DUPLICATES - Critical deduplication logic
+        existing_server = self.claude.get_server(name)
+        if existing_server:
+            logger.warning(f"Server '{name}' already exists in Claude - skipping duplicate addition")
+            return existing_server
+        
+        # Check database for duplicates too
+        catalog = await self._get_server_catalog()
+        if name in catalog["servers"] and catalog["servers"][name].get("enabled", False):
+            logger.warning(f"Server '{name}' already enabled in database - skipping duplicate")
+            # Return existing server info
+            server_info = catalog["servers"][name]
+            return Server(
+                name=name,
+                command=server_info.get("command", command),
+                args=server_info.get("args", args or []),
+                server_type=server_type,
+                scope=scope,
+                enabled=True,
+                description=server_info.get("description"),
+                env=server_info.get("env", env or {}),
+            )
+        
         # Handle Docker Desktop servers specially
         if server_type == ServerType.DOCKER_DESKTOP:
             # For Docker Desktop, we need to enable the server in Docker Desktop first
@@ -343,6 +367,14 @@ class SimpleMCPManager:
         # Mark operation start to prevent sync loops
         self._mark_operation_start()
         
+        # Check if this is a Docker Desktop server and if DD is available
+        catalog = await self._get_server_catalog()
+        if name in catalog["servers"] and catalog["servers"][name].get("type") == "docker-desktop":
+            can_enable, error_msg = DockerDesktopDetector.can_enable_dd_server(name)
+            if not can_enable:
+                logger.error(f"Cannot enable Docker Desktop server '{name}': {error_msg}")
+                raise MCPManagerError(error_msg)
+        
         # Check if server already exists in Claude
         server = self.claude.get_server(name)
         if server:
@@ -422,6 +454,34 @@ class SimpleMCPManager:
                 return True
             else:
                 raise MCPManagerError(f"Failed to enable Docker Desktop server '{name}'")
+        
+        # Check if this is a regular server in our database that's disabled
+        catalog = await self._get_server_catalog()
+        if name in catalog["servers"] and not catalog["servers"][name].get("enabled", True):
+            server_info = catalog["servers"][name]
+            logger.debug(f"Enabling disabled server from database: {name}")
+            
+            # Get server details from database
+            command = server_info.get("command", "")
+            args = server_info.get("args", [])
+            env = server_info.get("env", {})
+            
+            # Add to Claude
+            success = self.claude.add_server(
+                name=name,
+                command=command,
+                args=args,
+                env=env,
+            )
+            
+            if success:
+                # Mark as enabled in database
+                await self._update_server_in_catalog(name, enabled=True)
+                logger.debug(f"Successfully enabled server: {name}")
+                return True
+            else:
+                logger.error(f"Failed to add server to Claude: {name}")
+                return False
         
         # If not found, we can't enable it without knowing the command
         logger.debug(f"Server '{name}' not found for enabling")
@@ -714,29 +774,48 @@ class SimpleMCPManager:
         
         try:
             # Extract server names from gateway args
+            # Handle contaminated args that include status info
             if gateway_server.args and len(gateway_server.args) >= 5:
-                # Args format: ["mcp", "gateway", "run", "--servers", "server1,server2,server3"]
-                servers_arg = gateway_server.args[4]
-                server_names = [s.strip() for s in servers_arg.split(",")]
+                # Find the --servers argument and get the value after it
+                servers_arg = None
+                for i, arg in enumerate(gateway_server.args):
+                    if arg == "--servers" and i + 1 < len(gateway_server.args):
+                        servers_arg = gateway_server.args[i + 1]
+                        break
                 
-                for server_name in server_names:
-                    # Create a Server object for each Docker Desktop server
-                    docker_server = Server(
-                        name=server_name,
-                        command="docker",
-                        args=["mcp", "server", server_name],
-                        server_type=ServerType.DOCKER_DESKTOP,
-                        scope=gateway_server.scope,
-                        enabled=True,  # If it's in the gateway, it's enabled
-                        description=f"Docker Desktop MCP server: {server_name}",
-                        env={},
-                    )
-                    docker_servers.append(docker_server)
+                if servers_arg and not servers_arg.startswith("-"):  # Avoid status symbols
+                    # Split by comma and clean up server names
+                    server_names = [s.strip() for s in servers_arg.split(",") if s.strip()]
+                    
+                    logger.debug(f"Expanding docker-gateway with servers: {server_names}")
+                    
+                    for server_name in server_names:
+                        # Skip status symbols that might have gotten mixed in
+                        if server_name in ['-', '✓', '✗', 'Connected', 'Failed', 'to', 'connect']:
+                            continue
+                            
+                        # Create a Server object for each Docker Desktop server
+                        docker_server = Server(
+                            name=server_name,
+                            command="docker",
+                            args=["mcp", "server", server_name],
+                            server_type=ServerType.DOCKER_DESKTOP,
+                            scope=gateway_server.scope,
+                            enabled=True,  # If it's in the gateway, it's enabled
+                            description=f"Docker Desktop MCP server: {server_name}",
+                            env={},
+                        )
+                        docker_servers.append(docker_server)
+                        logger.debug(f"Created expanded server: {server_name}")
+                        
+            if not docker_servers:
+                logger.warning("No valid servers found in docker-gateway expansion")
                     
             return docker_servers
             
         except Exception as e:
-            logger.warning(f"Failed to expand docker-gateway: {e}")
+            logger.error(f"Failed to expand docker-gateway: {e}")
+            logger.debug(f"Gateway server args: {gateway_server.args}")
             # If expansion fails, return the gateway as-is
             return [gateway_server]
     
@@ -977,6 +1056,90 @@ class SimpleMCPManager:
             logger.warning(f"Error removing Docker image {image}: {e}")
             return True
     
+    async def fix_sync_issues(self) -> Dict[str, Any]:
+        """
+        Detect and fix synchronization issues between mcp-manager and Claude.
+        
+        Returns:
+            Dictionary with sync repair results
+        """
+        logger.info("Starting sync issue detection and repair")
+        
+        repair_results = {
+            "duplicates_removed": 0,
+            "orphaned_claude_servers": 0,
+            "orphaned_db_servers": 0,
+            "inconsistencies_fixed": 0,
+            "errors": []
+        }
+        
+        try:
+            # 1. Get current state from both systems
+            claude_servers = self.claude.list_servers()
+            catalog = await self._get_server_catalog()
+            db_servers = catalog.get("servers", {})
+            
+            # 2. Find and remove duplicates in Claude
+            claude_names = [s.name for s in claude_servers]
+            seen_names = set()
+            for server in claude_servers:
+                if server.name in seen_names:
+                    logger.warning(f"Removing duplicate server from Claude: {server.name}")
+                    self.claude.remove_server(server.name)
+                    repair_results["duplicates_removed"] += 1
+                seen_names.add(server.name)
+            
+            # 3. Find servers in Claude but not in database
+            for server in claude_servers:
+                if server.name not in db_servers:
+                    logger.info(f"Adding orphaned Claude server to database: {server.name}")
+                    await self._add_server_to_catalog(
+                        name=server.name,
+                        server_type=server.server_type.value,
+                        enabled=True,
+                        command=server.command,
+                        args=server.args,
+                        env=server.env,
+                        description=f"Auto-synced from Claude: {server.name}",
+                    )
+                    repair_results["orphaned_claude_servers"] += 1
+            
+            # 4. Find enabled servers in database but not in Claude
+            for name, server_info in db_servers.items():
+                if server_info.get("enabled", False):
+                    claude_server = self.claude.get_server(name)
+                    if not claude_server:
+                        logger.warning(f"Disabling orphaned database server: {name}")
+                        await self._update_server_in_catalog(name, enabled=False)
+                        repair_results["orphaned_db_servers"] += 1
+            
+            # 5. Fix command/args inconsistencies
+            fresh_claude_servers = self.claude.list_servers()  # Refresh after changes
+            for server in fresh_claude_servers:
+                if server.name in db_servers:
+                    db_info = db_servers[server.name]
+                    db_command = db_info.get("command", "")
+                    db_args = db_info.get("args", [])
+                    
+                    # Check for command inconsistencies
+                    if server.command != db_command or server.args != db_args:
+                        logger.info(f"Updating database to match Claude for: {server.name}")
+                        await self._update_server_in_catalog(
+                            server.name, 
+                            command=server.command,
+                            args=server.args
+                        )
+                        repair_results["inconsistencies_fixed"] += 1
+            
+            logger.info(f"Sync repair completed: {repair_results}")
+            return repair_results
+            
+        except Exception as e:
+            error_msg = f"Error during sync repair: {e}"
+            logger.error(error_msg)
+            repair_results["errors"].append(error_msg)
+            return repair_results
+
     async def check_sync_status(self) -> SyncCheckResult:
         """
         Check synchronization status between mcp-manager and Claude.
@@ -3258,8 +3421,111 @@ class SimpleMCPManager:
         command: str,
         args: Optional[List[str]] = None
     ) -> List[Dict[str, Any]]:
-        """Check for servers with similar functionality (public method for CLI)."""
-        # For now, return empty list to allow server addition to proceed
-        # TODO: Implement proper similarity checking using discovery system
-        logger.debug(f"Checking for similar servers to {name} (not implemented)")
-        return []
+        """Check for servers with similar functionality."""
+        try:
+            from mcp_manager.core.discovery import ServerDiscovery
+            from mcp_manager.core.models import DiscoveryResult
+            
+            # Create a mock discovery result for the target server
+            target_result = DiscoveryResult(
+                name=name,
+                package=None,
+                server_type=server_type,
+                description=None,
+                install_command=command,
+                install_args=args or []
+            )
+            
+            # Get existing servers
+            existing_servers = await self.list_servers()
+            
+            # Use discovery system to detect similar servers
+            discovery = ServerDiscovery()
+            similar_servers = discovery.detect_similar_servers(target_result, existing_servers)
+            
+            return similar_servers
+        except Exception as e:
+            logger.error(f"Error checking for similar servers: {e}")
+            return []
+    
+    async def detect_and_remove_duplicates(self) -> Dict[str, Any]:
+        """Detect and remove duplicate servers based on similarity."""
+        try:
+            from mcp_manager.core.discovery import ServerDiscovery
+            
+            servers = await self.list_servers()
+            discovery = ServerDiscovery()
+            
+            duplicates_removed = 0
+            removal_details = []
+            
+            # Check each server against all others
+            servers_to_check = servers.copy()
+            
+            for i, server in enumerate(servers_to_check):
+                if not server:  # Skip if already removed
+                    continue
+                    
+                # Create a mock discovery result for this server
+                from mcp_manager.core.models import DiscoveryResult
+                server_result = DiscoveryResult(
+                    name=server.name,
+                    package=getattr(server, 'package', None),
+                    server_type=server.server_type,
+                    description=getattr(server, 'description', None),
+                    install_command=server.command,
+                    install_args=server.args or []
+                )
+                
+                # Check against remaining servers
+                remaining_servers = [s for j, s in enumerate(servers_to_check) 
+                                   if j > i and s is not None]
+                
+                similar_servers = discovery.detect_similar_servers(server_result, remaining_servers)
+                
+                for similar_info in similar_servers:
+                    similar_server = similar_info["server"]
+                    score = similar_info["similarity_score"]
+                    
+                    # Only remove if very high similarity (80+)
+                    if score >= 80:
+                        # Prefer to keep the simpler named server
+                        server_to_remove = None
+                        server_to_keep = None
+                        
+                        if len(server.name) > len(similar_server.name):
+                            server_to_remove = server
+                            server_to_keep = similar_server
+                        else:
+                            server_to_remove = similar_server
+                            server_to_keep = server
+                        
+                        # Remove the duplicate
+                        success = await self.remove_server(server_to_remove.name)
+                        if success:
+                            duplicates_removed += 1
+                            removal_details.append({
+                                "removed": server_to_remove.name,
+                                "kept": server_to_keep.name,
+                                "similarity_score": score,
+                                "reasons": similar_info.get("reasons", [])
+                            })
+                            
+                            # Mark as removed in our working list
+                            for j, s in enumerate(servers_to_check):
+                                if s and s.name == server_to_remove.name:
+                                    servers_to_check[j] = None
+                                    break
+            
+            return {
+                "duplicates_removed": duplicates_removed,
+                "removal_details": removal_details
+            }
+            
+        except Exception as e:
+            logger.error(f"Error detecting duplicates: {e}")
+            return {
+                "duplicates_removed": 0,
+                "removal_details": [],
+                "error": str(e)
+            }
