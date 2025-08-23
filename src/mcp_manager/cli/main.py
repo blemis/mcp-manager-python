@@ -274,12 +274,12 @@ def list_cmd(scope: Optional[str], output_format: str):
                 title_style="bold cyan"
             )
             
-            table.add_column("Name", style="green", width=40)
-            table.add_column("Type", style="blue", width=9)
-            table.add_column("Scope", style="yellow", width=5)
-            table.add_column("Status", style="white", width=6)
-            table.add_column("Suites", style="magenta", width=15)
-            table.add_column("Command", style="dim", width=25)
+            table.add_column("Name", style="green")
+            table.add_column("Type", style="blue")
+            table.add_column("Scope", style="yellow")
+            table.add_column("Status", style="white")
+            table.add_column("Suites", style="magenta")
+            table.add_column("Command", style="dim")
             
             # Get suite memberships for all servers
             from mcp_manager.core.suites.database import SuiteDatabase
@@ -307,12 +307,9 @@ def list_cmd(scope: Optional[str], output_format: str):
                 server_suites = {}
             
             for server in servers:
-                status = "✅" if server.enabled else "❌"
-                status += " Ena…" if server.enabled else " Dis…"
-                scope_str = server.scope.value[:3] + "…" if server.scope else "unk"
-                command_str = f"{server.command} {' '.join(server.args[:2])}"
-                if len(server.args) > 2:
-                    command_str += "..."
+                status = "✅ Enabled" if server.enabled else "❌ Disabled"
+                scope_str = server.scope.value if server.scope else "unknown"
+                command_str = f"{server.command} {' '.join(server.args)}"
                 
                 # Get suite membership
                 suites = server_suites.get(server.name, [])
@@ -328,7 +325,7 @@ def list_cmd(scope: Optional[str], output_format: str):
                     scope_str,
                     status,
                     suite_str,
-                    command_str[:30] + "..." if len(command_str) > 33 else command_str
+                    command_str
                 )
             
             console.print("")
