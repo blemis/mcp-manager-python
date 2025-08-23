@@ -82,13 +82,13 @@ class OllamaProvider(BaseLLMProvider):
             
             # Extract response content
             content = response_data.get("response", "")
-            model_used = response_data.get("model", self.config.get_default_model())
+            llm_model = response_data.get("model", self.config.get_default_model())
             
             # Calculate approximate token usage (Ollama doesn't provide this directly)
             usage_tokens = self._estimate_token_usage(prompt, content, system_prompt)
             
             self.logger.info("Ollama response generated successfully", extra={
-                "model": model_used,
+                "model": llm_model,
                 "estimated_tokens": usage_tokens,
                 "response_length": len(content),
                 "done": response_data.get("done", False)
@@ -97,7 +97,7 @@ class OllamaProvider(BaseLLMProvider):
             return self._create_response(
                 content=content,
                 usage_tokens=usage_tokens,
-                model_used=model_used,
+                llm_model=llm_model,
                 done=response_data.get("done", False),
                 eval_duration=response_data.get("eval_duration"),
                 prompt_eval_duration=response_data.get("prompt_eval_duration")

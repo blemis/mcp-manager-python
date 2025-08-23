@@ -141,7 +141,7 @@ class AnalyticsDatabase:
                 cursor.execute("""
                     INSERT INTO recommendation_analytics (
                         session_id, user_query, query_category, recommendations_count,
-                        llm_provider, model_used, processing_time_ms, tools_analyzed,
+                        llm_provider, llm_model, processing_time_ms, tools_analyzed,
                         user_selected_tool, user_satisfaction_score, timestamp, context_data
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
@@ -150,7 +150,7 @@ class AnalyticsDatabase:
                     analytics.query_category,
                     analytics.recommendations_count,
                     analytics.llm_provider,
-                    analytics.model_used,
+                    analytics.llm_model,
                     analytics.processing_time_ms,
                     analytics.tools_analyzed,
                     analytics.user_selected_tool,

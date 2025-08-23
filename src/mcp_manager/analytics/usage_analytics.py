@@ -164,7 +164,7 @@ class UsageAnalyticsService:
     
     def record_recommendation_analytics(self, session_id: str, user_query: str,
                                       recommendations_count: int, llm_provider: str,
-                                      model_used: str, processing_time_ms: int,
+                                      llm_model: str, processing_time_ms: int,
                                       tools_analyzed: int, user_selected_tool: Optional[str] = None,
                                       user_satisfaction_score: Optional[float] = None,
                                       context_data: Optional[Dict[str, Any]] = None) -> bool:
@@ -176,7 +176,7 @@ class UsageAnalyticsService:
             user_query: Original user query
             recommendations_count: Number of recommendations provided
             llm_provider: LLM provider used
-            model_used: Specific model used
+            llm_model: Specific model used
             processing_time_ms: Total processing time
             tools_analyzed: Number of tools analyzed
             user_selected_tool: Tool user actually selected
@@ -199,7 +199,7 @@ class UsageAnalyticsService:
                 query_category=query_category,
                 recommendations_count=recommendations_count,
                 llm_provider=llm_provider,
-                model_used=model_used,
+                llm_model=llm_model,
                 processing_time_ms=processing_time_ms,
                 tools_analyzed=tools_analyzed,
                 user_selected_tool=user_selected_tool,
@@ -213,7 +213,7 @@ class UsageAnalyticsService:
                 cursor.execute("""
                     INSERT INTO recommendation_analytics (
                         session_id, user_query, query_category, recommendations_count,
-                        llm_provider, model_used, processing_time_ms, tools_analyzed,
+                        llm_provider, llm_model, processing_time_ms, tools_analyzed,
                         user_selected_tool, user_satisfaction_score, timestamp, context_data
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
@@ -222,7 +222,7 @@ class UsageAnalyticsService:
                     analytics.query_category,
                     analytics.recommendations_count,
                     analytics.llm_provider,
-                    analytics.model_used,
+                    analytics.llm_model,
                     analytics.processing_time_ms,
                     analytics.tools_analyzed,
                     analytics.user_selected_tool,

@@ -192,11 +192,31 @@ class MCPServerStateManager:
             )
         """)
         
+        # Server requirements table for dynamic requirement storage
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS mcp_server_requirements (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                server_identifier TEXT NOT NULL, -- package name or server name pattern
+                server_type TEXT NOT NULL,
+                requirement_type TEXT NOT NULL, -- 'api_key', 'directory_access', 'url', etc.
+                prompt TEXT NOT NULL, -- What to ask the user
+                env_var_name TEXT, -- Environment variable name to set
+                required BOOLEAN NOT NULL DEFAULT TRUE,
+                default_value TEXT,
+                description TEXT,
+                created_at TIMESTAMP NOT NULL,
+                updated_at TIMESTAMP NOT NULL,
+                UNIQUE(server_identifier, requirement_type)
+            )
+        """)
+        
         # Create indexes for performance
         conn.execute("CREATE INDEX IF NOT EXISTS idx_connection_history_server_time ON mcp_connection_history(server_name, checked_at)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_usage_events_server_time ON mcp_usage_events(server_name, created_at)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_server_registry_type ON mcp_server_registry(server_type)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_server_registry_enabled ON mcp_server_registry(enabled)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_server_requirements_identifier ON mcp_server_requirements(server_identifier)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_server_requirements_type ON mcp_server_requirements(server_type)")
         
         conn.commit()
     
@@ -520,11 +540,103 @@ class MCPServerStateManager:
                         'description': row[3],
                         'server_type': row[4],
                         'install_command': row[5],
-                        'install_args': json.loads(row[6] or '[]')
+                        'install_args': json.loads(row[6] or '[]'),
+                        'requirements': self.get_server_requirements(row[1] or row[0])  # Get requirements by package or name
                     }
                 return None
         except Exception:
             return None
+    
+    def get_server_requirements(self, server_identifier: str) -> List[Dict[str, Any]]:
+        """Get requirements for a server from the database."""
+        try:
+            with sqlite3.connect(str(self.db_path)) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.execute("""
+                    SELECT requirement_type, prompt, env_var_name, required, default_value, description
+                    FROM mcp_server_requirements
+                    WHERE server_identifier = ?
+                    ORDER BY required DESC, id ASC
+                """, (server_identifier,))
+                
+                requirements = []
+                for row in cursor:
+                    req = {
+                        "type": row['requirement_type'],
+                        "prompt": row['prompt'],
+                        "required": bool(row['required'])
+                    }
+                    if row['env_var_name']:
+                        req["env_var_name"] = row['env_var_name']
+                    if row['default_value']:
+                        req["default"] = row['default_value']
+                    if row['description']:
+                        req["description"] = row['description']
+                    
+                    requirements.append(req)
+                
+                return requirements
+                
+        except Exception as e:
+            logger.error(f"Failed to get requirements for {server_identifier}: {e}")
+            return []
+    
+    def add_server_requirement(self, server_identifier: str, server_type: str, 
+                             requirement_type: str, prompt: str, env_var_name: str = None, 
+                             required: bool = True, default_value: str = None, 
+                             description: str = None) -> bool:
+        """Add a requirement for a server."""
+        try:
+            with sqlite3.connect(str(self.db_path)) as conn:
+                now = datetime.now(timezone.utc).isoformat()
+                
+                conn.execute("""
+                    INSERT OR REPLACE INTO mcp_server_requirements
+                    (server_identifier, server_type, requirement_type, prompt, env_var_name, 
+                     required, default_value, description, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    server_identifier, server_type, requirement_type, prompt, env_var_name,
+                    required, default_value, description, now, now
+                ))
+                
+                logger.info(f"Added requirement {requirement_type} for {server_identifier}")
+                return True
+                
+        except Exception as e:
+            logger.error(f"Failed to add requirement for {server_identifier}: {e}")
+            return False
+    
+    def list_all_server_requirements(self) -> List[Dict[str, Any]]:
+        """List all server requirements in the database."""
+        try:
+            with sqlite3.connect(str(self.db_path)) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.execute("""
+                    SELECT server_identifier, server_type, requirement_type, prompt, 
+                           env_var_name, required, default_value, description
+                    FROM mcp_server_requirements
+                    ORDER BY server_identifier, requirement_type
+                """)
+                
+                requirements = []
+                for row in cursor:
+                    requirements.append({
+                        "server_identifier": row['server_identifier'],
+                        "server_type": row['server_type'],
+                        "requirement_type": row['requirement_type'],
+                        "prompt": row['prompt'],
+                        "env_var_name": row['env_var_name'],
+                        "required": bool(row['required']),
+                        "default_value": row['default_value'],
+                        "description": row['description']
+                    })
+                
+                return requirements
+                
+        except Exception as e:
+            logger.error(f"Failed to list all requirements: {e}")
+            return []
 
 # Import fix for timedelta
 from datetime import timedelta

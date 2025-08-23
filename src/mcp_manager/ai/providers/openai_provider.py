@@ -107,7 +107,7 @@ class OpenAIProvider(BaseLLMProvider):
             return self._create_response(
                 content=content,
                 usage_tokens=usage_tokens,
-                model_used=response.model,
+                llm_model=response.model,
                 finish_reason=response.choices[0].finish_reason if response.choices else None,
                 usage=response.usage.model_dump() if response.usage else None
             )
@@ -198,7 +198,7 @@ class OpenAIProvider(BaseLLMProvider):
             return self._create_response(
                 content=content,
                 usage_tokens=usage_tokens,
-                model_used=response.model,
+                llm_model=response.model,
                 finish_reason=response.choices[0].finish_reason if response.choices else None,
                 structured_response=True
             )

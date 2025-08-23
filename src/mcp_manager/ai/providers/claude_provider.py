@@ -107,7 +107,7 @@ class ClaudeProvider(BaseLLMProvider):
             return self._create_response(
                 content=content,
                 usage_tokens=usage_tokens,
-                model_used=response.model,
+                llm_model=response.model,
                 stop_reason=response.stop_reason,
                 usage=response.usage.model_dump() if response.usage else None
             )

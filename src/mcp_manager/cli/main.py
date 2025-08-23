@@ -320,14 +320,15 @@ def list_cmd(scope: Optional[str], output_format: str):
                 if result.returncode == 0:
                     lines = result.stdout.strip().split('\n')
                     for line in lines:
-                        if ':' in line and ('✓' in line or '✗' in line):
-                            parts = line.split(':', 1)
-                            if len(parts) == 2:
-                                name = parts[0].strip()
-                                if '✓' in parts[1]:
-                                    claude_status[name] = "Connected"
-                                elif '✗' in parts[1]:
-                                    claude_status[name] = "Failed"
+                        # Parse format: "server-name: command - ✓ Connected" or "server-name: command - ✗ Failed to connect"
+                        if ':' in line and (' - ✓' in line or ' - ✗' in line):
+                            # Extract server name (everything before first ':')
+                            name = line.split(':', 1)[0].strip()
+                            # Check status at end of line
+                            if ' - ✓' in line or 'Connected' in line:
+                                claude_status[name] = "Connected"
+                            elif ' - ✗' in line or 'Failed' in line:
+                                claude_status[name] = "Failed"
             except Exception:
                 # If Claude status check fails, continue without it
                 pass

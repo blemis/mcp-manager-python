@@ -61,7 +61,7 @@ class RecommendationResponse(BaseModel):
     total_tools_analyzed: int = Field(description="Total number of tools analyzed")
     processing_time_ms: int = Field(description="Time taken to generate recommendations")
     llm_provider: str = Field(description="LLM provider used for recommendations")
-    model_used: str = Field(description="Specific model used")
+    llm_model: str = Field(description="Specific model used")
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional response metadata")
 
 
@@ -130,7 +130,7 @@ class ToolRecommendationService:
                     total_tools_analyzed=0,
                     processing_time_ms=self._get_processing_time_ms(start_time),
                     llm_provider=self.llm_config.provider.value,
-                    model_used=self.llm_config.get_default_model(),
+                    llm_model=self.llm_config.get_default_model(),
                     metadata={"reason": "no_candidate_tools_found"}
                 )
             

@@ -276,7 +276,7 @@ class ServerDiscovery:
                                     repository=self._get_repo_url(pkg_info.get("links", {})),
                                     keywords=keywords,
                                     server_type=ServerType.NPM,
-                                    install_command="npx",
+                                    install_command=self._get_npx_path(),
                                     install_args=["-y", name],
                                     downloads=package.get("score", {}).get("detail", {}).get("popularity"),
                                     last_updated=self._parse_date(pkg_info.get("date")),
@@ -433,7 +433,7 @@ class ServerDiscovery:
                                     description=description or f"Docker MCP server: {server_name}",
                                     author=namespace,
                                     server_type=ServerType.DOCKER,
-                                    install_command="docker",
+                                    install_command=self._get_docker_path(),
                                     install_args=["run", "-i", "--rm", "--pull", "always", f"{name}:latest"],
                                     keywords=["mcp", "docker", server_name],
                                     downloads=repo.get("pull_count"),
@@ -692,65 +692,60 @@ class ServerDiscovery:
         except Exception:
             return None
     
-    def _get_docker_server_info(self, server_name: str, package_name: str):
-        """Get Docker server info with requirements from database, fallback to known servers."""
-        # Known server requirements database
-        known_servers = {
-            "mcp-filesystem": {
-                "requirements": [
-                    {
-                        "type": "directory_access",
-                        "prompt": "Enter directory path to allow filesystem access",
-                        "default": str(Path.home()),
-                        "required": True
-                    }
-                ]
-            },
-            "mcp-grafana": {
-                "requirements": [
-                    {
-                        "type": "api_key", 
-                        "prompt": "Enter Grafana API key",
-                        "required": True
-                    },
-                    {
-                        "type": "grafana_url",
-                        "prompt": "Enter Grafana URL",
-                        "default": "http://localhost:3000",
-                        "required": True
-                    }
-                ]
-            },
-            "mcp-slack": {
-                "requirements": [
-                    {
-                        "type": "slack_token",
-                        "prompt": "Enter Slack bot token", 
-                        "required": True
-                    }
-                ]
-            }
-        }
-        
-        # Check database first (highest priority)
+    def _get_npx_path(self) -> str:
+        """Get full path to npx executable."""
         try:
-            from mcp_manager.core.simple_manager import SimpleManager
-            manager = SimpleManager()
-            db_servers = manager.list_servers_fast()
-            for server in db_servers:
-                if server.name == server_name:
-                    return server.command, server.args, getattr(server, 'requirements', [])
-        except:
-            pass
-        
-        # Check known servers database
-        if server_name in known_servers:
-            requirements = known_servers[server_name]["requirements"]
-            return "docker", ["run", "-i", "--rm", "--pull", "always", f"{package_name}:latest"], requirements
-        
-        
-        # Default fallback
-        return "docker", ["run", "-i", "--rm", "--pull", "always", f"{package_name}:latest"], []
+            from mcp_manager.utils.executable_detection import ExecutableDetector
+            npx_path = ExecutableDetector.get_npx_path()
+            if not npx_path:
+                logger.error("NPX executable not found - NPM MCP servers will fail")
+                return "npx"  # Fallback
+            return npx_path
+        except Exception as e:
+            logger.error(f"Failed to detect npx path: {e}")
+            return "npx"  # Fallback
+    
+    def _get_docker_path(self) -> str:
+        """Get full path to docker executable."""
+        try:
+            from mcp_manager.utils.executable_detection import ExecutableDetector
+            docker_path = ExecutableDetector.get_docker_path()
+            if not docker_path:
+                logger.error("Docker executable not found - Docker MCP servers will fail")
+                return "docker"  # Fallback
+            return docker_path
+        except Exception as e:
+            logger.error(f"Failed to detect docker path: {e}")
+            return "docker"  # Fallback
+    
+    def _get_docker_server_info(self, server_name: str, package_name: str):
+        """Get Docker server info with requirements from database."""
+        try:
+            from mcp_manager.core.database.server_state import MCPServerStateManager
+            from mcp_manager.utils.executable_detection import ExecutableDetector
+            
+            db = MCPServerStateManager()
+            
+            # Try to get requirements from database using package name or server name
+            requirements = db.get_server_requirements(package_name)
+            if not requirements:
+                requirements = db.get_server_requirements(server_name)
+            
+            # Get full path to docker executable
+            docker_path = ExecutableDetector.get_docker_path()
+            if not docker_path:
+                logger.error("Docker executable not found - MCP servers will fail")
+                docker_path = "docker"  # Fallback
+            
+            # Default Docker command structure with full path
+            return docker_path, ["run", "-i", "--rm", "--pull", "always", f"{package_name}:latest"], requirements
+            
+        except Exception as e:
+            logger.error(f"Failed to get server requirements from database: {e}")
+            # Default fallback with no requirements - still use detected docker path
+            from mcp_manager.utils.executable_detection import ExecutableDetector
+            docker_path = ExecutableDetector.get_docker_path() or "docker"
+            return docker_path, ["run", "-i", "--rm", "--pull", "always", f"{package_name}:latest"], []
             
     def _calculate_relevance_score(self, result: DiscoveryResult) -> float:
         """Calculate relevance score for sorting."""

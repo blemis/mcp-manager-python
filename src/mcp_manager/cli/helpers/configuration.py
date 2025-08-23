@@ -42,26 +42,23 @@ def _prompt_from_requirements(server_name: str, requirements: List[Dict[str, Any
                 final_args.extend(["-v", f"{directory}:{directory}"])
                 config["directory_access"] = directory
         
-        elif req_type == "api_key":
-            api_key = Prompt.ask(prompt, password=True)
-            if api_key:
-                config["api_key"] = api_key
-                # Add as environment variable
-                final_args.extend(["-e", f"API_KEY={api_key}"])
-        
-        elif req_type == "grafana_url":
-            url = Prompt.ask(prompt, default=default)
-            if url:
-                config["grafana_url"] = url
-                final_args.extend(["-e", f"GRAFANA_URL={url}"])
-        
-        elif req_type == "slack_token":
-            token = Prompt.ask(prompt, password=True)
-            if token:
-                config["slack_token"] = token
-                final_args.extend(["-e", f"SLACK_TOKEN={token}"])
-        
-        # Add more requirement types as needed
+        else:
+            # Generic handling for all requirement types
+            is_sensitive = any(keyword in req_type.lower() for keyword in ['api_key', 'token', 'password', 'secret'])
+            
+            if is_sensitive:
+                value = Prompt.ask(prompt, password=True)
+            else:
+                value = Prompt.ask(prompt, default=default)
+            
+            if value:
+                # Store with requirement type as key
+                config[req_type] = value
+                
+                # Set environment variable if specified
+                env_var_name = req.get("env_var_name")
+                if env_var_name:
+                    config[env_var_name] = value
     
     # Return configuration with generated args
     if final_args:

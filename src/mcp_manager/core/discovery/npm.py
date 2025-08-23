@@ -83,7 +83,7 @@ class NPMDiscovery:
                                     repository=self._get_repo_url(pkg_info.get("links", {})),
                                     keywords=keywords,
                                     server_type=ServerType.NPM,
-                                    install_command="npx",
+                                    install_command=self._get_npx_path(),
                                     install_args=["-y", name, "--"],
                                     downloads=package.get("score", {}).get("detail", {}).get("popularity"),
                                     last_updated=self._parse_date(pkg_info.get("date")),
@@ -202,3 +202,16 @@ class NPMDiscovery:
             return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
         except ValueError:
             return None
+    
+    def _get_npx_path(self) -> str:
+        """Get full path to npx executable."""
+        try:
+            from mcp_manager.utils.executable_detection import ExecutableDetector
+            npx_path = ExecutableDetector.get_npx_path()
+            if not npx_path:
+                logger.error("NPX executable not found - NPM MCP servers will fail")
+                return "npx"  # Fallback
+            return npx_path
+        except Exception as e:
+            logger.error(f"Failed to detect npx path: {e}")
+            return "npx"  # Fallback

@@ -183,10 +183,13 @@ class SimpleMCPManager:
                 # For Docker Desktop, enable in Docker Desktop first
                 claude_success = await self._enable_docker_desktop_server(name, command, args or [])
             else:
-                # Add to Claude normally
+                # Add to Claude normally - use full path to executable
+                from mcp_manager.utils.executable_detection import ExecutableDetector
+                full_path_command, _ = ExecutableDetector.get_command_with_full_path(command, args)
+                
                 claude_success = self.claude.add_server(
                     name=name,
-                    command=command,
+                    command=full_path_command,
                     args=args,
                     env=env,
                 )
@@ -313,9 +316,14 @@ class SimpleMCPManager:
         if db_server:
             # Server exists in database - add it to Claude if not already there
             logger.debug(f"Re-syncing server '{name}' from database to Claude")
+            
+            # Use full path to executable
+            from mcp_manager.utils.executable_detection import ExecutableDetector
+            full_path_command, _ = ExecutableDetector.get_command_with_full_path(db_server.command, db_server.args)
+            
             success = self.claude.add_server(
                 name=db_server.name,
-                command=db_server.command,
+                command=full_path_command,
                 args=db_server.args,
                 env=db_server.env
             )
@@ -410,10 +418,13 @@ class SimpleMCPManager:
             args = server_info.get("args", [])
             env = server_info.get("env", {})
             
-            # Add to Claude
+            # Add to Claude - use full path to executable  
+            from mcp_manager.utils.executable_detection import ExecutableDetector
+            full_path_command, _ = ExecutableDetector.get_command_with_full_path(command, args)
+            
             success = self.claude.add_server(
                 name=name,
-                command=command,
+                command=full_path_command,
                 args=args,
                 env=env,
             )
