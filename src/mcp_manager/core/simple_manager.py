@@ -3429,7 +3429,8 @@ class SimpleMCPManager:
             # Create a mock discovery result for the target server
             target_result = DiscoveryResult(
                 name=name,
-                package=None,
+                package=name,  # Use name as package if not available
+                version="1.0.0",  # Default version
                 server_type=server_type,
                 description=None,
                 install_command=command,
@@ -3470,7 +3471,8 @@ class SimpleMCPManager:
                 from mcp_manager.core.models import DiscoveryResult
                 server_result = DiscoveryResult(
                     name=server.name,
-                    package=getattr(server, 'package', None),
+                    package=getattr(server, 'package', server.name),  # Use server name if no package
+                    version="1.0.0",  # Default version
                     server_type=server.server_type,
                     description=getattr(server, 'description', None),
                     install_command=server.command,
@@ -3487,20 +3489,51 @@ class SimpleMCPManager:
                     similar_server = similar_info["server"]
                     score = similar_info["similarity_score"]
                     
-                    # Only remove if very high similarity (80+)
-                    if score >= 80:
-                        # Prefer to keep the simpler named server
-                        server_to_remove = None
-                        server_to_keep = None
+                    # Only ask user if very high similarity (60+)  
+                    if score >= 60:
+                        # Ask user which server to keep
+                        from rich.console import Console
+                        from rich.prompt import IntPrompt
                         
-                        if len(server.name) > len(similar_server.name):
-                            server_to_remove = server
-                            server_to_keep = similar_server
-                        else:
-                            server_to_remove = similar_server
-                            server_to_keep = server
+                        console = Console()
+                        console.print(f"\n[blue]🔄 Found duplicate servers with {score}% similarity:[/blue]")
+                        console.print(f"   [dim]Reasons: {', '.join(similar_info.get('reasons', []))}[/dim]")
+                        console.print("")
+                        console.print(f"[green]1.[/green] [bold]{server.name}[/bold]")
+                        console.print(f"   [dim]Type: {server.server_type.value}[/dim]")
+                        console.print(f"   [dim]Status: {'✅ Enabled' if server.enabled else '❌ Disabled'}[/dim]")
+                        console.print(f"   [dim]Command: {server.command} {' '.join(server.args[:2])}[/dim]")
+                        console.print("")
+                        console.print(f"[green]2.[/green] [bold]{similar_server.name}[/bold]")
+                        console.print(f"   [dim]Type: {similar_server.server_type.value}[/dim]")
+                        console.print(f"   [dim]Status: {'✅ Enabled' if similar_server.enabled else '❌ Disabled'}[/dim]")
+                        console.print(f"   [dim]Command: {similar_server.command} {' '.join(similar_server.args[:2])}[/dim]")
+                        console.print("")
+                        console.print("[dim]0. Skip this pair (keep both)[/dim]")
+                        console.print("")
                         
-                        # Remove the duplicate
+                        try:
+                            choice = IntPrompt.ask(
+                                "[bold]Which server would you like to keep?[/bold]", 
+                                choices=["1", "2", "0"],
+                                default=1
+                            )
+                            
+                            if choice == 0:
+                                console.print("[dim]Skipping this duplicate pair[/dim]")
+                                continue
+                            elif choice == 1:
+                                server_to_remove = similar_server
+                                server_to_keep = server
+                            else:
+                                server_to_remove = server
+                                server_to_keep = similar_server
+                                
+                        except (EOFError, KeyboardInterrupt):
+                            console.print("[dim]Skipping duplicate resolution[/dim]")
+                            continue
+                        
+                        # Remove the selected duplicate
                         success = await self.remove_server(server_to_remove.name)
                         if success:
                             duplicates_removed += 1
@@ -3508,7 +3541,8 @@ class SimpleMCPManager:
                                 "removed": server_to_remove.name,
                                 "kept": server_to_keep.name,
                                 "similarity_score": score,
-                                "reasons": similar_info.get("reasons", [])
+                                "reasons": similar_info.get("reasons", []),
+                                "user_choice": True
                             })
                             
                             # Mark as removed in our working list

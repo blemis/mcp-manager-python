@@ -209,7 +209,41 @@ def discovery_commands(cli_context):
                 console.print("[dim]Use 'mcp-manager remove' to uninstall first if you want to reinstall[/dim]")
                 return
             
-            # Skip similarity check for now to get basic functionality working
+            # Check for similar servers and prompt user
+            similar_servers = await manager.check_for_similar_servers(
+                server_name, matching_server.server_type, matching_server.install_command, matching_server.install_args
+            )
+            
+            if similar_servers:
+                console.print(f"\n[yellow]⚠️ WARNING: Found {len(similar_servers)} similar server(s) that may provide overlapping functionality:[/yellow]")
+                console.print("")
+                
+                for similar in similar_servers:
+                    similar_server = similar["server"]
+                    score = similar["similarity_score"]
+                    reasons = similar.get("reasons", [])
+                    
+                    console.print(f"[red]🔄 Existing server:[/red] [bold]{similar_server.name}[/bold]")
+                    console.print(f"   [dim]Type: {similar_server.server_type.value}[/dim]")
+                    console.print(f"   [dim]Status: {'✅ Enabled' if similar_server.enabled else '❌ Disabled'}[/dim]")
+                    console.print(f"   [dim]Similarity: {score}% - {', '.join(reasons)}[/dim]")
+                    console.print("")
+                
+                console.print("[yellow]Installing duplicate servers can cause:[/yellow]")
+                console.print("   • [red]Conflicting functionality and tool names[/red]")
+                console.print("   • [red]Increased resource usage[/red]") 
+                console.print("   • [red]Confusion when using tools[/red]")
+                console.print("")
+                
+                from rich.prompt import Confirm
+                continue_install = Confirm.ask(
+                    f"[bold]Do you want to install '{server_name}' anyway?[/bold]",
+                    default=False
+                )
+                
+                if not continue_install:
+                    console.print("[dim]Installation cancelled by user[/dim]")
+                    return
             
             # Prompt for configuration if needed
             config = prompt_for_server_configuration(
