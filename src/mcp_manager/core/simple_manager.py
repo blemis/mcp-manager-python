@@ -56,6 +56,9 @@ class SimpleMCPManager:
         
         # Run migration on first use if needed
         self._ensure_migration()
+        
+        # Bootstrap from Claude if database is empty (first run)
+        self._bootstrap_from_claude_if_empty()
     
     @classmethod
     def _mark_operation_start(cls):
@@ -105,92 +108,16 @@ class SimpleMCPManager:
             
         except Exception as e:
             logger.error(f"Fast server list from database failed: {e}")
-            # Fallback to Claude config if database fails
-            return self.claude.list_servers()
+            return []
     
     async def list_servers(self) -> List[Server]:
         """
-        List all MCP servers, expanding docker-gateway to show individual servers.
-        Includes disabled servers that were previously installed.
+        List all MCP servers from mcp-manager's database.
         
         Returns:
-            List of servers from Claude's internal state with docker-gateway expanded,
-            plus any disabled Docker Desktop servers
+            List of servers from mcp-manager's database
         """
-        servers = self.claude.list_servers()
-        result = []
-        enabled_docker_servers = set()
-        
-        for server in servers:
-            if server.name == "docker-gateway":
-                # Expand docker-gateway to show individual Docker Desktop servers
-                docker_servers = await self._expand_docker_gateway(server)
-                result.extend(docker_servers)
-                # Keep track of enabled Docker Desktop servers
-                enabled_docker_servers.update(s.name for s in docker_servers)
-                
-                # Auto-populate catalog for servers that aren't tracked yet
-                catalog = await self._get_server_catalog()
-                for docker_server in docker_servers:
-                    if docker_server.name not in catalog["servers"]:
-                        await self._add_server_to_catalog(
-                            name=docker_server.name,
-                            server_type=docker_server.server_type.value,
-                            enabled=True,
-                            command=docker_server.command,
-                            args=docker_server.args,
-                            env=docker_server.env,
-                            description=docker_server.description,
-                        )
-            else:
-                result.append(server)
-                
-                # Auto-populate catalog for non-docker-gateway servers too
-                catalog = await self._get_server_catalog()
-                if server.name not in catalog["servers"]:
-                    await self._add_server_to_catalog(
-                        name=server.name,
-                        server_type=server.server_type.value,
-                        enabled=True,
-                        command=server.command,
-                        args=server.args,
-                        env=server.env,
-                        description=server.description or f"{server.server_type.value} server: {server.name}",
-                    )
-        
-        # Add disabled servers from our catalog that were previously installed
-        catalog = await self._get_server_catalog()
-        for server_name, server_info in catalog["servers"].items():
-            # Only include if disabled and not already in enabled list
-            if not server_info.get("enabled", True) and server_name not in enabled_docker_servers:
-                # Create a disabled server entry based on catalog info
-                server_type_str = server_info.get("type", "docker-desktop")
-                server_type = ServerType(server_type_str)
-                
-                # Set appropriate command based on server type
-                if server_type == ServerType.DOCKER_DESKTOP:
-                    command = "docker"
-                    args = ["mcp", "server", server_name]
-                elif server_type == ServerType.NPM:
-                    command = server_info.get("command", "npx")
-                    args = server_info.get("args", [])
-                else:
-                    command = server_info.get("command", "unknown")
-                    args = server_info.get("args", [])
-                
-                disabled_server = Server(
-                    name=server_name,
-                    command=command,
-                    args=args,
-                    server_type=server_type,
-                    scope=ServerScope.USER,
-                    enabled=False,  # Mark as disabled
-                    description=server_info.get("description", f"{server_type_str} server: {server_name} (disabled)"),
-                    env=server_info.get("env", {}),
-                )
-                result.append(disabled_server)
-                
-        return result
+        return self.list_servers_fast()
     
     async def add_server(
         self,
@@ -221,57 +148,56 @@ class SimpleMCPManager:
         """
         # Mark operation start to prevent sync loops
         self._mark_operation_start()
-        logger.debug(f"Adding server '{name}' to Claude")
+        logger.debug(f"Adding server '{name}' to mcp-manager database")
         
-        # CHECK FOR DUPLICATES - Critical deduplication logic
-        existing_server = self.claude.get_server(name)
+        # Check mcp-manager database for duplicates (our source of truth)
+        existing_servers = self.list_servers_fast()
+        existing_server = next((s for s in existing_servers if s.name == name), None)
         if existing_server:
-            logger.warning(f"Server '{name}' already exists in Claude - skipping duplicate addition")
+            logger.warning(f"Server '{name}' already exists in mcp-manager database")
             return existing_server
         
-        # Check database for duplicates too
-        catalog = await self._get_server_catalog()
-        if name in catalog["servers"] and catalog["servers"][name].get("enabled", False):
-            logger.warning(f"Server '{name}' already enabled in database - skipping duplicate")
-            # Return existing server info
-            server_info = catalog["servers"][name]
-            return Server(
-                name=name,
-                command=server_info.get("command", command),
-                args=server_info.get("args", args or []),
-                server_type=server_type,
-                scope=scope,
-                enabled=True,
-                description=server_info.get("description"),
-                env=server_info.get("env", env or {}),
-            )
-        
-        # Handle Docker Desktop servers specially
-        if server_type == ServerType.DOCKER_DESKTOP:
-            # For Docker Desktop, we need to enable the server in Docker Desktop first
-            success = await self._enable_docker_desktop_server(name, command, args or [])
-        else:
-            # Add to Claude normally
-            success = self.claude.add_server(
-                name=name,
-                command=command,
-                args=args,
-                env=env,
-            )
-        
-        if not success:
-            raise MCPManagerError(f"Failed to add server '{name}'")
-        
-        # Add to our catalog as enabled
-        await self._add_server_to_catalog(
+        # Add to mcp-manager database first (master catalog)
+        from mcp_manager.core.database.server_state import ServerInfo, ServerType as DBServerType
+        server_info = ServerInfo(
             name=name,
-            server_type=server_type.value,
-            enabled=True,
+            server_type=DBServerType(server_type.value),
             command=command,
             args=args or [],
             env=env or {},
-            description=description,
+            enabled=True,  # New servers are enabled by default
+            scope=scope.value,
+            description=description
         )
+        
+        db_success = self.db_manager.add_server(server_info)
+        if not db_success:
+            raise MCPManagerError(f"Failed to add server '{name}' to database")
+        
+        logger.info(f"Added server '{name}' to mcp-manager database")
+        
+        # Push enabled server to Claude (since it's enabled by default)
+        claude_success = False
+        try:
+            if server_type == ServerType.DOCKER_DESKTOP:
+                # For Docker Desktop, enable in Docker Desktop first
+                claude_success = await self._enable_docker_desktop_server(name, command, args or [])
+            else:
+                # Add to Claude normally
+                claude_success = self.claude.add_server(
+                    name=name,
+                    command=command,
+                    args=args,
+                    env=env,
+                )
+            
+            if claude_success:
+                logger.info(f"Successfully synced server '{name}' to Claude")
+            else:
+                logger.warning(f"Server '{name}' added to mcp-manager but failed to sync to Claude")
+                
+        except Exception as e:
+            logger.warning(f"Server '{name}' added to mcp-manager but Claude sync failed: {e}")
         
         # Return the server object
         server = Server(
@@ -279,7 +205,7 @@ class SimpleMCPManager:
             command=command,
             args=args or [],
             server_type=server_type,
-            scope=ServerScope.USER,
+            scope=scope,
             enabled=True,
             description=description,
             env=env or {},
@@ -380,6 +306,24 @@ class SimpleMCPManager:
         if server:
             logger.debug(f"Server '{name}' is already enabled in Claude")
             return True
+        
+        # Check if server exists in database but not in Claude - need to re-sync
+        db_servers = self.list_servers_fast()
+        db_server = next((s for s in db_servers if s.name == name), None)
+        if db_server:
+            # Server exists in database - add it to Claude if not already there
+            logger.debug(f"Re-syncing server '{name}' from database to Claude")
+            success = self.claude.add_server(
+                name=db_server.name,
+                command=db_server.command,
+                args=db_server.args,
+                env=db_server.env
+            )
+            if success:
+                await self._update_server_in_catalog(name, enabled=True)
+                return True
+            else:
+                return False
         
         # Check if this is a Docker Desktop server that's disabled in catalog
         catalog = await self._get_server_catalog()
@@ -515,17 +459,25 @@ class SimpleMCPManager:
             else:
                 raise MCPManagerError(f"Failed to disable Docker Desktop server '{name}'")
         
-        # Get server before removing (for regular servers)
-        server = self.claude.get_server(name)
-        if not server:
-            logger.debug(f"Server '{name}' not found for disabling")
+        # Check database first (database is authoritative)
+        db_servers = self.list_servers_fast()
+        db_server = next((s for s in db_servers if s.name == name), None)
+        if not db_server:
+            logger.debug(f"Server '{name}' not found in database for disabling")
             return False
         
-        # Remove from Claude (this is how we "disable")
-        success = self.claude.remove_server(name)
-        if not success:
-            logger.debug(f"Failed to disable server '{name}'")
-            return False
+        # Server exists in database - disable it
+        logger.debug(f"Disabling server '{name}' from database")
+        
+        # Try to remove from Claude if it exists there
+        server = self.claude.get_server(name)
+        if server:
+            success = self.claude.remove_server(name)
+            if not success:
+                logger.debug(f"Failed to remove server '{name}' from Claude, but continuing with database update")
+        
+        # Update database to disabled (this is the authoritative state)
+        await self._update_server_in_catalog(name, enabled=False)
         
         # Server disabled successfully
         return True
@@ -3563,3 +3515,49 @@ class SimpleMCPManager:
                 "removal_details": [],
                 "error": str(e)
             }
+    
+    def _bootstrap_from_claude_if_empty(self):
+        """Bootstrap mcp-manager database from Claude config if empty (first run)."""
+        try:
+            # Check if database has any servers
+            existing_servers = self.list_servers_fast()
+            if existing_servers:
+                logger.debug("Database already has servers, skipping bootstrap")
+                return
+            
+            # Database is empty - bootstrap from Claude
+            logger.info("Empty database detected, bootstrapping from Claude MCP configuration...")
+            claude_servers = self.claude.list_servers()
+            
+            if not claude_servers:
+                logger.info("No servers in Claude config, starting with empty database")
+                return
+            
+            logger.info(f"Found {len(claude_servers)} servers in Claude, importing to mcp-manager database...")
+            
+            # Import each server to our database
+            for server in claude_servers:
+                try:
+                    # Add server to database
+                    from mcp_manager.core.database.server_state import ServerInfo, ServerType as DBServerType
+                    server_info = ServerInfo(
+                        name=server.name,
+                        server_type=DBServerType(server.server_type.value),
+                        command=server.command,
+                        args=server.args,
+                        env=server.env or {},
+                        enabled=True,  # Assume enabled if in Claude
+                        scope=server.scope.value if server.scope else "user",
+                        description=server.description
+                    )
+                    self.db_manager.add_server(server_info)
+                    logger.debug(f"Imported server: {server.name}")
+                except Exception as e:
+                    logger.warning(f"Failed to import server {server.name}: {e}")
+            
+            # Verify import
+            imported_servers = self.list_servers_fast()
+            logger.info(f"Bootstrap complete: {len(imported_servers)} servers imported to mcp-manager database")
+            
+        except Exception as e:
+            logger.warning(f"Bootstrap from Claude failed (continuing with empty database): {e}")

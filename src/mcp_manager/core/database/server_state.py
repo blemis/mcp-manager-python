@@ -12,6 +12,7 @@ import sqlite3
 import json
 import asyncio
 import time
+import os
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Union
 from datetime import datetime, timezone
@@ -81,6 +82,32 @@ class MCPServerStateManager:
     
     def _get_default_db_path(self) -> Path:
         """Get the default database path."""
+        # Check environment variable first for global database location
+        env_path = os.getenv("MCP_MANAGER_DB_PATH")
+        if env_path:
+            db_path = Path(env_path)
+            db_path.parent.mkdir(parents=True, exist_ok=True)
+            return db_path
+        
+        # Try global locations first (for system-wide MCP server management)
+        global_locations = [
+            Path("/usr/local/share/mcp-manager"),
+            Path("/opt/mcp-manager"), 
+            Path("/var/lib/mcp-manager")
+        ]
+        
+        for location in global_locations:
+            try:
+                location.mkdir(parents=True, exist_ok=True)
+                # Test if we can write to this location
+                test_file = location / ".write_test"
+                test_file.touch()
+                test_file.unlink()
+                return location / "server_state.db"
+            except (PermissionError, OSError):
+                continue
+        
+        # Fallback to user config directory if no global location available
         config_dir = Path.home() / ".config" / "mcp-manager"
         config_dir.mkdir(parents=True, exist_ok=True)
         return config_dir / "server_state.db"
@@ -429,6 +456,75 @@ class MCPServerStateManager:
             ))
         except Exception as e:
             logger.error(f"Failed to log usage event: {e}")
+    
+    def clear_discovery_cache(self):
+        """Clear previous discovery results."""
+        try:
+            with sqlite3.connect(str(self.db_path)) as conn:
+                conn.execute("DELETE FROM discovery_cache WHERE 1=1")
+                conn.commit()
+        except Exception:
+            pass
+    
+    def store_discovery_result(self, number: int, result):
+        """Store a discovery result with its number."""
+        try:
+            with sqlite3.connect(str(self.db_path)) as conn:
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS discovery_cache (
+                        number INTEGER PRIMARY KEY,
+                        name TEXT NOT NULL,
+                        package TEXT,
+                        version TEXT,
+                        description TEXT,
+                        server_type TEXT NOT NULL,
+                        install_command TEXT NOT NULL,
+                        install_args TEXT
+                    )
+                """)
+                
+                conn.execute("""
+                    INSERT OR REPLACE INTO discovery_cache 
+                    (number, name, package, version, description, server_type, install_command, install_args)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    number,
+                    result.name,
+                    result.package,
+                    result.version,
+                    result.description,
+                    result.server_type.value,
+                    result.install_command,
+                    json.dumps(result.install_args or [])
+                ))
+                conn.commit()
+        except Exception:
+            pass
+    
+    def get_discovery_result(self, number: int):
+        """Get a discovery result by number."""
+        try:
+            with sqlite3.connect(str(self.db_path)) as conn:
+                cursor = conn.execute("""
+                    SELECT name, package, version, description, server_type, install_command, install_args
+                    FROM discovery_cache 
+                    WHERE number = ?
+                """, (number,))
+                
+                row = cursor.fetchone()
+                if row:
+                    return {
+                        'name': row[0],
+                        'package': row[1],
+                        'version': row[2],
+                        'description': row[3],
+                        'server_type': row[4],
+                        'install_command': row[5],
+                        'install_args': json.loads(row[6] or '[]')
+                    }
+                return None
+        except Exception:
+            return None
 
 # Import fix for timedelta
 from datetime import timedelta

@@ -3,7 +3,9 @@ Discovery and installation commands for MCP Manager CLI.
 """
 
 import asyncio
+import json
 import sys
+from pathlib import Path
 from typing import Optional
 
 import click
@@ -16,6 +18,23 @@ from mcp_manager.cli.helpers import (
 )
 
 console = Console()
+
+
+def _store_discovery_results(results):
+    """Store discovery results in database for numbered installation."""
+    try:
+        from mcp_manager.core.database.server_state import MCPServerStateManager
+        db = MCPServerStateManager()
+        
+        # Clear previous discovery results and store new ones
+        db.clear_discovery_cache()
+        
+        for i, result in enumerate(results, 1):
+            db.store_discovery_result(i, result)
+            
+    except Exception as e:
+        # Storage failure is not critical
+        pass
 
 
 def discovery_commands(cli_context):
@@ -88,7 +107,10 @@ def discovery_commands(cli_context):
         
         from rich.table import Table
         
-        # Display results in a table
+        # Store results in database for install-package command
+        _store_discovery_results(results)
+        
+        # Display results in a table with numbers
         scope_title = f" for {scope} scope" if scope else ""
         table = Table(
             title=f"Discovered MCP Servers ({len(results)} results{scope_title})",
@@ -98,19 +120,22 @@ def discovery_commands(cli_context):
             show_lines=True
         )
         
-        table.add_column("Install ID", style="green", width=25)
+        table.add_column("#", style="green", width=3, no_wrap=True)
+        table.add_column("Name", style="cyan", width=18)  # What gets stored in DB
         table.add_column("Type", style="blue", width=8)
-        table.add_column("Name/Package", style="white", width=30)
-        table.add_column("Description", style="dim", width=50)
+        table.add_column("Package/Source", style="white", width=22)
+        table.add_column("Description", style="dim")
         
-        for result in results:
-            install_id = generate_install_id(result)
+        for i, result in enumerate(results, 1):
+            # Use install_id as the name that will be stored
+            install_name = generate_install_id(result)
             
             table.add_row(
-                install_id,
+                str(i),
+                install_name,  # This is what they'll use for uninstall
                 result.server_type.value,
                 result.package or result.name,
-                (result.description[:47] + "...") if result.description and len(result.description) > 50 else (result.description or "")
+                (result.description[:37] + "...") if result.description and len(result.description) > 40 else (result.description or "")
             )
         
         console.print("")
@@ -118,86 +143,60 @@ def discovery_commands(cli_context):
         console.print("")
         console.print("[dim]💡 To install a server, use:[/dim]")
         scope_flag = f" --scope {scope}" if scope else ""
-        console.print(f"[dim]   [cyan]mcp-manager install-package <install-id>{scope_flag}[/cyan][/dim]")
-        console.print(f"[dim]   Example: [cyan]mcp-manager install-package modelcontextprotocol-filesystem{scope_flag}[/cyan][/dim]")
+        console.print(f"[dim]   [cyan]mcp-manager install-package <number>{scope_flag}[/cyan][/dim]")
+        console.print(f"[dim]   Example: [cyan]mcp-manager install-package 3{scope_flag}[/cyan][/dim]")
+        console.print(f"[dim]   To uninstall later: [cyan]mcp-manager rm <name>[/cyan][/dim]")
     
     
     @click.command("install-package")
-    @click.argument("install_id")
+    @click.argument("number_or_name")
     @click.option("--scope", type=click.Choice(['local', 'project', 'user'], case_sensitive=False), default="user", help="Installation scope")
     @handle_errors
-    def install_package(install_id: str, scope: str):
-        """Install a server using its unique install ID from discovery."""
+    def install_package(number_or_name: str, scope: str):
+        """Install a server using number from discovery results."""
         discovery = cli_context.get_discovery()
         
         async def find_and_install():
-            console.print(f"[blue]🔍 Searching for server with ID: {install_id}[/blue]")
-            
-            # Try multiple search strategies
-            search_strategies = []
-            
-            # Strategy 1: Reverse-engineer package name from install_id 
-            if not install_id.startswith("dd-") and "-" in install_id:
-                # For NPM packages like browsermcp-mcp -> @browsermcp/mcp
-                parts = install_id.split("-", 1)
-                if len(parts) == 2:
-                    possible_package = f"@{parts[0]}/{parts[1]}"
-                    search_strategies.append(("package name", possible_package))
-            
-            # Strategy 2: Direct install_id search
-            search_strategies.append(("install_id", install_id))
-            
-            # Strategy 3: Broader search
-            search_strategies.append(("broad search", None))
-            
-            # Strategy 4: Fallback searches
-            if "modelcontextprotocol" in install_id:
-                search_strategies.append(("fallback", install_id.replace("modelcontextprotocol-", "")))
-            elif install_id.startswith("dd-"):
-                search_strategies.append(("fallback", install_id.replace("dd-", "")))
-            elif "-" in install_id:
-                search_strategies.append(("fallback", install_id.replace("-", " ")))
-            
-            results = []
-            for strategy_name, query in search_strategies:
-                try:
-                    strategy_results = await discovery.discover_servers(query=query, limit=100)
-                    if strategy_results:
-                        results = strategy_results
-                        break
-                except Exception as e:
-                    continue
-            
-            if not results:
-                console.print("[red]No results found with any search strategy[/red]")
-                sys.exit(1)
-            
-            
-            # Find exact match by install ID
             matching_server = None
-            for result in results:
-                result_id = generate_install_id(result)
-                if result_id == install_id:
-                    matching_server = result
-                    break
             
-            if not matching_server:
-                console.print(f"[red]❌ Server with install ID '{install_id}' not found[/red]")
-                console.print(f"[yellow]💡 Try running 'mcp-manager discover' to see available servers[/yellow]")
+            # Try to parse as number first
+            try:
+                number = int(number_or_name)
+                console.print(f"[blue]🔍 Looking up discovery result #{number}[/blue]")
                 
-                # Show similar results
-                similar_results = [r for r in results if install_id.lower() in generate_install_id(r).lower()]
-                if similar_results:
-                    console.print(f"\n[dim]🔍 Did you mean one of these?[/dim]")
-                    for result in similar_results[:3]:
-                        similar_id = generate_install_id(result)
-                        console.print(f"   • [cyan]{similar_id}[/cyan]: {result.description or 'No description'}")
+                from mcp_manager.core.database.server_state import MCPServerStateManager
+                db = MCPServerStateManager()
+                result_data = db.get_discovery_result(number)
+                
+                if result_data:
+                    # Convert back to DiscoveryResult object
+                    from mcp_manager.core.models import DiscoveryResult, ServerType
+                    matching_server = DiscoveryResult(
+                        name=result_data['name'],
+                        package=result_data['package'],
+                        version=result_data['version'],
+                        description=result_data['description'],
+                        server_type=ServerType(result_data['server_type']),
+                        install_command=result_data['install_command'],
+                        install_args=result_data['install_args']
+                    )
+                    console.print(f"[green]✅ Found: {matching_server.name}[/green]")
+                else:
+                    console.print(f"[red]❌ No discovery result #{number} found[/red]")
+                    console.print(f"[yellow]💡 Run 'mcpm discover' first to see numbered options[/yellow]")
+                    sys.exit(1)
+                    
+            except ValueError:
+                # Not a number - show helpful message
+                console.print(f"[yellow]💡 Please use the number from discovery results[/yellow]")
+                console.print(f"[dim]Example: 'mcpm install-package 3'[/dim]")
+                console.print(f"[dim]Run 'mcpm discover --query {number_or_name}' first to see numbered options[/dim]")
                 sys.exit(1)
             
             # Get manager and install
             manager = cli_context.get_manager()
-            # Use install_id as server name to avoid conflicts with discovery result names
-            server_name = install_id
+            # Use generated install_id as server name
+            server_name = generate_install_id(matching_server)
             
             console.print(f"[blue]📦 Installing: {server_name}[/blue]")
             console.print(f"[dim]Package: {matching_server.package or 'N/A'}[/dim]")

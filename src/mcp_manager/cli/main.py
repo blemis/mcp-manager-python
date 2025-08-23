@@ -6,10 +6,9 @@ rich help formatting and professional modular command structure.
 """
 
 import asyncio
-import subprocess
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 import click
 from rich.console import Console
@@ -56,36 +55,6 @@ def _is_infrastructure_server(server) -> bool:
     return False
 
 
-def _get_claude_mcp_status() -> Dict[str, Dict[str, str]]:
-    """Get actual connection status from Claude MCP."""
-    try:
-        result = subprocess.run(['claude', 'mcp', 'list'], capture_output=True, text=True, timeout=10)
-        if result.returncode != 0:
-            return {}
-        
-        status_map = {}
-        lines = result.stdout.strip().split('\n')
-        
-        for line in lines:
-            if ':' in line and ('✓' in line or '✗' in line):
-                # Parse lines like: "fetch: docker run -i --rm --pull always mcp/fetch:latest - ✗ Failed to connect"
-                parts = line.split(':', 1)
-                if len(parts) == 2:
-                    name = parts[0].strip()
-                    rest = parts[1].strip()
-                    
-                    if '✓ Connected' in rest:
-                        status_map[name] = {'status': 'Connected', 'details': rest}
-                    elif '✗' in rest:
-                        status_map[name] = {'status': 'Failed', 'details': rest}
-                    else:
-                        status_map[name] = {'status': 'Unknown', 'details': rest}
-        
-        return status_map
-        
-    except Exception as e:
-        logger.error(f"Failed to get Claude MCP status: {e}")
-        return {}
 
 
 class CLIContext:
@@ -267,8 +236,9 @@ def cli(ctx: click.Context, debug: bool, verbose: bool, config_dir: Optional[Pat
 @handle_errors
 def list_cmd(scope: Optional[str], output_format: str):
     """List configured MCP servers."""
-    # Use intelligent context detection and auto-sync
-    manager, context = cli_context.auto_sync_and_get_manager(explicit_scope=scope, silent=True)
+    # Use manager directly without automatic sync
+    manager = cli_context.get_manager()
+    context = cli_context.detect_context(scope)
     
     # Show context info if not in silent mode
     if output_format != "json":
@@ -279,8 +249,6 @@ def list_cmd(scope: Optional[str], output_format: str):
         # Filter out infrastructure components that users shouldn't see  
         servers = [s for s in all_servers if not _is_infrastructure_server(s)]
         
-        # Get actual connection status from Claude MCP
-        claude_status = _get_claude_mcp_status()
         
         if output_format == "json":
             import json
@@ -311,9 +279,10 @@ def list_cmd(scope: Optional[str], output_format: str):
             )
             
             table.add_column("Name", style="green")
-            table.add_column("Type", style="blue")
+            table.add_column("Type", style="blue") 
             table.add_column("Scope", style="yellow")
-            table.add_column("Status", style="white")
+            table.add_column("Status", style="white", width=12)
+            table.add_column("Claude Status", style="cyan", width=12)
             table.add_column("Suites", style="magenta")
             table.add_column("Command", style="dim")
             
@@ -342,30 +311,42 @@ def list_cmd(scope: Optional[str], output_format: str):
                 # If suite functionality not available, use empty dict
                 server_suites = {}
             
+            # Get Claude connection status for dual display
+            claude_status = {}
+            try:
+                import subprocess
+                result = subprocess.run(['claude', 'mcp', 'list'], 
+                                     capture_output=True, text=True, timeout=10)
+                if result.returncode == 0:
+                    lines = result.stdout.strip().split('\n')
+                    for line in lines:
+                        if ':' in line and ('✓' in line or '✗' in line):
+                            parts = line.split(':', 1)
+                            if len(parts) == 2:
+                                name = parts[0].strip()
+                                if '✓' in parts[1]:
+                                    claude_status[name] = "Connected"
+                                elif '✗' in parts[1]:
+                                    claude_status[name] = "Failed"
+            except Exception:
+                # If Claude status check fails, continue without it
+                pass
+            
             for server in servers:
-                # Handle Docker Desktop servers specially
-                if server.server_type.value == 'docker-desktop':
-                    # For DD servers, check if they're in docker-gateway status
-                    docker_gateway_status = claude_status.get('docker-gateway', {})
-                    gateway_details = docker_gateway_status.get('details', '')
-                    
-                    if server.name in gateway_details and '✓' in docker_gateway_status.get('status', ''):
-                        status = "✅ Connected (via docker-gateway)"
-                    else:
-                        status = "❌ Disabled"
+                # Separate status columns: database status and Claude status
+                db_status = "✅ Enabled" if server.enabled else "❌ Disabled"
+                claude_conn = claude_status.get(server.name, "Not in Claude")
+                
+                # Claude status should reflect actual Claude state, not database state
+                if claude_conn == "Connected":
+                    claude_status_display = "✓ Connected"
+                elif claude_conn == "Failed":
+                    claude_status_display = "✗ Failed"
+                elif claude_conn == "Not in Claude":
+                    # Only show "-" if server is disabled AND not in Claude
+                    claude_status_display = "-" if not server.enabled else "⚠️ Not Synced"
                 else:
-                    # For regular servers, get actual status from Claude MCP  
-                    claude_server_status = claude_status.get(server.name, {})
-                    actual_status = claude_server_status.get('status', 'Not in Claude')
-                    
-                    if actual_status == 'Not in Claude':
-                        status = "❌ Disabled" 
-                    elif actual_status == 'Connected':
-                        status = "✅ Connected"
-                    elif actual_status == 'Failed':
-                        status = "✗ Failed"
-                    else:
-                        status = f"? {actual_status}"
+                    claude_status_display = claude_conn
                 
                 scope_str = server.scope.value if server.scope else "unknown" 
                 command_str = f"{server.command} {' '.join(server.args)}"
@@ -382,7 +363,8 @@ def list_cmd(scope: Optional[str], output_format: str):
                     server.name,
                     server.server_type.value,
                     scope_str,
-                    status,
+                    db_status,
+                    claude_status_display,
                     suite_str,
                     command_str
                 )
@@ -452,52 +434,101 @@ def cleanup_duplicates(dry_run: bool):
 @click.option("--dry-run", is_flag=True, help="Show what would be fixed without making changes")
 @handle_errors
 def sync_fix(dry_run: bool):
-    """Detect and fix synchronization issues between mcp-manager and Claude."""
+    """Synchronize enabled servers FROM mcp-manager TO Claude."""
     
     async def fix_sync_async():
         try:
-            # Use intelligent context detection
-            manager, context = cli_context.auto_sync_and_get_manager(silent=True)
-            console.print(f"[dim]Checking sync in: {context.description}[/dim]")
+            # Use manager directly (mcp-manager is source of truth)
+            manager = cli_context.get_manager()
+            context = cli_context.detect_context()
+            console.print(f"[dim]Synchronizing in: {context.description}[/dim]")
             
             if dry_run:
                 console.print("[yellow]🔍 DRY RUN MODE - No changes will be made[/yellow]")
                 console.print("")
             
-            console.print("🔄 Analyzing synchronization between MCP Manager and Claude...")
+            console.print("🔄 Synchronizing: mcp-manager (master) → Claude (subset)...")
             
-            # Run sync repair
-            results = await manager.fix_sync_issues()
+            # Get servers from mcp-manager database (source of truth)
+            mcp_servers = await manager.list_servers()
+            enabled_servers = [s for s in mcp_servers if s.enabled]
+            disabled_servers = [s for s in mcp_servers if not s.enabled]
             
+            # Get servers from Claude config
+            claude_servers = manager.claude.list_servers()
+            claude_names = set(s.name for s in claude_servers)
+            
+            console.print(f"[dim]📊 mcp-manager: {len(enabled_servers)} enabled, {len(disabled_servers)} disabled[/dim]")
+            console.print(f"[dim]📊 Claude: {len(claude_servers)} servers configured[/dim]")
             console.print("")
-            console.print("📊 Sync Repair Results:")
+            
+            added_to_claude = []
+            removed_from_claude = []
+            errors = []
+            
+            # Push enabled servers TO Claude
+            for server in enabled_servers:
+                if server.name not in claude_names:
+                    if not dry_run:
+                        try:
+                            success = manager.claude.add_server(
+                                name=server.name,
+                                command=server.command,
+                                args=server.args,
+                                env=server.env
+                            )
+                            if success:
+                                added_to_claude.append(server.name)
+                                console.print(f"[green]➕ Added to Claude: {server.name}[/green]")
+                            else:
+                                errors.append(f"Failed to add {server.name} to Claude")
+                        except Exception as e:
+                            errors.append(f"Error adding {server.name}: {e}")
+                    else:
+                        added_to_claude.append(server.name)
+                        console.print(f"[green]➕ Would add to Claude: {server.name}[/green]")
+            
+            # Remove disabled servers FROM Claude  
+            enabled_names = set(s.name for s in enabled_servers)
+            for claude_server in claude_servers:
+                if claude_server.name not in enabled_names:
+                    if not dry_run:
+                        try:
+                            success = manager.claude.remove_server(claude_server.name)
+                            if success:
+                                removed_from_claude.append(claude_server.name)
+                                console.print(f"[yellow]➖ Removed from Claude: {claude_server.name}[/yellow]")
+                            else:
+                                errors.append(f"Failed to remove {claude_server.name} from Claude")
+                        except Exception as e:
+                            errors.append(f"Error removing {claude_server.name}: {e}")
+                    else:
+                        removed_from_claude.append(claude_server.name)
+                        console.print(f"[yellow]➖ Would remove from Claude: {claude_server.name}[/yellow]")
+            
+            # Show results
+            console.print("")
+            console.print("📊 Synchronization Results:")
             console.print("")
             
-            if results["duplicates_removed"] > 0:
-                console.print(f"[green]✅ Removed {results['duplicates_removed']} duplicate servers[/green]")
-            
-            if results["orphaned_claude_servers"] > 0:
-                console.print(f"[blue]📥 Added {results['orphaned_claude_servers']} orphaned Claude servers to database[/blue]")
-            
-            if results["orphaned_db_servers"] > 0:
-                console.print(f"[yellow]📤 Disabled {results['orphaned_db_servers']} orphaned database servers[/yellow]")
-            
-            if results["inconsistencies_fixed"] > 0:
-                console.print(f"[cyan]🔧 Fixed {results['inconsistencies_fixed']} command/args inconsistencies[/cyan]")
-            
-            if results["errors"]:
-                console.print(f"[red]❌ Errors encountered:[/red]")
-                for error in results["errors"]:
+            if added_to_claude:
+                console.print(f"[green]✅ Added {len(added_to_claude)} servers to Claude[/green]")
+                
+            if removed_from_claude:
+                console.print(f"[yellow]📤 Removed {len(removed_from_claude)} servers from Claude[/yellow]")
+                
+            if errors:
+                console.print(f"[red]❌ {len(errors)} errors encountered:[/red]")
+                for error in errors:
                     console.print(f"[red]   • {error}[/red]")
             
-            total_fixes = (results["duplicates_removed"] + results["orphaned_claude_servers"] + 
-                          results["orphaned_db_servers"] + results["inconsistencies_fixed"])
-            
-            if total_fixes == 0 and not results["errors"]:
-                console.print("[green]✅ No synchronization issues found - systems are in sync![/green]")
+            total_changes = len(added_to_claude) + len(removed_from_claude)
+            if total_changes == 0 and not errors:
+                console.print("[green]✅ Already synchronized - no changes needed![/green]")
+            elif not dry_run:
+                console.print(f"[bold green]🎯 Synchronization complete: {total_changes} changes made[/bold green]")
             else:
-                console.print("")
-                console.print(f"[bold green]🎯 Total issues fixed: {total_fixes}[/bold green]")
+                console.print(f"[bold blue]🎯 Dry run complete: {total_changes} changes would be made[/bold blue]")
             
         except Exception as e:
             console.print(f"[red]Failed to fix sync issues: {e}[/red]")
