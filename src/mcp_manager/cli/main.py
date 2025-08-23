@@ -274,7 +274,7 @@ def list_cmd(scope: Optional[str], output_format: str):
                 title_style="bold cyan"
             )
             
-            table.add_column("Name", style="green", width=25)
+            table.add_column("Name", style="green", width=40)
             table.add_column("Type", style="blue", width=9)
             table.add_column("Scope", style="yellow", width=5)
             table.add_column("Status", style="white", width=6)
