@@ -5,7 +5,7 @@ Server configuration helper functions.
 import os
 import sqlite3
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List, Dict, Any
 
 import yaml
 from rich.console import Console
@@ -16,10 +16,68 @@ from mcp_manager.core.models import ServerType
 console = Console()
 
 
-def prompt_for_server_configuration(server_name: str, server_type: ServerType, package: Optional[str], test_mode: bool = False) -> Optional[dict]:
+def _prompt_from_requirements(server_name: str, requirements: List[Dict[str, Any]], test_mode: bool = False) -> Optional[dict]:
+    """Prompt user based on requirements specification."""
+    from rich.prompt import Prompt
+    
+    if not requirements or test_mode:
+        return None
+    
+    console.print(f"[blue]ℹ {server_name} requires additional configuration[/blue]")
+    
+    config = {}
+    final_args = []
+    
+    for req in requirements:
+        req_type = req.get("type")
+        prompt = req.get("prompt", f"Enter {req_type}")
+        default = req.get("default")
+        required = req.get("required", False)
+        
+        if req_type == "directory_access":
+            console.print(f"[dim]{prompt}[/dim]")
+            directory = Prompt.ask("Directory path", default=default)
+            if directory:
+                # Add volume mount to final args
+                final_args.extend(["-v", f"{directory}:{directory}"])
+                config["directory_access"] = directory
+        
+        elif req_type == "api_key":
+            api_key = Prompt.ask(prompt, password=True)
+            if api_key:
+                config["api_key"] = api_key
+                # Add as environment variable
+                final_args.extend(["-e", f"API_KEY={api_key}"])
+        
+        elif req_type == "grafana_url":
+            url = Prompt.ask(prompt, default=default)
+            if url:
+                config["grafana_url"] = url
+                final_args.extend(["-e", f"GRAFANA_URL={url}"])
+        
+        elif req_type == "slack_token":
+            token = Prompt.ask(prompt, password=True)
+            if token:
+                config["slack_token"] = token
+                final_args.extend(["-e", f"SLACK_TOKEN={token}"])
+        
+        # Add more requirement types as needed
+    
+    # Return configuration with generated args
+    if final_args:
+        config["args"] = final_args
+    
+    return config if config else None
+
+
+def prompt_for_server_configuration(server_name: str, server_type: ServerType, package: Optional[str], test_mode: bool = False, requirements: List[Dict[str, Any]] = None) -> Optional[dict]:
     """Prompt user for server configuration if needed."""
     
-    # Define servers that need configuration
+    # Use new requirements system if available
+    if requirements:
+        return _prompt_from_requirements(server_name, requirements, test_mode)
+    
+    # Fallback to old system
     config_requirements = {
         # Filesystem servers
         'filesystem': {
@@ -102,7 +160,8 @@ def prompt_for_server_configuration(server_name: str, server_type: ServerType, p
             if server_type == ServerType.DOCKER_DESKTOP:
                 config['directory'] = value
             else:
-                config['args'].append(value)
+                # For Docker containers, add volume mount (directory path is already in base command)
+                config['args'].extend(['-v', f'{value}:{value}'])
                 
         elif server_key == 'sqlite':
             # Create database file if it doesn't exist

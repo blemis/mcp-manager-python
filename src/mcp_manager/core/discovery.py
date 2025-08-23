@@ -349,6 +349,9 @@ class ServerDiscovery:
                                 if any(r.package == full_name for r in results):
                                     continue
                                 
+                                # Get base command and requirements from database
+                                install_command, install_args, requirements = self._get_docker_server_info(server_name, full_name)
+                                
                                 result = DiscoveryResult(
                                     name=server_name,
                                     package=full_name,
@@ -356,8 +359,9 @@ class ServerDiscovery:
                                     description=description or f"Docker MCP server: {server_name}",
                                     author=namespace,
                                     server_type=ServerType.DOCKER,
-                                    install_command="docker",
-                                    install_args=["run", "-i", "--rm", "--pull", "always", f"{full_name}:latest"],
+                                    install_command=install_command,
+                                    install_args=install_args,
+                                    requirements=requirements,
                                     keywords=["mcp", "docker", server_name],
                                     downloads=repo.get("pull_count"),
                                     last_updated=self._parse_date(repo.get("last_updated")),
@@ -687,6 +691,66 @@ class ServerDiscovery:
             return datetime.fromisoformat(date_str.replace("Z", "+00:00"))
         except Exception:
             return None
+    
+    def _get_docker_server_info(self, server_name: str, package_name: str):
+        """Get Docker server info with requirements from database, fallback to known servers."""
+        # Known server requirements database
+        known_servers = {
+            "mcp-filesystem": {
+                "requirements": [
+                    {
+                        "type": "directory_access",
+                        "prompt": "Enter directory path to allow filesystem access",
+                        "default": str(Path.home()),
+                        "required": True
+                    }
+                ]
+            },
+            "mcp-grafana": {
+                "requirements": [
+                    {
+                        "type": "api_key", 
+                        "prompt": "Enter Grafana API key",
+                        "required": True
+                    },
+                    {
+                        "type": "grafana_url",
+                        "prompt": "Enter Grafana URL",
+                        "default": "http://localhost:3000",
+                        "required": True
+                    }
+                ]
+            },
+            "mcp-slack": {
+                "requirements": [
+                    {
+                        "type": "slack_token",
+                        "prompt": "Enter Slack bot token", 
+                        "required": True
+                    }
+                ]
+            }
+        }
+        
+        # Check database first (highest priority)
+        try:
+            from mcp_manager.core.simple_manager import SimpleManager
+            manager = SimpleManager()
+            db_servers = manager.list_servers_fast()
+            for server in db_servers:
+                if server.name == server_name:
+                    return server.command, server.args, getattr(server, 'requirements', [])
+        except:
+            pass
+        
+        # Check known servers database
+        if server_name in known_servers:
+            requirements = known_servers[server_name]["requirements"]
+            return "docker", ["run", "-i", "--rm", "--pull", "always"], requirements
+        
+        
+        # Default fallback
+        return "docker", ["run", "-i", "--rm", "--pull", "always", f"{package_name}:latest"], []
             
     def _calculate_relevance_score(self, result: DiscoveryResult) -> float:
         """Calculate relevance score for sorting."""

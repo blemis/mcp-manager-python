@@ -178,6 +178,7 @@ class DiscoveryResult(BaseModel):
     server_type: ServerType = Field(description="Server type")
     install_command: str = Field(description="Installation command")
     install_args: List[str] = Field(default_factory=list, description="Installation command arguments")
+    requirements: List[Dict[str, Any]] = Field(default_factory=list, description="Installation requirements")
     downloads: Optional[int] = Field(default=None, description="Download count")
     last_updated: Optional[datetime] = Field(default=None, description="Last update")
     
@@ -293,7 +294,7 @@ class RecommendationAnalytics(BaseModel):
     query_category: Optional[str] = Field(default=None, description="Inferred query category")
     recommendations_count: int = Field(description="Number of recommendations provided")
     llm_provider: str = Field(description="LLM provider used")
-    model_used: str = Field(description="Specific model used")
+    llm_model: str = Field(description="Specific model used")
     processing_time_ms: int = Field(description="Total processing time")
     tools_analyzed: int = Field(description="Number of tools analyzed")
     user_selected_tool: Optional[str] = Field(default=None, description="Tool user actually selected")

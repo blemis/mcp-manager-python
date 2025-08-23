@@ -178,7 +178,8 @@ def discovery_commands(cli_context):
                         description=result_data['description'],
                         server_type=ServerType(result_data['server_type']),
                         install_command=result_data['install_command'],
-                        install_args=result_data['install_args']
+                        install_args=result_data['install_args'],
+                        requirements=result_data.get('requirements', [])
                     )
                     console.print(f"[green]✅ Found: {matching_server.name}[/green]")
                 else:
@@ -248,7 +249,8 @@ def discovery_commands(cli_context):
             config = prompt_for_server_configuration(
                 server_name=server_name,
                 server_type=matching_server.server_type,
-                package=matching_server.package
+                package=matching_server.package,
+                requirements=getattr(matching_server, 'requirements', [])
             )
             
             try:
