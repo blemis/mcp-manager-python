@@ -6,9 +6,10 @@ rich help formatting and professional modular command structure.
 """
 
 import asyncio
+import subprocess
 import sys
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import click
 from rich.console import Console
@@ -53,6 +54,38 @@ def _is_infrastructure_server(server) -> bool:
     if server.name.startswith("_") or server.name.endswith("-gateway"):
         return True
     return False
+
+
+def _get_claude_mcp_status() -> Dict[str, Dict[str, str]]:
+    """Get actual connection status from Claude MCP."""
+    try:
+        result = subprocess.run(['claude', 'mcp', 'list'], capture_output=True, text=True, timeout=10)
+        if result.returncode != 0:
+            return {}
+        
+        status_map = {}
+        lines = result.stdout.strip().split('\n')
+        
+        for line in lines:
+            if ':' in line and ('✓' in line or '✗' in line):
+                # Parse lines like: "fetch: docker run -i --rm --pull always mcp/fetch:latest - ✗ Failed to connect"
+                parts = line.split(':', 1)
+                if len(parts) == 2:
+                    name = parts[0].strip()
+                    rest = parts[1].strip()
+                    
+                    if '✓ Connected' in rest:
+                        status_map[name] = {'status': 'Connected', 'details': rest}
+                    elif '✗' in rest:
+                        status_map[name] = {'status': 'Failed', 'details': rest}
+                    else:
+                        status_map[name] = {'status': 'Unknown', 'details': rest}
+        
+        return status_map
+        
+    except Exception as e:
+        logger.error(f"Failed to get Claude MCP status: {e}")
+        return {}
 
 
 class CLIContext:
@@ -243,8 +276,11 @@ def list_cmd(scope: Optional[str], output_format: str):
     
     try:
         all_servers = asyncio.run(manager.list_servers())
-        # Filter out infrastructure components that users shouldn't see
+        # Filter out infrastructure components that users shouldn't see  
         servers = [s for s in all_servers if not _is_infrastructure_server(s)]
+        
+        # Get actual connection status from Claude MCP
+        claude_status = _get_claude_mcp_status()
         
         if output_format == "json":
             import json
@@ -307,8 +343,31 @@ def list_cmd(scope: Optional[str], output_format: str):
                 server_suites = {}
             
             for server in servers:
-                status = "✅ Enabled" if server.enabled else "❌ Disabled"
-                scope_str = server.scope.value if server.scope else "unknown"
+                # Handle Docker Desktop servers specially
+                if server.server_type.value == 'docker-desktop':
+                    # For DD servers, check if they're in docker-gateway status
+                    docker_gateway_status = claude_status.get('docker-gateway', {})
+                    gateway_details = docker_gateway_status.get('details', '')
+                    
+                    if server.name in gateway_details and '✓' in docker_gateway_status.get('status', ''):
+                        status = "✅ Connected (via docker-gateway)"
+                    else:
+                        status = "❌ Disabled"
+                else:
+                    # For regular servers, get actual status from Claude MCP  
+                    claude_server_status = claude_status.get(server.name, {})
+                    actual_status = claude_server_status.get('status', 'Not in Claude')
+                    
+                    if actual_status == 'Not in Claude':
+                        status = "❌ Disabled" 
+                    elif actual_status == 'Connected':
+                        status = "✅ Connected"
+                    elif actual_status == 'Failed':
+                        status = "✗ Failed"
+                    else:
+                        status = f"? {actual_status}"
+                
+                scope_str = server.scope.value if server.scope else "unknown" 
                 command_str = f"{server.command} {' '.join(server.args)}"
                 
                 # Get suite membership
