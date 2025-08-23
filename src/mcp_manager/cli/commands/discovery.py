@@ -43,8 +43,13 @@ def discovery_commands(cli_context):
         is_flag=True,
         help="Update Docker MCP catalog before discovery"
     )
+    @click.option(
+        "--scope",
+        type=click.Choice(['local', 'project', 'user'], case_sensitive=False),
+        help="Show only servers that would be installed in this scope"
+    )
     @handle_errors
-    def discover(query: Optional[str], server_type: Optional[str], limit: int, update_catalog: bool):
+    def discover(query: Optional[str], server_type: Optional[str], limit: int, update_catalog: bool, scope: Optional[str]):
         """
         Discover available MCP servers with pattern matching support.
         
@@ -84,8 +89,9 @@ def discovery_commands(cli_context):
         from rich.table import Table
         
         # Display results in a table
+        scope_title = f" for {scope} scope" if scope else ""
         table = Table(
-            title=f"Discovered MCP Servers ({len(results)} results)",
+            title=f"Discovered MCP Servers ({len(results)} results{scope_title})",
             show_header=True,
             header_style="bold cyan",
             title_style="bold cyan",
@@ -111,33 +117,61 @@ def discovery_commands(cli_context):
         console.print(table)
         console.print("")
         console.print("[dim]💡 To install a server, use:[/dim]")
-        console.print("[dim]   [cyan]mcp-manager install-package <install-id>[/cyan][/dim]")
-        console.print("[dim]   Example: [cyan]mcp-manager install-package modelcontextprotocol-filesystem[/cyan][/dim]")
+        scope_flag = f" --scope {scope}" if scope else ""
+        console.print(f"[dim]   [cyan]mcp-manager install-package <install-id>{scope_flag}[/cyan][/dim]")
+        console.print(f"[dim]   Example: [cyan]mcp-manager install-package modelcontextprotocol-filesystem{scope_flag}[/cyan][/dim]")
     
     
     @click.command("install-package")
     @click.argument("install_id")
+    @click.option("--scope", type=click.Choice(['local', 'project', 'user'], case_sensitive=False), default="user", help="Installation scope")
     @handle_errors
-    def install_package(install_id: str):
+    def install_package(install_id: str, scope: str):
         """Install a server using its unique install ID from discovery."""
         discovery = cli_context.get_discovery()
         
         async def find_and_install():
-            # Try to extract search terms from install_id to improve discovery
-            search_query = None
-            if "modelcontextprotocol" in install_id:
-                search_query = install_id.replace("modelcontextprotocol-", "")
-            elif install_id.startswith("dd-"):
-                search_query = install_id.replace("dd-", "")
-            elif "-" in install_id:
-                search_query = install_id.replace("-", " ")
-            else:
-                search_query = install_id
-            
             console.print(f"[blue]🔍 Searching for server with ID: {install_id}[/blue]")
             
-            # Run discovery with broader search
-            results = await discovery.discover_servers(query=search_query, limit=20)
+            # Try multiple search strategies
+            search_strategies = []
+            
+            # Strategy 1: Reverse-engineer package name from install_id 
+            if not install_id.startswith("dd-") and "-" in install_id:
+                # For NPM packages like browsermcp-mcp -> @browsermcp/mcp
+                parts = install_id.split("-", 1)
+                if len(parts) == 2:
+                    possible_package = f"@{parts[0]}/{parts[1]}"
+                    search_strategies.append(("package name", possible_package))
+            
+            # Strategy 2: Direct install_id search
+            search_strategies.append(("install_id", install_id))
+            
+            # Strategy 3: Broader search
+            search_strategies.append(("broad search", None))
+            
+            # Strategy 4: Fallback searches
+            if "modelcontextprotocol" in install_id:
+                search_strategies.append(("fallback", install_id.replace("modelcontextprotocol-", "")))
+            elif install_id.startswith("dd-"):
+                search_strategies.append(("fallback", install_id.replace("dd-", "")))
+            elif "-" in install_id:
+                search_strategies.append(("fallback", install_id.replace("-", " ")))
+            
+            results = []
+            for strategy_name, query in search_strategies:
+                try:
+                    strategy_results = await discovery.discover_servers(query=query, limit=100)
+                    if strategy_results:
+                        results = strategy_results
+                        break
+                except Exception as e:
+                    continue
+            
+            if not results:
+                console.print("[red]No results found with any search strategy[/red]")
+                sys.exit(1)
+            
             
             # Find exact match by install ID
             matching_server = None
@@ -162,7 +196,8 @@ def discovery_commands(cli_context):
             
             # Get manager and install
             manager = cli_context.get_manager()
-            server_name = matching_server.name
+            # Use install_id as server name to avoid conflicts with discovery result names
+            server_name = install_id
             
             console.print(f"[blue]📦 Installing: {server_name}[/blue]")
             console.print(f"[dim]Package: {matching_server.package or 'N/A'}[/dim]")
@@ -189,16 +224,21 @@ def discovery_commands(cli_context):
                 env_vars = {k: v for k, v in config.items() if k != 'args' and isinstance(v, str)}
                 additional_args = config.get('args', []) if isinstance(config.get('args'), list) else []
                 
+                # Convert scope string to enum
+                from mcp_manager.core.models import ServerScope
+                scope_enum = ServerScope(scope) if scope else ServerScope.USER
+                
                 # Add server to manager
                 server = await manager.add_server(
                     name=server_name,
                     server_type=matching_server.server_type,
                     command=matching_server.install_command,
                     args=(matching_server.install_args or []) + additional_args,
-                    env=env_vars
+                    env=env_vars,
+                    scope=scope_enum
                 )
                 
-                console.print(f"[green]✅ Successfully installed '{server_name}'[/green]")
+                console.print(f"[green]✅ Successfully installed '{server_name}' in {scope} scope[/green]")
                 
                 # Show server details
                 await show_server_details_after_install(manager, server_name)
@@ -216,8 +256,9 @@ def discovery_commands(cli_context):
     
     @click.command()
     @click.argument("name")
+    @click.option("--scope", type=click.Choice(['local', 'project', 'user'], case_sensitive=False), default="user", help="Installation scope")
     @handle_errors
-    def install(name: str):
+    def install(name: str, scope: str):
         """Install a server from discovery results."""
         discovery = cli_context.get_discovery()
         
@@ -271,16 +312,21 @@ def discovery_commands(cli_context):
                 env_vars = {k: v for k, v in config.items() if k != 'args' and isinstance(v, str)}
                 additional_args = config.get('args', []) if isinstance(config.get('args'), list) else []
                 
+                # Convert scope string to enum
+                from mcp_manager.core.models import ServerScope
+                scope_enum = ServerScope(scope) if scope else ServerScope.USER
+                
                 # Add server to manager
                 server = await manager.add_server(
                     name=server_name,
                     server_type=server_result.server_type,
                     command=server_result.install_command,
                     args=(server_result.install_args or []) + additional_args,
-                    env=env_vars
+                    env=env_vars,
+                    scope=scope_enum
                 )
                 
-                console.print(f"[green]✅ Successfully installed '{server_name}'[/green]")
+                console.print(f"[green]✅ Successfully installed '{server_name}' in {scope} scope[/green]")
                 
                 # Show server details
                 await show_server_details_after_install(manager, server_name)
