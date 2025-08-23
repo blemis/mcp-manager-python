@@ -447,7 +447,7 @@ def sync_fix(dry_run: bool):
     asyncio.run(fix_sync_async())
 
 
-@cli.command()
+@cli.command("add")
 @click.argument("name")
 @click.option("--type", "server_type", type=click.Choice([t.value for t in ServerType], case_sensitive=False), help="Server type")
 @click.option("--command", "-c", help="Server command")
@@ -531,7 +531,7 @@ def add(
     asyncio.run(add_server_async())
 
 
-@cli.command()
+@cli.command("remove")
 @click.argument("name")
 @click.option("--scope", type=click.Choice([s.value for s in ServerScope], case_sensitive=False), help="Server scope")
 @click.option("--force", "-f", is_flag=True, help="Skip confirmation prompt")
@@ -756,7 +756,7 @@ def nuke(force: bool, scope: Optional[str]):
         sys.exit(1)
 
 
-@cli.command()
+@cli.command("enable")
 @click.argument("name")
 @click.option("--scope", type=click.Choice([s.value for s in ServerScope], case_sensitive=False), help="Server scope to enable in")
 @handle_errors
@@ -781,7 +781,7 @@ def enable(name: str, scope: Optional[str]):
         sys.exit(1)
 
 
-@cli.command()
+@cli.command("disable")
 @click.argument("name")
 @click.option("--scope", type=click.Choice([s.value for s in ServerScope], case_sensitive=False), help="Server scope to disable in")
 @handle_errors
@@ -1171,6 +1171,13 @@ def register_commands():
 
 # Register all commands
 register_commands()
+
+# Add command aliases for shorter typing
+cli.add_command(list_cmd, name="ls")  # mcpm ls
+cli.add_command(activate_suites, name="act")  # mcpm act
+cli.add_command(remove, name="rm")  # mcpm rm  
+cli.add_command(enable, name="en")  # mcpm en
+cli.add_command(disable, name="dis")  # mcpm dis
 
 
 def main():

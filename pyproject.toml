@@ -82,6 +82,7 @@ Repository = "https://github.com/anthropics/claude-mcp-manager"
 
 [project.scripts]
 mcp-manager = "mcp_manager.cli.main:main"
+mcpm = "mcp_manager.cli.main:main"
 mcp-tui = "mcp_manager.tui.main:main"
 
 [tool.hatch.version]
