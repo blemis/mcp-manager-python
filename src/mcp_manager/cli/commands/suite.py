@@ -589,4 +589,447 @@ def suite_commands(cli_context):
         
         asyncio.run(remove_suite_servers())
     
+    
+    @suite.command("enable")
+    @click.argument("suite_name")
+    @click.option("--dry-run", is_flag=True, help="Show what would be changed without making changes")
+    @handle_errors
+    def suite_enable(suite_name: str, dry_run: bool):
+        """Enable ONLY servers in the specified suite, disable all others."""
+        
+        async def enable_suite_async():
+            try:
+                manager, context = cli_context.auto_sync_and_get_manager(silent=True)
+                console.print(f"[dim]Suite enable in: {context.description}[/dim]")
+                
+                if dry_run:
+                    console.print("[yellow]🔍 DRY RUN MODE - No changes will be made[/yellow]")
+                    console.print("")
+                
+                console.print(f"[blue]🎯 Enabling suite: {suite_name}[/blue]")
+                console.print("[dim]This will enable ONLY servers in this suite and disable all others[/dim]")
+                console.print("")
+                
+                # Get all servers
+                all_servers = await manager.list_servers()
+                
+                # Get suite membership for all servers
+                from mcp_manager.core.suites.database import SuiteDatabase
+                from mcp_manager.core.suites.membership import MembershipManager
+                
+                suite_db = SuiteDatabase()
+                membership_mgr = MembershipManager(suite_db)
+                
+                # Find servers in the target suite
+                suite_servers = []
+                other_servers = []
+                
+                for server in all_servers:
+                    try:
+                        suites = await membership_mgr.get_server_suites(server.name)
+                        server_suite_names = [suite[1] for suite in suites]  # suite[1] is the name
+                        
+                        # Check if server is in target suite
+                        if suite_name in server_suite_names:
+                            suite_servers.append(server)
+                        else:
+                            other_servers.append(server)
+                    except Exception:
+                        # If can't get suite info, treat as other server
+                        other_servers.append(server)
+                
+                if not suite_servers:
+                    console.print(f"[red]❌ No servers found in suite: {suite_name}[/red]")
+                    console.print("[yellow]💡 Use 'mcp-manager suite list' to see available suites[/yellow]")
+                    return
+                
+                console.print(f"[green]📦 Servers to ENABLE ({len(suite_servers)}):[/green]")
+                for server in suite_servers:
+                    status = "already enabled" if server.enabled else "will enable"
+                    console.print(f"  ✅ {server.name} ({status})")
+                
+                console.print("")
+                console.print(f"[red]📦 Servers to DISABLE ({len(other_servers)}):[/red]")
+                for server in other_servers:
+                    status = "already disabled" if not server.enabled else "will disable"
+                    console.print(f"  ❌ {server.name} ({status})")
+                
+                if not dry_run:
+                    console.print("")
+                    from rich.prompt import Confirm
+                    if not Confirm.ask(f"[bold]Proceed with enabling suite '{suite_name}'?[/bold]"):
+                        console.print("[dim]Suite enable cancelled[/dim]")
+                        return
+                    
+                    console.print("")
+                    console.print("[blue]🔄 Applying changes...[/blue]")
+                    
+                    # Enable suite servers
+                    enabled_count = 0
+                    for server in suite_servers:
+                        if not server.enabled:
+                            success = await manager.enable_server(server.name)
+                            if success:
+                                enabled_count += 1
+                                console.print(f"  [green]✅ Enabled: {server.name}[/green]")
+                            else:
+                                console.print(f"  [red]❌ Failed to enable: {server.name}[/red]")
+                    
+                    # Disable other servers  
+                    disabled_count = 0
+                    for server in other_servers:
+                        if server.enabled:
+                            success = await manager.disable_server(server.name)
+                            if success:
+                                disabled_count += 1
+                                console.print(f"  [yellow]❌ Disabled: {server.name}[/yellow]")
+                            else:
+                                console.print(f"  [red]❌ Failed to disable: {server.name}[/red]")
+                    
+                    console.print("")
+                    console.print(f"[bold green]🎯 Suite '{suite_name}' enabled successfully![/bold green]")
+                    console.print(f"[dim]Enabled {enabled_count} servers, disabled {disabled_count} servers[/dim]")
+                else:
+                    console.print("")
+                    console.print("[dim]Dry run complete - no changes made[/dim]")
+                    
+            except Exception as e:
+                console.print(f"[red]Failed to enable suite: {e}[/red]")
+                import sys
+                sys.exit(1)
+        
+        asyncio.run(enable_suite_async())
+
+    
+    @suite.command("disable")
+    @click.argument("suite_name")
+    @click.option("--dry-run", is_flag=True, help="Show what would be changed without making changes")
+    @handle_errors
+    def suite_disable(suite_name: str, dry_run: bool):
+        """Disable servers in the specified suite, leave others unchanged."""
+        
+        async def disable_suite_async():
+            try:
+                manager, context = cli_context.auto_sync_and_get_manager(silent=True)
+                console.print(f"[dim]Suite disable in: {context.description}[/dim]")
+                
+                if dry_run:
+                    console.print("[yellow]🔍 DRY RUN MODE - No changes will be made[/yellow]")
+                    console.print("")
+                
+                console.print(f"[blue]🎯 Disabling suite: {suite_name}[/blue]")
+                console.print("[dim]This will disable ONLY servers in this suite, others remain unchanged[/dim]")
+                console.print("")
+                
+                # Get all servers
+                all_servers = await manager.list_servers()
+                
+                # Get suite membership for all servers
+                from mcp_manager.core.suites.database import SuiteDatabase
+                from mcp_manager.core.suites.membership import MembershipManager
+                
+                suite_db = SuiteDatabase()
+                membership_mgr = MembershipManager(suite_db)
+                
+                # Find servers in the target suite
+                suite_servers = []
+                other_servers = []
+                
+                for server in all_servers:
+                    try:
+                        suites = await membership_mgr.get_server_suites(server.name)
+                        server_suite_names = [suite[1] for suite in suites]  # suite[1] is the name
+                        
+                        # Check if server is in target suite
+                        if suite_name in server_suite_names:
+                            suite_servers.append(server)
+                        else:
+                            other_servers.append(server)
+                    except Exception:
+                        # If can't get suite info, treat as other server
+                        other_servers.append(server)
+                
+                if not suite_servers:
+                    console.print(f"[red]❌ No servers found in suite: {suite_name}[/red]")
+                    console.print("[yellow]💡 Use 'mcp-manager suite list' to see available suites[/yellow]")
+                    return
+                
+                console.print(f"[red]📦 Servers to DISABLE ({len(suite_servers)}):[/red]")
+                for server in suite_servers:
+                    status = "already disabled" if not server.enabled else "will disable"
+                    console.print(f"  ❌ {server.name} ({status})")
+                
+                console.print("")
+                console.print(f"[dim]📦 Servers UNCHANGED ({len(other_servers)}):[/dim]")
+                for server in other_servers:
+                    status = "enabled" if server.enabled else "disabled"
+                    console.print(f"  ➖ {server.name} (stays {status})")
+                
+                if not dry_run:
+                    console.print("")
+                    from rich.prompt import Confirm
+                    if not Confirm.ask(f"[bold]Proceed with disabling suite '{suite_name}'?[/bold]"):
+                        console.print("[dim]Suite disable cancelled[/dim]")
+                        return
+                    
+                    console.print("")
+                    console.print("[blue]🔄 Applying changes...[/blue]")
+                    
+                    # Disable suite servers only
+                    disabled_count = 0
+                    for server in suite_servers:
+                        if server.enabled:
+                            success = await manager.disable_server(server.name)
+                            if success:
+                                disabled_count += 1
+                                console.print(f"  [yellow]❌ Disabled: {server.name}[/yellow]")
+                            else:
+                                console.print(f"  [red]❌ Failed to disable: {server.name}[/red]")
+                    
+                    console.print("")
+                    console.print(f"[bold green]🎯 Suite '{suite_name}' disabled successfully![/bold green]")
+                    console.print(f"[dim]Disabled {disabled_count} servers[/dim]")
+                else:
+                    console.print("")
+                    console.print("[dim]Dry run complete - no changes made[/dim]")
+                    
+            except Exception as e:
+                console.print(f"[red]Failed to disable suite: {e}[/red]")
+                import sys
+                sys.exit(1)
+        
+        asyncio.run(disable_suite_async())
+
+    
+    @suite.command("activate")
+    @click.argument("suite_names", nargs=-1, required=True)
+    @click.option("--dry-run", is_flag=True, help="Show what would be changed without making changes")
+    @click.option("--include-individual", is_flag=True, help="Also keep individual servers (not in any suite) enabled")
+    @handle_errors
+    def suite_activate(suite_names: tuple, dry_run: bool, include_individual: bool):
+        """Activate ONLY servers in the specified suites, disable all others."""
+        
+        async def activate_suites_async():
+            try:
+                manager, context = cli_context.auto_sync_and_get_manager(silent=True)
+                console.print(f"[dim]Suite activation in: {context.description}[/dim]")
+                
+                if dry_run:
+                    console.print("[yellow]🔍 DRY RUN MODE - No changes will be made[/yellow]")
+                    console.print("")
+                
+                suite_list = ", ".join(suite_names)
+                console.print(f"[blue]🎯 Activating suites: {suite_list}[/blue]")
+                console.print("[dim]This will enable ONLY servers in these suites and disable all others[/dim]")
+                if include_individual:
+                    console.print("[dim](Individual servers not in any suite will also be kept enabled)[/dim]")
+                console.print("")
+                
+                # Get all servers
+                all_servers = await manager.list_servers()
+                
+                # Get suite membership for all servers
+                from mcp_manager.core.suites.database import SuiteDatabase
+                from mcp_manager.core.suites.membership import MembershipManager
+                
+                suite_db = SuiteDatabase()
+                membership_mgr = MembershipManager(suite_db)
+                
+                # Find servers in the target suites
+                suite_servers = []
+                individual_servers = []
+                other_servers = []
+                
+                for server in all_servers:
+                    try:
+                        suites = await membership_mgr.get_server_suites(server.name)
+                        server_suite_names = [suite[1] for suite in suites]  # suite[1] is the name
+                        
+                        # Check if server is in any of our target suites
+                        if any(suite_name in server_suite_names for suite_name in suite_names):
+                            suite_servers.append(server)
+                        elif not server_suite_names:  # No suites = individual server
+                            individual_servers.append(server)
+                        else:
+                            other_servers.append(server)
+                    except Exception:
+                        # If can't get suite info, treat as individual server
+                        individual_servers.append(server)
+                
+                if not suite_servers:
+                    console.print(f"[red]❌ No servers found in suites: {suite_list}[/red]")
+                    console.print("[yellow]💡 Use 'mcp-manager suite list' to see available suites[/yellow]")
+                    return
+                
+                servers_to_enable = suite_servers[:]
+                if include_individual:
+                    servers_to_enable.extend(individual_servers)
+                    
+                servers_to_disable = other_servers[:]
+                if not include_individual:
+                    servers_to_disable.extend(individual_servers)
+                
+                console.print(f"[green]📦 Servers to ENABLE ({len(servers_to_enable)}):[/green]")
+                for server in servers_to_enable:
+                    status = "already enabled" if server.enabled else "will enable"
+                    suite_info = " (suite)" if server in suite_servers else " (individual)"
+                    console.print(f"  ✅ {server.name} ({status}){suite_info}")
+                
+                console.print("")
+                console.print(f"[red]📦 Servers to DISABLE ({len(servers_to_disable)}):[/red]")
+                for server in servers_to_disable:
+                    status = "already disabled" if not server.enabled else "will disable"
+                    console.print(f"  ❌ {server.name} ({status})")
+                
+                if not dry_run:
+                    console.print("")
+                    from rich.prompt import Confirm
+                    if not Confirm.ask(f"[bold]Proceed with suite activation?[/bold]"):
+                        console.print("[dim]Suite activation cancelled[/dim]")
+                        return
+                    
+                    console.print("")
+                    console.print("[blue]🔄 Applying changes...[/blue]")
+                    
+                    # Enable selected servers
+                    enabled_count = 0
+                    for server in servers_to_enable:
+                        if not server.enabled:
+                            success = await manager.enable_server(server.name)
+                            if success:
+                                enabled_count += 1
+                                console.print(f"  [green]✅ Enabled: {server.name}[/green]")
+                            else:
+                                console.print(f"  [red]❌ Failed to enable: {server.name}[/red]")
+                    
+                    # Disable other servers  
+                    disabled_count = 0
+                    for server in servers_to_disable:
+                        if server.enabled:
+                            success = await manager.disable_server(server.name)
+                            if success:
+                                disabled_count += 1
+                                console.print(f"  [yellow]❌ Disabled: {server.name}[/yellow]")
+                            else:
+                                console.print(f"  [red]❌ Failed to disable: {server.name}[/red]")
+                    
+                    console.print("")
+                    console.print(f"[bold green]🎯 Suites '{suite_list}' activated successfully![/bold green]")
+                    console.print(f"[dim]Enabled {enabled_count} servers, disabled {disabled_count} servers[/dim]")
+                else:
+                    console.print("")
+                    console.print("[dim]Dry run complete - no changes made[/dim]")
+                    
+            except Exception as e:
+                console.print(f"[red]Failed to activate suites: {e}[/red]")
+                import sys
+                sys.exit(1)
+        
+        asyncio.run(activate_suites_async())
+
+    
+    @suite.command("activate-except")
+    @click.argument("suite_name")
+    @click.option("--dry-run", is_flag=True, help="Show what would be changed without making changes")
+    @handle_errors
+    def suite_activate_except(suite_name: str, dry_run: bool):
+        """Activate all servers EXCEPT those in the specified suite."""
+        
+        async def activate_except_suite_async():
+            try:
+                manager, context = cli_context.auto_sync_and_get_manager(silent=True)
+                console.print(f"[dim]Suite activation (except) in: {context.description}[/dim]")
+                
+                if dry_run:
+                    console.print("[yellow]🔍 DRY RUN MODE - No changes will be made[/yellow]")
+                    console.print("")
+                
+                console.print(f"[blue]🎯 Activating all servers EXCEPT suite: {suite_name}[/blue]")
+                console.print("")
+                
+                # Get all servers
+                all_servers = await manager.list_servers()
+                
+                # Get suite membership for all servers
+                from mcp_manager.core.suites.database import SuiteDatabase
+                from mcp_manager.core.suites.membership import MembershipManager
+                
+                suite_db = SuiteDatabase()
+                membership_mgr = MembershipManager(suite_db)
+                
+                # Find servers in the target suite vs others
+                excluded_servers = []
+                other_servers = []
+                
+                for server in all_servers:
+                    try:
+                        suites = await membership_mgr.get_server_suites(server.name)
+                        server_suite_names = [suite[1] for suite in suites]  # suite[1] is the name
+                        
+                        # Check if server is in the excluded suite
+                        if suite_name in server_suite_names:
+                            excluded_servers.append(server)
+                        else:
+                            other_servers.append(server)
+                    except Exception:
+                        # If can't get suite info, treat as other server (enable it)
+                        other_servers.append(server)
+                
+                console.print(f"[green]📦 Servers to ENABLE ({len(other_servers)}):[/green]")
+                for server in other_servers:
+                    status = "already enabled" if server.enabled else "will enable"
+                    console.print(f"  ✅ {server.name} ({status})")
+                
+                console.print("")
+                console.print(f"[red]📦 Servers to DISABLE ({len(excluded_servers)}):[/red]")
+                for server in excluded_servers:
+                    status = "already disabled" if not server.enabled else "will disable"
+                    console.print(f"  ❌ {server.name} ({status}) [excluded suite]")
+                
+                if not dry_run:
+                    console.print("")
+                    from rich.prompt import Confirm
+                    if not Confirm.ask(f"[bold]Proceed with activation (except '{suite_name}')?[/bold]"):
+                        console.print("[dim]Activation cancelled[/dim]")
+                        return
+                    
+                    console.print("")
+                    console.print("[blue]🔄 Applying changes...[/blue]")
+                    
+                    # Enable other servers
+                    enabled_count = 0
+                    for server in other_servers:
+                        if not server.enabled:
+                            success = await manager.enable_server(server.name)
+                            if success:
+                                enabled_count += 1
+                                console.print(f"  [green]✅ Enabled: {server.name}[/green]")
+                            else:
+                                console.print(f"  [red]❌ Failed to enable: {server.name}[/red]")
+                    
+                    # Disable excluded servers  
+                    disabled_count = 0
+                    for server in excluded_servers:
+                        if server.enabled:
+                            success = await manager.disable_server(server.name)
+                            if success:
+                                disabled_count += 1
+                                console.print(f"  [yellow]❌ Disabled: {server.name}[/yellow]")
+                            else:
+                                console.print(f"  [red]❌ Failed to disable: {server.name}[/red]")
+                    
+                    console.print("")
+                    console.print(f"[bold green]🎯 Activated all servers except '{suite_name}' successfully![/bold green]")
+                    console.print(f"[dim]Enabled {enabled_count} servers, disabled {disabled_count} servers[/dim]")
+                else:
+                    console.print("")
+                    console.print("[dim]Dry run complete - no changes made[/dim]")
+                    
+            except Exception as e:
+                console.print(f"[red]Failed to activate except suite: {e}[/red]")
+                import sys
+                sys.exit(1)
+        
+        asyncio.run(activate_except_suite_async())
+    
     return [suite]
