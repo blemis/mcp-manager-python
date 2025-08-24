@@ -792,6 +792,10 @@ def nuke(force: bool, scope: Optional[str]):
                             for project_path, project_config_data in config["projectConfigs"].items():
                                 if "mcpServers" in project_config_data:
                                     project_config_data["mcpServers"] = {}
+                        if "projects" in config:
+                            for project_path, project_data in config["projects"].items():
+                                if "mcpServers" in project_data:
+                                    project_data["mcpServers"] = {}
                         console.print(f"  ✅ Cleared all Claude internal config: {claude_config}")
                     elif scope == "user":
                         # Clear only global user servers
@@ -800,11 +804,15 @@ def nuke(force: bool, scope: Optional[str]):
                         console.print(f"  ✅ Cleared user servers in Claude internal config: {claude_config}")
                     elif scope == "project":
                         # Clear only current project servers
+                        current_dir = str(Path.cwd())
                         if "projectConfigs" in config:
-                            current_dir = str(Path.cwd())
                             for project_path, project_config_data in config["projectConfigs"].items():
                                 if project_path == current_dir and "mcpServers" in project_config_data:
                                     project_config_data["mcpServers"] = {}
+                        if "projects" in config:
+                            for project_path, project_data in config["projects"].items():
+                                if project_path == current_dir and "mcpServers" in project_data:
+                                    project_data["mcpServers"] = {}
                         console.print(f"  ✅ Cleared project servers in Claude internal config: {claude_config}")
                     
                     with open(claude_config, 'w') as f:
