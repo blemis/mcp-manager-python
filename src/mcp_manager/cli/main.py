@@ -1319,16 +1319,19 @@ cli.add_command(disable, name="dis")  # mcpm dis
 
 @cli.command("install-completion")
 @click.argument("shell", required=False, type=click.Choice(["bash", "zsh", "fish"]))
-def install_completion(shell):
+@click.option("--auto-install", "-y", is_flag=True, help="Automatically add to shell config file")
+def install_completion(shell, auto_install):
     """Install shell completion for mcp-manager commands.
     
+    This enables Tab completion for server names in commands like:
+    - mcp-manager remove <TAB> 
+    - mcp-manager enable <TAB>
+    - mcp-manager server-details <TAB>
+    
     Examples:
-        mcp-manager install-completion bash
-        mcp-manager install-completion zsh
-        mcp-manager install-completion fish
-        
-    Or auto-detect shell:
-        mcp-manager install-completion
+        mcp-manager install-completion          # Show manual instructions
+        mcp-manager install-completion -y       # Auto-install for detected shell
+        mcp-manager install-completion bash -y  # Auto-install for bash
     """
     if not shell:
         # Auto-detect shell
@@ -1344,31 +1347,99 @@ def install_completion(shell):
             console.print("[red]Could not detect shell. Please specify: bash, zsh, or fish[/red]")
             sys.exit(1)
     
-    console.print(f"[blue]Installing {shell} completion for mcp-manager...[/blue]")
+    console.print(f"[blue]Setting up {shell} completion for mcp-manager...[/blue]")
+    
+    completion_line = f'eval "$(_MCP_MANAGER_COMPLETE={shell}_source mcp-manager)"'
     
     if shell == "bash":
-        console.print("\n[bold]Add this to your ~/.bashrc or ~/.bash_profile:[/bold]")
-        console.print("[green]eval \"$(_MCP_MANAGER_COMPLETE=bash_source mcp-manager)\"[/green]")
-        console.print("\nThen reload your shell or run:")
-        console.print("[dim]source ~/.bashrc[/dim]")
+        config_file = Path.home() / ".bashrc"
+        console.print(f"\n[bold]Bash completion line:[/bold]")
+        console.print(f"[green]{completion_line}[/green]")
+        
+        if auto_install:
+            # Check if already installed
+            if config_file.exists():
+                content = config_file.read_text()
+                if completion_line in content:
+                    console.print(f"[yellow]Completion already installed in {config_file}[/yellow]")
+                else:
+                    with open(config_file, "a") as f:
+                        f.write(f"\n# MCP Manager completion\n{completion_line}\n")
+                    console.print(f"[green]✅ Added completion to {config_file}[/green]")
+            else:
+                config_file.write_text(f"# MCP Manager completion\n{completion_line}\n")
+                console.print(f"[green]✅ Created {config_file} with completion[/green]")
+        else:
+            console.print(f"\n[bold]Manual installation:[/bold]")
+            console.print(f"Add the line above to your {config_file}")
+            console.print(f"Then run: [dim]source {config_file}[/dim]")
         
     elif shell == "zsh":
-        console.print("\n[bold]Add this to your ~/.zshrc:[/bold]")
-        console.print("[green]eval \"$(_MCP_MANAGER_COMPLETE=zsh_source mcp-manager)\"[/green]")
-        console.print("\nThen reload your shell or run:")
-        console.print("[dim]source ~/.zshrc[/dim]")
+        config_file = Path.home() / ".zshrc"
+        console.print(f"\n[bold]Zsh completion line:[/bold]")
+        console.print(f"[green]{completion_line}[/green]")
+        
+        if auto_install:
+            # Check if already installed
+            if config_file.exists():
+                content = config_file.read_text()
+                if completion_line in content:
+                    console.print(f"[yellow]Completion already installed in {config_file}[/yellow]")
+                else:
+                    with open(config_file, "a") as f:
+                        f.write(f"\n# MCP Manager completion\n{completion_line}\n")
+                    console.print(f"[green]✅ Added completion to {config_file}[/green]")
+            else:
+                config_file.write_text(f"# MCP Manager completion\n{completion_line}\n")
+                console.print(f"[green]✅ Created {config_file} with completion[/green]")
+        else:
+            console.print(f"\n[bold]Manual installation:[/bold]")
+            console.print(f"Add the line above to your {config_file}")
+            console.print(f"Then run: [dim]source {config_file}[/dim]")
         
     elif shell == "fish":
-        console.print("\n[bold]Add this to your ~/.config/fish/completions/mcp-manager.fish:[/bold]")
-        console.print("[green]_MCP_MANAGER_COMPLETE=fish_source mcp-manager | source[/green]")
-        console.print("\nOr run this command to install automatically:")
-        console.print("[dim]_MCP_MANAGER_COMPLETE=fish_source mcp-manager > ~/.config/fish/completions/mcp-manager.fish[/dim]")
+        config_dir = Path.home() / ".config" / "fish" / "completions"
+        config_file = config_dir / "mcp-manager.fish"
+        fish_line = "_MCP_MANAGER_COMPLETE=fish_source mcp-manager | source"
+        
+        console.print(f"\n[bold]Fish completion:[/bold]")
+        console.print(f"[green]{fish_line}[/green]")
+        
+        if auto_install:
+            config_dir.mkdir(parents=True, exist_ok=True)
+            if config_file.exists():
+                console.print(f"[yellow]Completion file already exists: {config_file}[/yellow]")
+            else:
+                import subprocess
+                try:
+                    result = subprocess.run(
+                        ["_MCP_MANAGER_COMPLETE=fish_source", "mcp-manager"],
+                        shell=True, capture_output=True, text=True
+                    )
+                    config_file.write_text(result.stdout)
+                    console.print(f"[green]✅ Created fish completion file: {config_file}[/green]")
+                except Exception as e:
+                    console.print(f"[red]Failed to create fish completion: {e}[/red]")
+                    console.print(f"[yellow]Please run manually: {fish_line} > {config_file}[/yellow]")
+        else:
+            console.print(f"\n[bold]Manual installation:[/bold]")
+            console.print(f"Run: [dim]{fish_line} > {config_file}[/dim]")
     
-    console.print(f"\n[green]✅ {shell} completion setup instructions provided![/green]")
-    console.print("\n💡 After setup, you can use Tab to auto-complete server names:")
-    console.print("   [dim]mcp-manager remove <TAB>[/dim]")
-    console.print("   [dim]mcp-manager server-details <TAB>[/dim]")
-    console.print("   [dim]mcp-manager enable <TAB>[/dim]")
+    if auto_install:
+        console.print(f"\n[green]✅ {shell} completion installed![/green]")
+        console.print("\n[bold]Restart your shell or run:[/bold]")
+        if shell in ["bash", "zsh"]:
+            console.print(f"[dim]source {config_file}[/dim]")
+        else:
+            console.print("[dim]Open a new terminal window[/dim]")
+    else:
+        console.print(f"\n[green]✅ {shell} completion setup instructions provided![/green]")
+    
+    console.print("\n💡 [bold]After installation, you can use Tab completion:[/bold]")
+    console.print("   [dim]mcp-manager remove <TAB>           # Shows all server names[/dim]")
+    console.print("   [dim]mcp-manager remove not<TAB>        # Shows notionhq-notion-mcp-server[/dim]")
+    console.print("   [dim]mcp-manager rm up<TAB>             # Shows upstash-context7-mcp[/dim]")
+    console.print("   [dim]mcp-manager server-details <TAB>   # Shows all server names[/dim]")
 
 
 def main():
