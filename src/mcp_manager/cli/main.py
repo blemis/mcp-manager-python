@@ -896,9 +896,83 @@ def nuke(force: bool, scope: Optional[str]):
 @cli.command("enable")
 @click.argument("name", shell_complete=complete_server_name)
 @click.option("--scope", type=click.Choice([s.value for s in ServerScope], case_sensitive=False), help="Server scope to enable in")
+@click.option("--dry-run", is_flag=True, help="Show what would be changed without making changes")
 @handle_errors
-def enable(name: str, scope: Optional[str]):
-    """Enable an MCP server."""
+def enable(name: str, scope: Optional[str], dry_run: bool):
+    """Enable an MCP server or all servers with 'all'."""
+    
+    # Handle 'all' argument
+    if name.lower() == "all":
+        async def enable_all_async():
+            try:
+                manager, context = cli_context.auto_sync_and_get_manager(silent=True)
+                console.print(f"[dim]Enabling all servers in: {context.description}[/dim]")
+                
+                if dry_run:
+                    console.print("[yellow]🔍 DRY RUN MODE - No changes will be made[/yellow]")
+                    console.print("")
+                
+                console.print("[blue]🎯 Enabling ALL servers[/blue]")
+                console.print("")
+                
+                # Get all servers
+                all_servers = await manager.list_servers()
+                
+                if not all_servers:
+                    console.print("[yellow]📭 No servers found to enable[/yellow]")
+                    return
+                
+                disabled_servers = [server for server in all_servers if not server.enabled]
+                already_enabled = [server for server in all_servers if server.enabled]
+                
+                console.print(f"[green]📦 Servers to ENABLE ({len(disabled_servers)}):[/green]")
+                for server in disabled_servers:
+                    console.print(f"  ✅ {server.name}")
+                
+                if already_enabled:
+                    console.print("")
+                    console.print(f"[dim]📦 Already enabled ({len(already_enabled)}):[/dim]")
+                    for server in already_enabled:
+                        console.print(f"  ➡️ {server.name}")
+                
+                if not dry_run:
+                    if disabled_servers:
+                        console.print("")
+                        from rich.prompt import Confirm
+                        if not Confirm.ask(f"[bold]Enable {len(disabled_servers)} servers?[/bold]"):
+                            console.print("[dim]Enable all cancelled[/dim]")
+                            return
+                        
+                        console.print("")
+                        console.print("[blue]🔄 Enabling servers...[/blue]")
+                        
+                        enabled_count = 0
+                        for server in disabled_servers:
+                            success = await manager.enable_server(server.name)
+                            if success:
+                                enabled_count += 1
+                                console.print(f"  [green]✅ Enabled: {server.name}[/green]")
+                            else:
+                                console.print(f"  [red]❌ Failed to enable: {server.name}[/red]")
+                        
+                        console.print("")
+                        console.print(f"[bold green]🎯 Enabled {enabled_count} of {len(disabled_servers)} servers![/bold green]")
+                    else:
+                        console.print("")
+                        console.print("[dim]All servers are already enabled[/dim]")
+                else:
+                    console.print("")
+                    console.print("[dim]Dry run complete - no changes made[/dim]")
+                    
+            except Exception as e:
+                console.print(f"[red]Failed to enable all servers: {e}[/red]")
+                import sys
+                sys.exit(1)
+        
+        asyncio.run(enable_all_async())
+        return
+    
+    # Handle single server enable
     manager = cli_context.get_manager()
     
     try:
@@ -921,9 +995,83 @@ def enable(name: str, scope: Optional[str]):
 @cli.command("disable")
 @click.argument("name", shell_complete=complete_server_name)
 @click.option("--scope", type=click.Choice([s.value for s in ServerScope], case_sensitive=False), help="Server scope to disable in")
+@click.option("--dry-run", is_flag=True, help="Show what would be changed without making changes")
 @handle_errors
-def disable(name: str, scope: Optional[str]):
-    """Disable an MCP server."""
+def disable(name: str, scope: Optional[str], dry_run: bool):
+    """Disable an MCP server or all servers with 'all'."""
+    
+    # Handle 'all' argument
+    if name.lower() == "all":
+        async def disable_all_async():
+            try:
+                manager, context = cli_context.auto_sync_and_get_manager(silent=True)
+                console.print(f"[dim]Disabling all servers in: {context.description}[/dim]")
+                
+                if dry_run:
+                    console.print("[yellow]🔍 DRY RUN MODE - No changes will be made[/yellow]")
+                    console.print("")
+                
+                console.print("[blue]🎯 Disabling ALL servers[/blue]")
+                console.print("")
+                
+                # Get all servers
+                all_servers = await manager.list_servers()
+                
+                if not all_servers:
+                    console.print("[yellow]📭 No servers found to disable[/yellow]")
+                    return
+                
+                enabled_servers = [server for server in all_servers if server.enabled]
+                already_disabled = [server for server in all_servers if not server.enabled]
+                
+                console.print(f"[red]📦 Servers to DISABLE ({len(enabled_servers)}):[/red]")
+                for server in enabled_servers:
+                    console.print(f"  ❌ {server.name}")
+                
+                if already_disabled:
+                    console.print("")
+                    console.print(f"[dim]📦 Already disabled ({len(already_disabled)}):[/dim]")
+                    for server in already_disabled:
+                        console.print(f"  ➡️ {server.name}")
+                
+                if not dry_run:
+                    if enabled_servers:
+                        console.print("")
+                        from rich.prompt import Confirm
+                        if not Confirm.ask(f"[bold]Disable {len(enabled_servers)} servers?[/bold]"):
+                            console.print("[dim]Disable all cancelled[/dim]")
+                            return
+                        
+                        console.print("")
+                        console.print("[blue]🔄 Disabling servers...[/blue]")
+                        
+                        disabled_count = 0
+                        for server in enabled_servers:
+                            success = await manager.disable_server(server.name)
+                            if success:
+                                disabled_count += 1
+                                console.print(f"  [yellow]❌ Disabled: {server.name}[/yellow]")
+                            else:
+                                console.print(f"  [red]❌ Failed to disable: {server.name}[/red]")
+                        
+                        console.print("")
+                        console.print(f"[bold green]🎯 Disabled {disabled_count} of {len(enabled_servers)} servers![/bold green]")
+                    else:
+                        console.print("")
+                        console.print("[dim]All servers are already disabled[/dim]")
+                else:
+                    console.print("")
+                    console.print("[dim]Dry run complete - no changes made[/dim]")
+                    
+            except Exception as e:
+                console.print(f"[red]Failed to disable all servers: {e}[/red]")
+                import sys
+                sys.exit(1)
+        
+        asyncio.run(disable_all_async())
+        return
+    
+    # Handle single server disable
     manager = cli_context.get_manager()
     
     try:
