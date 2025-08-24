@@ -284,8 +284,7 @@ def list_cmd(scope: Optional[str], output_format: str):
     
     try:
         all_servers = asyncio.run(manager.list_servers())
-        # Filter out infrastructure components that users shouldn't see  
-        servers = [s for s in all_servers if not _is_infrastructure_server(s)]
+        servers = all_servers
         
         
         if output_format == "json":
