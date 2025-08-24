@@ -490,7 +490,7 @@ class ServerDiscovery:
                     description=server_info.get("description", f"Docker Desktop MCP server: {server_name}"),
                     server_type=ServerType.DOCKER_DESKTOP,
                     install_command="docker",
-                    install_args=["mcp", "server", "enable", server_name],
+                    install_args=["mcp", "gateway", "run", "--servers", server_name],
                     keywords=["mcp", "docker-desktop", server_name],
                 )
                 results.append(result)
