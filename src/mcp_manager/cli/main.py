@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import List, Optional
 
 import click
+from click.shell_completion import CompletionItem
 from rich.console import Console
 from rich.table import Table
 
@@ -55,6 +56,43 @@ def _is_infrastructure_server(server) -> bool:
     return False
 
 
+def complete_server_name(ctx, param, incomplete):
+    """Completion function for server names."""
+    try:
+        # Get the current CLI context and manager
+        cli_ctx = ctx.find_root().obj
+        if not cli_ctx:
+            cli_ctx = CLIContext()
+        
+        manager, _ = cli_ctx.auto_sync_and_get_manager(silent=True)
+        
+        # Get all servers asynchronously
+        import asyncio
+        try:
+            # Create new event loop if none exists (for completion context)
+            try:
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+            
+            servers = loop.run_until_complete(manager.list_servers())
+            
+            # Filter by incomplete input and return matching names
+            matching_names = [
+                server.name for server in servers 
+                if server.name.startswith(incomplete) and not _is_infrastructure_server(server)
+            ]
+            
+            return [CompletionItem(name) for name in sorted(matching_names)]
+            
+        except Exception:
+            # Fallback: return empty list if async fails
+            return []
+            
+    except Exception:
+        # If anything fails, return empty completion
+        return []
 
 
 class CLIContext:
@@ -623,7 +661,7 @@ def add(
 
 
 @cli.command("remove")
-@click.argument("name")
+@click.argument("name", shell_complete=complete_server_name)
 @click.option("--scope", type=click.Choice([s.value for s in ServerScope], case_sensitive=False), help="Server scope")
 @click.option("--force", "-f", is_flag=True, help="Skip confirmation prompt")
 @handle_errors
@@ -856,7 +894,7 @@ def nuke(force: bool, scope: Optional[str]):
 
 
 @cli.command("enable")
-@click.argument("name")
+@click.argument("name", shell_complete=complete_server_name)
 @click.option("--scope", type=click.Choice([s.value for s in ServerScope], case_sensitive=False), help="Server scope to enable in")
 @handle_errors
 def enable(name: str, scope: Optional[str]):
@@ -881,7 +919,7 @@ def enable(name: str, scope: Optional[str]):
 
 
 @cli.command("disable")
-@click.argument("name")
+@click.argument("name", shell_complete=complete_server_name)
 @click.option("--scope", type=click.Choice([s.value for s in ServerScope], case_sensitive=False), help="Server scope to disable in")
 @handle_errors
 def disable(name: str, scope: Optional[str]):
@@ -1141,7 +1179,7 @@ def activate_except_suite(suite_name: str, dry_run: bool):
 
 
 @cli.command("server-details")
-@click.argument("name")
+@click.argument("name", shell_complete=complete_server_name)
 @click.option("--scope", type=click.Choice([s.value for s in ServerScope], case_sensitive=False), help="Specify server scope for details")
 @handle_errors
 def server_details(name: str, scope: Optional[str]):
@@ -1271,12 +1309,66 @@ def register_commands():
 # Register all commands
 register_commands()
 
-# Add command aliases for shorter typing
+# Add command aliases for shorter typing (with completion support)
 cli.add_command(list_cmd, name="ls")  # mcpm ls
 cli.add_command(activate_suites, name="act")  # mcpm act
 cli.add_command(remove, name="rm")  # mcpm rm  
 cli.add_command(enable, name="en")  # mcpm en
 cli.add_command(disable, name="dis")  # mcpm dis
+
+
+@cli.command("install-completion")
+@click.argument("shell", required=False, type=click.Choice(["bash", "zsh", "fish"]))
+def install_completion(shell):
+    """Install shell completion for mcp-manager commands.
+    
+    Examples:
+        mcp-manager install-completion bash
+        mcp-manager install-completion zsh
+        mcp-manager install-completion fish
+        
+    Or auto-detect shell:
+        mcp-manager install-completion
+    """
+    if not shell:
+        # Auto-detect shell
+        import os
+        shell_path = os.environ.get("SHELL", "")
+        if "bash" in shell_path:
+            shell = "bash"
+        elif "zsh" in shell_path:
+            shell = "zsh"
+        elif "fish" in shell_path:
+            shell = "fish"
+        else:
+            console.print("[red]Could not detect shell. Please specify: bash, zsh, or fish[/red]")
+            sys.exit(1)
+    
+    console.print(f"[blue]Installing {shell} completion for mcp-manager...[/blue]")
+    
+    if shell == "bash":
+        console.print("\n[bold]Add this to your ~/.bashrc or ~/.bash_profile:[/bold]")
+        console.print("[green]eval \"$(_MCP_MANAGER_COMPLETE=bash_source mcp-manager)\"[/green]")
+        console.print("\nThen reload your shell or run:")
+        console.print("[dim]source ~/.bashrc[/dim]")
+        
+    elif shell == "zsh":
+        console.print("\n[bold]Add this to your ~/.zshrc:[/bold]")
+        console.print("[green]eval \"$(_MCP_MANAGER_COMPLETE=zsh_source mcp-manager)\"[/green]")
+        console.print("\nThen reload your shell or run:")
+        console.print("[dim]source ~/.zshrc[/dim]")
+        
+    elif shell == "fish":
+        console.print("\n[bold]Add this to your ~/.config/fish/completions/mcp-manager.fish:[/bold]")
+        console.print("[green]_MCP_MANAGER_COMPLETE=fish_source mcp-manager | source[/green]")
+        console.print("\nOr run this command to install automatically:")
+        console.print("[dim]_MCP_MANAGER_COMPLETE=fish_source mcp-manager > ~/.config/fish/completions/mcp-manager.fish[/dim]")
+    
+    console.print(f"\n[green]✅ {shell} completion setup instructions provided![/green]")
+    console.print("\n💡 After setup, you can use Tab to auto-complete server names:")
+    console.print("   [dim]mcp-manager remove <TAB>[/dim]")
+    console.print("   [dim]mcp-manager server-details <TAB>[/dim]")
+    console.print("   [dim]mcp-manager enable <TAB>[/dim]")
 
 
 def main():
