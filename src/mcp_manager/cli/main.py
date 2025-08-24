@@ -1319,19 +1319,21 @@ cli.add_command(disable, name="dis")  # mcpm dis
 
 @cli.command("install-completion")
 @click.argument("shell", required=False, type=click.Choice(["bash", "zsh", "fish"]))
-@click.option("--auto-install", "-y", is_flag=True, help="Automatically add to shell config file")
+@click.option("--auto-install", "-y", is_flag=True, help="Automatically install to appropriate completion directory")
 def install_completion(shell, auto_install):
-    """Install shell completion for mcp-manager commands.
+    """Install shell completion for mcp-manager commands using SECURE static files.
     
     This enables Tab completion for server names in commands like:
     - mcp-manager remove <TAB> 
     - mcp-manager enable <TAB>
     - mcp-manager server-details <TAB>
     
+    Uses static completion files instead of dangerous eval() for security.
+    
     Examples:
         mcp-manager install-completion          # Show manual instructions
-        mcp-manager install-completion -y       # Auto-install for detected shell
-        mcp-manager install-completion bash -y  # Auto-install for bash
+        mcp-manager install-completion -y       # Auto-install for current shell
+        mcp-manager install-completion zsh -y   # Auto-install for specific shell
     """
     if not shell:
         # Auto-detect shell
@@ -1347,94 +1349,125 @@ def install_completion(shell, auto_install):
             console.print("[red]Could not detect shell. Please specify: bash, zsh, or fish[/red]")
             sys.exit(1)
     
-    console.print(f"[blue]Setting up {shell} completion for mcp-manager...[/blue]")
+    console.print(f"[blue]Setting up SECURE {shell} completion for mcp-manager...[/blue]")
     
-    completion_line = f'eval "$(_MCP_MANAGER_COMPLETE={shell}_source mcp-manager)"'
+    # Generate static completion script (secure approach)
+    import subprocess
+    import os
+    try:
+        env = os.environ.copy()
+        env[f"_MCP_MANAGER_COMPLETE"] = f"{shell}_source"
+        
+        result = subprocess.run([
+            "mcp-manager"
+        ], env=env, capture_output=True, text=True, timeout=30)
+        
+        if result.returncode != 0:
+            console.print(f"[red]Failed to generate completion script: {result.stderr}[/red]")
+            return
+            
+        completion_script = result.stdout
+        
+    except Exception as e:
+        console.print(f"[red]Failed to generate completion: {e}[/red]")
+        return
     
     if shell == "bash":
-        config_file = Path.home() / ".bashrc"
-        console.print(f"\n[bold]Bash completion line:[/bold]")
-        console.print(f"[green]{completion_line}[/green]")
+        # Bash completion using bash-completion system
+        system_dir = Path("/usr/local/etc/bash_completion.d")
+        user_dir = Path.home() / ".local" / "share" / "bash-completion" / "completions"
+        completion_file = "mcp-manager"
+        
+        console.print(f"\n[bold]Bash completion (static file approach):[/bold]")
         
         if auto_install:
-            # Check if already installed
-            if config_file.exists():
-                content = config_file.read_text()
-                if completion_line in content:
-                    console.print(f"[yellow]Completion already installed in {config_file}[/yellow]")
-                else:
-                    with open(config_file, "a") as f:
-                        f.write(f"\n# MCP Manager completion\n{completion_line}\n")
-                    console.print(f"[green]✅ Added completion to {config_file}[/green]")
-            else:
-                config_file.write_text(f"# MCP Manager completion\n{completion_line}\n")
-                console.print(f"[green]✅ Created {config_file} with completion[/green]")
+            # Try system directory first, fall back to user directory
+            target_dir = system_dir if system_dir.exists() and os.access(system_dir, os.W_OK) else user_dir
+            target_dir.mkdir(parents=True, exist_ok=True)
+            target_file = target_dir / completion_file
+            
+            target_file.write_text(completion_script)
+            console.print(f"[green]✅ Installed completion to: {target_file}[/green]")
+            
         else:
             console.print(f"\n[bold]Manual installation:[/bold]")
-            console.print(f"Add the line above to your {config_file}")
-            console.print(f"Then run: [dim]source {config_file}[/dim]")
+            console.print(f"1. Save completion script to: {system_dir / completion_file}")
+            console.print(f"   Or user directory: {user_dir / completion_file}")
+            console.print(f"2. Ensure bash-completion is enabled")
+            console.print(f"3. Restart terminal")
         
     elif shell == "zsh":
-        config_file = Path.home() / ".zshrc"
-        console.print(f"\n[bold]Zsh completion line:[/bold]")
-        console.print(f"[green]{completion_line}[/green]")
+        # Zsh completion using fpath system (secure)
+        system_dir = Path("/usr/local/share/zsh/site-functions") 
+        user_dir = Path.home() / ".local" / "share" / "zsh" / "site-functions"
+        completion_file = "_mcp-manager"
+        
+        console.print(f"\n[bold]Zsh completion (secure fpath approach):[/bold]")
         
         if auto_install:
-            # Check if already installed
-            if config_file.exists():
-                content = config_file.read_text()
-                if completion_line in content:
-                    console.print(f"[yellow]Completion already installed in {config_file}[/yellow]")
-                else:
-                    with open(config_file, "a") as f:
-                        f.write(f"\n# MCP Manager completion\n{completion_line}\n")
-                    console.print(f"[green]✅ Added completion to {config_file}[/green]")
-            else:
-                config_file.write_text(f"# MCP Manager completion\n{completion_line}\n")
-                console.print(f"[green]✅ Created {config_file} with completion[/green]")
+            # Try system directory first, fall back to user directory  
+            target_dir = system_dir if system_dir.exists() and os.access(system_dir, os.W_OK) else user_dir
+            target_dir.mkdir(parents=True, exist_ok=True)
+            target_file = target_dir / completion_file
+            
+            target_file.write_text(completion_script)
+            console.print(f"[green]✅ Installed completion to: {target_file}[/green]")
+            
+            # Add to fpath if using user directory
+            if target_dir == user_dir:
+                zshrc = Path.home() / ".zshrc"
+                zshrc_content = zshrc.read_text() if zshrc.exists() else ""
+                
+                fpath_line = f"fpath=({user_dir} $fpath)"
+                if str(user_dir) not in zshrc_content:
+                    # Insert before compinit
+                    lines = zshrc_content.split('\n')
+                    compinit_index = next((i for i, line in enumerate(lines) if 'compinit' in line), len(lines))
+                    lines.insert(compinit_index, f"# MCP Manager completion")
+                    lines.insert(compinit_index + 1, fpath_line)
+                    
+                    zshrc.write_text('\n'.join(lines))
+                    console.print(f"[green]✅ Added {user_dir} to fpath in .zshrc[/green]")
+            
+            # Remove completion cache to force reload
+            zcompdump = Path.home() / ".zcompdump"
+            if zcompdump.exists():
+                zcompdump.unlink()
+                console.print("[green]✅ Cleared completion cache[/green]")
+                
         else:
             console.print(f"\n[bold]Manual installation:[/bold]")
-            console.print(f"Add the line above to your {config_file}")
-            console.print(f"Then run: [dim]source {config_file}[/dim]")
+            console.print(f"1. Save completion script to: {system_dir / completion_file}")
+            console.print(f"   Or user directory: {user_dir / completion_file}")
+            console.print(f"2. If using user dir, add to .zshrc before compinit:")
+            console.print(f"   [dim]fpath=({user_dir} $fpath)[/dim]")
+            console.print(f"3. Remove ~/.zcompdump and restart zsh")
         
     elif shell == "fish":
-        config_dir = Path.home() / ".config" / "fish" / "completions"
-        config_file = config_dir / "mcp-manager.fish"
-        fish_line = "_MCP_MANAGER_COMPLETE=fish_source mcp-manager | source"
+        # Fish completion (already secure by design)
+        completion_dir = Path.home() / ".config" / "fish" / "completions"
+        completion_file = completion_dir / "mcp-manager.fish"
         
-        console.print(f"\n[bold]Fish completion:[/bold]")
-        console.print(f"[green]{fish_line}[/green]")
+        console.print(f"\n[bold]Fish completion (secure by design):[/bold]")
         
         if auto_install:
-            config_dir.mkdir(parents=True, exist_ok=True)
-            if config_file.exists():
-                console.print(f"[yellow]Completion file already exists: {config_file}[/yellow]")
+            completion_dir.mkdir(parents=True, exist_ok=True)
+            if completion_file.exists():
+                console.print(f"[yellow]Completion file already exists: {completion_file}[/yellow]")
             else:
-                import subprocess
-                try:
-                    result = subprocess.run(
-                        ["_MCP_MANAGER_COMPLETE=fish_source", "mcp-manager"],
-                        shell=True, capture_output=True, text=True
-                    )
-                    config_file.write_text(result.stdout)
-                    console.print(f"[green]✅ Created fish completion file: {config_file}[/green]")
-                except Exception as e:
-                    console.print(f"[red]Failed to create fish completion: {e}[/red]")
-                    console.print(f"[yellow]Please run manually: {fish_line} > {config_file}[/yellow]")
+                completion_file.write_text(completion_script)
+                console.print(f"[green]✅ Created fish completion: {completion_file}[/green]")
         else:
             console.print(f"\n[bold]Manual installation:[/bold]")
-            console.print(f"Run: [dim]{fish_line} > {config_file}[/dim]")
+            console.print(f"Save completion script to: {completion_file}")
     
     if auto_install:
-        console.print(f"\n[green]✅ {shell} completion installed![/green]")
-        console.print("\n[bold]Restart your shell or run:[/bold]")
-        if shell in ["bash", "zsh"]:
-            console.print(f"[dim]source {config_file}[/dim]")
-        else:
-            console.print("[dim]Open a new terminal window[/dim]")
+        console.print(f"\n[green]✅ SECURE {shell} completion installed![/green]")
+        console.print("\n[bold]Restart your terminal to activate completion[/bold]")
     else:
         console.print(f"\n[green]✅ {shell} completion setup instructions provided![/green]")
     
+    console.print(f"\n[yellow]🛡️  Security Note: Uses static completion files instead of dangerous eval()[/yellow]")
     console.print("\n💡 [bold]After installation, you can use Tab completion:[/bold]")
     console.print("   [dim]mcp-manager remove <TAB>           # Shows all server names[/dim]")
     console.print("   [dim]mcp-manager remove not<TAB>        # Shows notionhq-notion-mcp-server[/dim]")
