@@ -210,3 +210,94 @@ class CLIBridge:
         except Exception as e:
             logger.error(f"Error getting config info: {e}")
             return {}
+    
+    # Suite Management Methods
+    async def get_suites(self) -> Dict[str, Dict[str, Any]]:
+        """Get all available suites."""
+        try:
+            # This would integrate with the suite management system
+            # For now, return some example suites
+            return {
+                "development": {
+                    "name": "development",
+                    "category": "Development",
+                    "description": "Development tools suite",
+                    "servers": [],
+                    "priority": 50
+                }
+            }
+        except Exception as e:
+            logger.error(f"Error getting suites: {e}")
+            return {}
+    
+    async def create_suite(self, name: str, category: str = "", description: str = "", priority: int = 50) -> bool:
+        """Create a new suite."""
+        try:
+            # This would create a new suite via the CLI system
+            logger.info(f"Creating suite '{name}' in category '{category}'")
+            return True
+        except Exception as e:
+            logger.error(f"Error creating suite '{name}': {e}")
+            return False
+    
+    async def delete_suite(self, suite_name: str) -> bool:
+        """Delete a suite."""
+        try:
+            # This would delete a suite via the CLI system
+            logger.info(f"Deleting suite '{suite_name}'")
+            return True
+        except Exception as e:
+            logger.error(f"Error deleting suite '{suite_name}': {e}")
+            return False
+    
+    async def update_suite(self, name: str, category: str, description: str, priority: int) -> bool:
+        """Update suite information."""
+        try:
+            # This would update suite information via the CLI system
+            logger.info(f"Updating suite '{name}'")
+            return True
+        except Exception as e:
+            logger.error(f"Error updating suite '{name}': {e}")
+            return False
+    
+    async def install_suite(self, suite_name: str, dry_run: bool = False, scope: str = "user") -> bool:
+        """Install all servers in a suite."""
+        try:
+            # This would install all servers in the suite
+            action = "Installing" if not dry_run else "Previewing installation of"
+            logger.info(f"{action} suite '{suite_name}' in scope '{scope}'")
+            return True
+        except Exception as e:
+            logger.error(f"Error installing suite '{suite_name}': {e}")
+            return False
+    
+    async def enable_suite(self, suite_name: str) -> bool:
+        """Enable all servers in a suite."""
+        try:
+            # This would enable all servers in the suite
+            logger.info(f"Enabling suite '{suite_name}'")
+            return True
+        except Exception as e:
+            logger.error(f"Error enabling suite '{suite_name}': {e}")
+            return False
+    
+    async def disable_suite(self, suite_name: str) -> bool:
+        """Disable all servers in a suite."""
+        try:
+            # This would disable all servers in the suite
+            logger.info(f"Disabling suite '{suite_name}'")
+            return True
+        except Exception as e:
+            logger.error(f"Error disabling suite '{suite_name}': {e}")
+            return False
+    
+    # Discovery Enhancement Methods
+    async def update_discovery_catalog(self) -> bool:
+        """Update the discovery catalog with latest information."""
+        try:
+            # This would update the discovery catalog
+            logger.info("Updating discovery catalog")
+            return True
+        except Exception as e:
+            logger.error(f"Error updating discovery catalog: {e}")
+            return False

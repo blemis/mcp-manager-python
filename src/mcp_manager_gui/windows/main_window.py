@@ -486,6 +486,18 @@ class MainWindow(QMainWindow):
         cleanup_action.triggered.connect(self._cleanup_config)
         tools_menu.addAction(cleanup_action)
         
+        tools_menu.addSeparator()
+        
+        suite_manager_action = QAction("Suite Manager...", self)
+        suite_manager_action.setShortcut(QKeySequence("Cmd+Shift+S"))
+        suite_manager_action.triggered.connect(self._show_suite_manager)
+        tools_menu.addAction(suite_manager_action)
+        
+        preferences_action = QAction("Preferences...", self)
+        preferences_action.setShortcut(QKeySequence("Cmd+,"))
+        preferences_action.triggered.connect(self._show_preferences)
+        tools_menu.addAction(preferences_action)
+        
         # Window menu
         window_menu = menubar.addMenu("Window")
         
@@ -641,30 +653,65 @@ class MainWindow(QMainWindow):
     
     def _configure_current_server(self):
         """Configure the currently selected server."""
-        # TODO: Implement configuration dialog
-        QMessageBox.information(
-            self, 
-            "Configure Server", 
-            "Server configuration dialog will be implemented in a future version."
-        )
+        if not hasattr(self.main_panel, 'current_server') or not self.main_panel.current_server:
+            QMessageBox.warning(
+                self,
+                "No Selection",
+                "Please select a server to configure."
+            )
+            return
+        
+        server_data = self.main_panel.current_server
+        
+        from .server_detail import EditServerDialog
+        dialog = EditServerDialog(self, self.cli_bridge, server_data)
+        dialog.server_updated.connect(self._on_server_updated)
+        dialog.exec()
     
     def _show_add_server_dialog(self):
         """Show the add server dialog."""
-        # TODO: Implement add server dialog
-        QMessageBox.information(
-            self, 
-            "Add Server", 
-            "Add server dialog will be implemented in a future version."
-        )
+        from .server_detail import AddServerDialog
+        dialog = AddServerDialog(self, self.cli_bridge)
+        dialog.server_added.connect(self._on_server_added)
+        dialog.exec()
     
     def _show_discovery_window(self):
         """Show the server discovery window."""
-        # TODO: Implement discovery window
-        QMessageBox.information(
-            self, 
-            "Discover Servers", 
-            "Server discovery window will be implemented in a future version."
-        )
+        from .discovery_window import DiscoveryWindow
+        
+        # Create discovery window as a separate window
+        discovery_window = DiscoveryWindow(self, self.cli_bridge)
+        discovery_window.server_installed.connect(self._on_server_installed)
+        discovery_window.show()
+        discovery_window.raise_()
+        discovery_window.activateWindow()
+    
+    def _on_server_added(self, server_data):
+        """Handle server addition."""
+        try:
+            self.statusBar().showMessage(f"Server '{server_data['name']}' added successfully", 3000)
+            # Refresh server list
+            asyncio.run(self._refresh_server_list())
+        except Exception as e:
+            logger.error(f"Error handling server addition: {e}")
+    
+    def _on_server_updated(self, server_data):
+        """Handle server update."""
+        try:
+            self.statusBar().showMessage(f"Server '{server_data['name']}' updated successfully", 3000)
+            # Refresh server list
+            asyncio.run(self._refresh_server_list())
+        except Exception as e:
+            logger.error(f"Error handling server update: {e}")
+    
+    def _on_server_installed(self, server_data):
+        """Handle server installation from discovery."""
+        try:
+            self.statusBar().showMessage(f"Server installed successfully", 3000)
+            # Refresh server list
+            asyncio.run(self._refresh_server_list())
+        except Exception as e:
+            logger.error(f"Error handling server installation: {e}")
     
     def _cleanup_config(self):
         """Cleanup configuration."""
@@ -701,6 +748,38 @@ class MainWindow(QMainWindow):
         """
         
         QMessageBox.about(self, "About MCP Manager", about_text)
+    
+    def _show_suite_manager(self):
+        """Show the suite manager window."""
+        from .suite_manager import SuiteManagerWindow
+        
+        # Create suite manager as a separate window
+        suite_manager = SuiteManagerWindow(self, self.cli_bridge)
+        suite_manager.show()
+        suite_manager.raise_()
+        suite_manager.activateWindow()
+    
+    def _show_preferences(self):
+        """Show the preferences dialog."""
+        from .preferences import PreferencesDialog
+        
+        dialog = PreferencesDialog(self, self.cli_bridge)
+        dialog.settings_changed.connect(self._on_settings_changed)
+        dialog.exec()
+    
+    def _on_settings_changed(self, settings):
+        """Handle settings changes."""
+        try:
+            # Apply any immediate UI changes based on settings
+            self.statusBar().showMessage("Settings applied successfully", 2000)
+            
+            # Update refresh intervals if they changed
+            if 'server_refresh_interval' in settings:
+                interval = settings['server_refresh_interval'] * 1000  # Convert to milliseconds
+                self.refresh_timer.setInterval(interval)
+            
+        except Exception as e:
+            logger.error(f"Error applying settings: {e}")
     
     def closeEvent(self, event):
         """Handle window close event."""
