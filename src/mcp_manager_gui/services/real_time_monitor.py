@@ -365,7 +365,7 @@ class RealTimeMonitor(QObject):
         # Emit signal for UI updates
         self.server_metrics_updated.emit(server_name, metrics)
     
-    @pyqtSlot(str, str)
+    @Slot(str, str)
     def _on_monitoring_error(self, error_type: str, message: str):
         """Handle monitoring error from worker."""
         self.errors_count += 1
