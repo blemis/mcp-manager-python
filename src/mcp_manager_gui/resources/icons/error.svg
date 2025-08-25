@@ -1,0 +1,8 @@
+<svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+  <!-- Error icon -->
+  <circle cx="8" cy="8" r="6" fill="none" stroke="#FF3B30" stroke-width="1.5"/>
+  <g stroke="#FF3B30" stroke-width="1.5" stroke-linecap="round">
+    <line x1="6" y1="6" x2="10" y2="10"/>
+    <line x1="10" y1="6" x2="6" y2="10"/>
+  </g>
+</svg>

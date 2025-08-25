@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any, Callable
 from enum import Enum
 
-from PySide6.QtCore import QObject, QTimer, QThread, Signal, pyqtSlot
+from PySide6.QtCore import QObject, QTimer, QThread, Signal, Slot
 from PySide6.QtWidgets import QApplication
 
 from mcp_manager.core.models import Server, ServerStatus, ServerType
@@ -344,7 +344,7 @@ class RealTimeMonitor(QObject):
             self.worker.server_metrics_updated.connect(self._on_server_metrics_updated)
             self.worker.monitoring_error.connect(self._on_monitoring_error)
     
-    @pyqtSlot(str, str)
+    @Slot(str, str)
     def _on_server_status_changed(self, server_name: str, status: str):
         """Handle server status change from worker."""
         logger.debug(f"Server status changed: {server_name} -> {status}")
@@ -356,7 +356,7 @@ class RealTimeMonitor(QObject):
         # Emit signal for UI updates
         self.server_status_changed.emit(server_name, status)
     
-    @pyqtSlot(str, dict)
+    @Slot(str, dict)
     def _on_server_metrics_updated(self, server_name: str, metrics: Dict[str, Any]):
         """Handle server metrics update from worker."""
         # Update local cache

@@ -1,0 +1,30 @@
+<svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+  <!-- Docker icon -->
+  <defs>
+    <linearGradient id="dockerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2496ED;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0DB7ED;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Docker container blocks -->
+  <rect x="2" y="8" width="2.5" height="2" fill="url(#dockerGradient)"/>
+  <rect x="5" y="8" width="2.5" height="2" fill="url(#dockerGradient)"/>
+  <rect x="8" y="8" width="2.5" height="2" fill="url(#dockerGradient)"/>
+  <rect x="11" y="8" width="2.5" height="2" fill="url(#dockerGradient)"/>
+  
+  <rect x="8" y="5.5" width="2.5" height="2" fill="url(#dockerGradient)"/>
+  <rect x="11" y="5.5" width="2.5" height="2" fill="url(#dockerGradient)"/>
+  
+  <rect x="11" y="3" width="2.5" height="2" fill="url(#dockerGradient)"/>
+  
+  <!-- Docker whale -->
+  <path d="M14.5 8.5 C15.5 8.5 16.5 9 17 9.5 C17.2 9.2 17.5 9 18 9 C17.8 8.5 17.5 8.2 17 8 C16.8 7.5 16.2 7.2 15.5 7.5 C15.2 7.8 15 8.1 14.5 8.5 Z" 
+        fill="url(#dockerGradient)"/>
+  
+  <!-- Water waves -->
+  <path d="M1 11 Q3 10.5 5 11 T9 11 T13 11 T17 11 T19 11" 
+        fill="none" stroke="url(#dockerGradient)" stroke-width="1" opacity="0.6"/>
+  <path d="M1 12.5 Q2.5 12 4 12.5 T7 12.5 T10 12.5 T13 12.5 T16 12.5 T19 12.5" 
+        fill="none" stroke="url(#dockerGradient)" stroke-width="0.8" opacity="0.4"/>
+</svg>

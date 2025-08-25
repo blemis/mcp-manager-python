@@ -1,0 +1,33 @@
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <!-- Online server status icon -->
+  <defs>
+    <linearGradient id="onlineGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#30D158;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#28A745;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Server box -->
+  <rect x="2" y="6" width="20" height="12" rx="2" ry="2" 
+        fill="url(#onlineGradient)" stroke="none"/>
+  
+  <!-- Server details -->
+  <rect x="4" y="8" width="2" height="1" rx="0.5" fill="white" opacity="0.8"/>
+  <rect x="4" y="10" width="2" height="1" rx="0.5" fill="white" opacity="0.8"/>
+  <rect x="4" y="12" width="2" height="1" rx="0.5" fill="white" opacity="0.8"/>
+  <rect x="4" y="14" width="2" height="1" rx="0.5" fill="white" opacity="0.8"/>
+  
+  <!-- Status indicator -->
+  <circle cx="18" cy="10" r="2" fill="white"/>
+  <circle cx="18" cy="10" r="1" fill="#30D158"/>
+  
+  <!-- Connection indicator -->
+  <g fill="white" opacity="0.9">
+    <circle cx="8" cy="4" r="1"/>
+    <circle cx="10" cy="4" r="1"/>
+    <circle cx="12" cy="4" r="1"/>
+    <line x1="8" y1="5" x2="8" y2="6" stroke="white" stroke-width="0.5"/>
+    <line x1="10" y1="5" x2="10" y2="6" stroke="white" stroke-width="0.5"/>
+    <line x1="12" y1="5" x2="12" y2="6" stroke="white" stroke-width="0.5"/>
+  </g>
+</svg>
