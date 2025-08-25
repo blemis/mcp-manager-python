@@ -135,9 +135,8 @@ class AddServerDialog(QDialog):
         
         self.tab_widget.addTab(tab, "Manual Configuration")
         
-        # Connect type change to update form
+        # Connect type change to update form (after buttons are created)
         self.server_type.currentTextChanged.connect(self.update_form_for_type)
-        self.update_form_for_type("npm")
     
     def create_npm_config(self):
         """Create NPM server configuration section."""
@@ -372,7 +371,8 @@ class AddServerDialog(QDialog):
         self.discovery_list.itemSelectionChanged.connect(self.show_server_details)
         self.install_from_discovery_btn.clicked.connect(self.install_from_discovery)
         
-        # Initial validation
+        # Initial form setup and validation
+        self.update_form_for_type("npm")
         self.validate_form()
     
     def setup_preview_connections(self):

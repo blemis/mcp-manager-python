@@ -16,7 +16,7 @@ from PySide6.QtCore import QTimer, QSettings, Qt
 from PySide6.QtGui import QIcon, QPalette
 
 from mcp_manager.utils.logging import get_logger
-from .windows.main_window import MainWindow
+from .windows.main_window_modern import ModernMainWindow as MainWindow
 from .services.cli_bridge import CLIBridge
 
 
@@ -30,11 +30,24 @@ class MCPManagerApp(QApplication):
         """Initialize the MCP Manager application."""
         super().__init__(argv)
         
-        # Set application metadata
+        # Set application metadata (fixes macOS menu to show "MCP Manager" not "Python")
         self.setApplicationName("MCP Manager")
+        self.setApplicationDisplayName("MCP Manager") 
         self.setApplicationVersion("2.0.0")
         self.setOrganizationName("MCP Manager")
         self.setOrganizationDomain("mcp-manager.dev")
+        
+        # Fix macOS app name in menu bar
+        try:
+            import Foundation
+            bundle = Foundation.NSBundle.mainBundle()
+            info = bundle.localizedInfoDictionary() or bundle.infoDictionary()
+            if info:
+                info['CFBundleName'] = 'MCP Manager'
+                info['CFBundleDisplayName'] = 'MCP Manager'
+        except ImportError:
+            # Foundation not available on non-macOS systems
+            pass
         
         # Initialize components
         self.cli_bridge: Optional[CLIBridge] = None
@@ -140,8 +153,8 @@ class MCPManagerApp(QApplication):
     def create_main_window(self) -> None:
         """Create and show the main application window."""
         try:
-            # Create main window
-            self.main_window = MainWindow(self.cli_bridge, parent=None)
+            # Create main window (ModernMainWindow creates its own CLI bridge)
+            self.main_window = MainWindow()
             
             # Restore window geometry if available
             self._restore_window_state()
