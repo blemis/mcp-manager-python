@@ -522,9 +522,11 @@ class SimpleMCPManager:
         import subprocess
         
         try:
-            # Extract the actual server name (remove docker-desktop- prefix if present)
+            # Extract the actual server name (remove dd- or docker-desktop- prefix if present)
             if name.startswith("docker-desktop-"):
                 server_name = name.replace("docker-desktop-", "")
+            elif name.startswith("dd-"):
+                server_name = name.replace("dd-", "")
             else:
                 server_name = name
             
@@ -656,9 +658,11 @@ class SimpleMCPManager:
         import subprocess
         
         try:
-            # Extract the actual server name (remove docker-desktop- prefix if present)
+            # Extract the actual server name (remove dd- or docker-desktop- prefix if present)
             if name.startswith("docker-desktop-"):
                 server_name = name.replace("docker-desktop-", "")
+            elif name.startswith("dd-"):
+                server_name = name.replace("dd-", "")
             else:
                 server_name = name
             
@@ -2024,9 +2028,11 @@ class SimpleMCPManager:
         import subprocess
         
         try:
-            # Extract the actual server name (remove docker-desktop- prefix if present)
+            # Extract the actual server name (remove dd- or docker-desktop- prefix if present)
             if name.startswith("docker-desktop-"):
                 server_name = name.replace("docker-desktop-", "")
+            elif name.startswith("dd-"):
+                server_name = name.replace("dd-", "")
             else:
                 server_name = name
             
@@ -2065,9 +2071,11 @@ class SimpleMCPManager:
         import subprocess
         
         try:
-            # Extract the actual server name (remove docker-desktop- prefix if present)
+            # Extract the actual server name (remove dd- or docker-desktop- prefix if present)
             if name.startswith("docker-desktop-"):
                 server_name = name.replace("docker-desktop-", "")
+            elif name.startswith("dd-"):
+                server_name = name.replace("dd-", "")
             else:
                 server_name = name
             
