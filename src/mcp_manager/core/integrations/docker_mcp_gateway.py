@@ -126,11 +126,11 @@ class DockerMCPGatewayClient:
     async def _start_gateway_process(self):
         """Start the Docker MCP Gateway HTTP server process."""
         try:
-            # Start the gateway in HTTP server mode
+            # Start the gateway in HTTP server mode with all available servers
             cmd = [
-                "docker", "mcp", "gateway", "serve", 
+                "docker", "mcp", "gateway", "run",
                 "--port", str(self.port),
-                "--host", self.host
+                "--servers", "Ref,SQLite,filesystem"  # Enable all available DD servers
             ]
             
             logger.debug(f"Starting gateway with command: {' '.join(cmd)}")
@@ -141,8 +141,8 @@ class DockerMCPGatewayClient:
                 text=True
             )
             
-            # Give it a moment to start
-            await asyncio.sleep(2)
+            # Give it more time to start (Gateway needs to pull images potentially)
+            await asyncio.sleep(5)
             
         except Exception as e:
             logger.error(f"Failed to start gateway process: {e}")

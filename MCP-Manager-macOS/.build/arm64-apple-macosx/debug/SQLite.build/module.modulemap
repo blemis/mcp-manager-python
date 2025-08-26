@@ -1,0 +1,4 @@
+module SQLite {
+    header "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/SQLite-Swift.h"
+    requires objc
+}

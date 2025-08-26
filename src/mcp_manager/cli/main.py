@@ -376,9 +376,38 @@ def list_cmd(scope: Optional[str], output_format: str):
                 # If Claude status check fails, continue without it
                 pass
             
+            # Get real-time status using polymorphic handlers
+            real_status = {}
+            try:
+                async def get_real_status():
+                    result = {}
+                    for server in servers:
+                        try:
+                            status = await manager.handler_factory.get_server_status(server)
+                            result[server.name] = status
+                        except Exception as e:
+                            logger.debug(f"Failed to get status for {server.name}: {e}")
+                            result[server.name] = "error"
+                    return result
+                
+                real_status = asyncio.run(get_real_status())
+            except Exception as e:
+                logger.debug(f"Failed to get real-time status: {e}")
+                # Fall back to database status
+                real_status = {server.name: ("enabled" if server.enabled else "disabled") for server in servers}
+            
             for server in servers:
-                # Separate status columns: database status and Claude status
-                db_status = "✅ Enabled" if server.enabled else "❌ Disabled"
+                # Use real-time status from handlers instead of database enabled flag
+                server_status = real_status.get(server.name, "unknown")
+                if server_status == "enabled":
+                    db_status = "✅ Enabled"
+                elif server_status == "disabled":
+                    db_status = "❌ Disabled"
+                elif server_status == "error":
+                    db_status = "⚠️ Error"
+                else:
+                    db_status = f"❓ {server_status.title()}"
+                
                 claude_conn = claude_status.get(server.name, "Not in Claude")
                 
                 # Claude status should reflect actual Claude state, not database state

@@ -1,0 +1,1939 @@
+{
+  "builtTestProducts" : [
+    {
+      "binaryPath" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP-Manager-macOSPackageTests.xctest/Contents/MacOS/MCP-Manager-macOSPackageTests",
+      "packagePath" : "/Users/jestes/mcp-manager/MCP-Manager-macOS",
+      "productName" : "MCP-Manager-macOSPackageTests"
+    }
+  ],
+  "copyCommands" : {
+
+  },
+  "explicitTargetDependencyImportCheckingMode" : {
+    "none" : {
+
+    }
+  },
+  "generatedSourceTargetSet" : [
+
+  ],
+  "pluginDescriptions" : [
+
+  ],
+  "swiftCommands" : {
+    "C.MCP-Manager-macOS-arm64-apple-macosx16.0-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/sources",
+      "importPath" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/App.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Database/DatabaseManager.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Database/OptimizedDatabaseManager.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Models/MCPServer.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Services/MCPServerService.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/AddServerSheet.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/ContentView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/EditServerSheet.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/PreferencesView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/ServerDetailView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/ServerListView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/ServerLogsView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/Modules/SQLite.swiftmodule"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/sources"
+        }
+      ],
+      "isLibrary" : false,
+      "moduleName" : "MCP_Manager_macOS",
+      "moduleOutputPath" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/Modules/MCP_Manager_macOS.swiftmodule",
+      "objects" : [
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/App.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/DatabaseManager.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/OptimizedDatabaseManager.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/MCPServer.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/MCPServerService.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/AddServerSheet.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/ContentView.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/EditServerSheet.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/PreferencesView.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/ServerDetailView.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/ServerListView.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/ServerLogsView.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx14.0",
+        "-enable-batch-mode",
+        "-index-store-path",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-j12",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-module-cache-path",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-Xfrontend",
+        "-entry-point-function-name",
+        "-Xfrontend",
+        "MCP_Manager_macOS_main",
+        "-swift-version",
+        "5",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "mcp_manager_macos"
+      ],
+      "outputFileMapPath" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/App.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/DatabaseManager.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/OptimizedDatabaseManager.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/MCPServer.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/MCPServerService.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/AddServerSheet.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/ContentView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/EditServerSheet.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/PreferencesView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/ServerDetailView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/ServerListView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/ServerLogsView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/Modules/MCP_Manager_macOS.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/App.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Database/DatabaseManager.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Database/OptimizedDatabaseManager.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Models/MCPServer.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Services/MCPServerService.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/AddServerSheet.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/ContentView.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/EditServerSheet.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/PreferencesView.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/ServerDetailView.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/ServerListView.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/ServerLogsView.swift"
+      ],
+      "tempsPath" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build",
+      "wholeModuleOptimization" : false
+    },
+    "C.MCP-Manager-macOSPackageTests-arm64-apple-macosx16.0-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOSPackageTests.build/sources",
+      "importPath" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP-Manager-macOSPackageTests.derived/runner.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/Modules/MCP_Manager_macOSTests.swiftmodule"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOSPackageTests.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "MCP_Manager_macOSPackageTests",
+      "moduleOutputPath" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/Modules/MCP_Manager_macOSPackageTests.swiftmodule",
+      "objects" : [
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOSPackageTests.build/runner.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx14.0",
+        "-enable-batch-mode",
+        "-index-store-path",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-Xfrontend",
+        "-enable-cross-import-overlays",
+        "-j12",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-module-cache-path",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-emit-objc-header",
+        "-emit-objc-header-path",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOSPackageTests.build/MCP-Manager-macOSPackageTests-Swift.h",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "mcp_manager_macos"
+      ],
+      "outputFileMapPath" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOSPackageTests.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOSPackageTests.build/runner.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/Modules/MCP_Manager_macOSPackageTests.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP-Manager-macOSPackageTests.derived/runner.swift"
+      ],
+      "tempsPath" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOSPackageTests.build",
+      "wholeModuleOptimization" : false
+    },
+    "C.MCP-Manager-macOSTests-arm64-apple-macosx16.0-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOSTests.build/sources",
+      "importPath" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/Tests/DatabaseConcurrencyTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/Tests/DatabaseManagerTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP-Manager-macOS"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOSTests.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "MCP_Manager_macOSTests",
+      "moduleOutputPath" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/Modules/MCP_Manager_macOSTests.swiftmodule",
+      "objects" : [
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOSTests.build/DatabaseConcurrencyTests.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOSTests.build/DatabaseManagerTests.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx14.0",
+        "-enable-batch-mode",
+        "-index-store-path",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-Xfrontend",
+        "-enable-cross-import-overlays",
+        "-j12",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-module-cache-path",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-swift-version",
+        "5",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "mcp_manager_macos"
+      ],
+      "outputFileMapPath" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOSTests.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOSTests.build/DatabaseConcurrencyTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOSTests.build/DatabaseManagerTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/Modules/MCP_Manager_macOSTests.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/Tests/DatabaseConcurrencyTests.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/Tests/DatabaseManagerTests.swift"
+      ],
+      "tempsPath" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOSTests.build",
+      "wholeModuleOptimization" : false
+    },
+    "C.SQLite-arm64-apple-macosx16.0-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/sources",
+      "importPath" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/Backup.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/Blob.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/Connection+Aggregation.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/Connection+Attach.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/Connection+Pragmas.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/Connection.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/Errors.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/Result.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/SQLiteFeature.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/SQLiteVersion.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/Statement.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/URIQueryParameter.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/Value.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Extensions/Cipher.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Extensions/FTS4.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Extensions/FTS5.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Extensions/RTree.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Foundation.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Helpers.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Schema/Connection+Schema.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Schema/SchemaChanger.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Schema/SchemaDefinitions.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Schema/SchemaReader.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/AggregateFunctions.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/Coding.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/Collation.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/CoreFunctions.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/CustomFunctions.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/DateAndTimeFunctions.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/Expression.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/Operators.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/Query+with.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/Query.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/Schema.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/Setter.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/WindowFunctions.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "SQLite",
+      "moduleOutputPath" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/Modules/SQLite.swiftmodule",
+      "objects" : [
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Backup.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Blob.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Connection+Aggregation.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Connection+Attach.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Connection+Pragmas.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Connection.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Errors.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Result.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/SQLiteFeature.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/SQLiteVersion.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Statement.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/URIQueryParameter.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Value.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Cipher.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/FTS4.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/FTS5.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/RTree.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Foundation.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Helpers.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Connection+Schema.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/SchemaChanger.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/SchemaDefinitions.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/SchemaReader.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/AggregateFunctions.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Coding.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Collation.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/CoreFunctions.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/CustomFunctions.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/DateAndTimeFunctions.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Expression.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Operators.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Query+with.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Query.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Schema.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Setter.swift.o",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/WindowFunctions.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "arm64-apple-macosx10.13",
+        "-enable-batch-mode",
+        "-index-store-path",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-j12",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-module-cache-path",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-emit-objc-header",
+        "-emit-objc-header-path",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/SQLite-Swift.h",
+        "-swift-version",
+        "5",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-suppress-warnings",
+        "-package-name",
+        "sqlite_swift"
+      ],
+      "outputFileMapPath" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Backup.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Blob.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Connection+Aggregation.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Connection+Attach.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Connection+Pragmas.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Connection.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Errors.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Result.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/SQLiteFeature.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/SQLiteVersion.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Statement.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/URIQueryParameter.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Value.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Cipher.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/FTS4.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/FTS5.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/RTree.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Foundation.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Helpers.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Connection+Schema.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/SchemaChanger.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/SchemaDefinitions.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/SchemaReader.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/AggregateFunctions.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Coding.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Collation.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/CoreFunctions.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/CustomFunctions.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/DateAndTimeFunctions.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Expression.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Operators.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Query+with.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Query.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Schema.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Setter.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/WindowFunctions.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/Modules/SQLite.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/Backup.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/Blob.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/Connection+Aggregation.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/Connection+Attach.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/Connection+Pragmas.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/Connection.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/Errors.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/Result.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/SQLiteFeature.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/SQLiteVersion.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/Statement.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/URIQueryParameter.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/Value.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Extensions/Cipher.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Extensions/FTS4.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Extensions/FTS5.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Extensions/RTree.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Foundation.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Helpers.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Schema/Connection+Schema.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Schema/SchemaChanger.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Schema/SchemaDefinitions.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Schema/SchemaReader.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/AggregateFunctions.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/Coding.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/Collation.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/CoreFunctions.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/CustomFunctions.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/DateAndTimeFunctions.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/Expression.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/Operators.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/Query+with.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/Query.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/Schema.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/Setter.swift",
+        "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/WindowFunctions.swift"
+      ],
+      "tempsPath" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build",
+      "wholeModuleOptimization" : false
+    }
+  },
+  "swiftFrontendCommands" : {
+
+  },
+  "swiftTargetScanArgs" : {
+    "MCP_Manager_macOS" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "MCP_Manager_macOS",
+      "-package-name",
+      "mcp_manager_macos",
+      "-incremental",
+      "-c",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/App.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Database/DatabaseManager.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Database/OptimizedDatabaseManager.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Models/MCPServer.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Services/MCPServerService.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/AddServerSheet.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/ContentView.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/EditServerSheet.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/PreferencesView.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/ServerDetailView.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/ServerListView.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/ServerLogsView.swift",
+      "-I",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx14.0",
+      "-enable-batch-mode",
+      "-index-store-path",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-j12",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-module-cache-path",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-Xfrontend",
+      "-entry-point-function-name",
+      "-Xfrontend",
+      "MCP_Manager_macOS_main",
+      "-swift-version",
+      "5",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "mcp_manager_macos",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ],
+    "MCP_Manager_macOSPackageTests" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "MCP_Manager_macOSPackageTests",
+      "-package-name",
+      "mcp_manager_macos",
+      "-incremental",
+      "-c",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP-Manager-macOSPackageTests.derived/runner.swift",
+      "-I",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx14.0",
+      "-enable-batch-mode",
+      "-index-store-path",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-Xfrontend",
+      "-enable-cross-import-overlays",
+      "-j12",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-module-cache-path",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-emit-objc-header",
+      "-emit-objc-header-path",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOSPackageTests.build/MCP-Manager-macOSPackageTests-Swift.h",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "mcp_manager_macos",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ],
+    "MCP_Manager_macOSTests" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "MCP_Manager_macOSTests",
+      "-package-name",
+      "mcp_manager_macos",
+      "-incremental",
+      "-c",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/Tests/DatabaseConcurrencyTests.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/Tests/DatabaseManagerTests.swift",
+      "-I",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx14.0",
+      "-enable-batch-mode",
+      "-index-store-path",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-Xfrontend",
+      "-enable-cross-import-overlays",
+      "-j12",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-module-cache-path",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-swift-version",
+      "5",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "mcp_manager_macos",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ],
+    "SQLite" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "SQLite",
+      "-package-name",
+      "sqlite_swift",
+      "-incremental",
+      "-c",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/Backup.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/Blob.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/Connection+Aggregation.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/Connection+Attach.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/Connection+Pragmas.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/Connection.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/Errors.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/Result.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/SQLiteFeature.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/SQLiteVersion.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/Statement.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/URIQueryParameter.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/Value.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Extensions/Cipher.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Extensions/FTS4.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Extensions/FTS5.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Extensions/RTree.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Foundation.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Helpers.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Schema/Connection+Schema.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Schema/SchemaChanger.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Schema/SchemaDefinitions.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Schema/SchemaReader.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/AggregateFunctions.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/Coding.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/Collation.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/CoreFunctions.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/CustomFunctions.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/DateAndTimeFunctions.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/Expression.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/Operators.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/Query+with.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/Query.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/Schema.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/Setter.swift",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/WindowFunctions.swift",
+      "-I",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/Modules",
+      "-target",
+      "arm64-apple-macosx10.13",
+      "-enable-batch-mode",
+      "-index-store-path",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-j12",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-module-cache-path",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-emit-objc-header",
+      "-emit-objc-header-path",
+      "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/SQLite-Swift.h",
+      "-swift-version",
+      "5",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-suppress-warnings",
+      "-package-name",
+      "sqlite_swift",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ]
+  },
+  "targetDependencyMap" : {
+    "MCP_Manager_macOS" : [
+      "SQLite"
+    ],
+    "MCP_Manager_macOSPackageTests" : [
+      "MCP_Manager_macOSTests",
+      "MCP_Manager_macOS",
+      "SQLite"
+    ],
+    "MCP_Manager_macOSTests" : [
+      "MCP_Manager_macOS",
+      "SQLite"
+    ],
+    "SQLite" : [
+
+    ],
+    "SwiftToolchainCSQLite" : [
+
+    ],
+    "sqlite" : [
+      "SwiftToolchainCSQLite"
+    ]
+  },
+  "testDiscoveryCommands" : {
+
+  },
+  "testEntryPointCommands" : {
+    "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP-Manager-macOSPackageTests.derived/runner.swift" : {
+      "inputs" : [
+
+      ],
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP-Manager-macOSPackageTests.derived/runner.swift"
+        }
+      ]
+    }
+  },
+  "traitConfiguration" : {
+    "enableAllTraits" : false
+  },
+  "writeCommands" : {
+    "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP-Manager-macOS-entitlement.plist" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<entitlement-plist>"
+        },
+        {
+          "kind" : "virtual",
+          "name" : "<com.apple.security.get-task-allow>"
+        }
+      ],
+      "outputFilePath" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP-Manager-macOS-entitlement.plist"
+    },
+    "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP-Manager-macOS.product/Objects.LinkFileList" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<link-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/AddServerSheet.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/App.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/ContentView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/DatabaseManager.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/EditServerSheet.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/MCPServer.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/MCPServerService.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/OptimizedDatabaseManager.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/PreferencesView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/ServerDetailView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/ServerListView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/ServerLogsView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/AggregateFunctions.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Backup.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Blob.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Cipher.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Coding.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Collation.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Connection+Aggregation.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Connection+Attach.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Connection+Pragmas.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Connection+Schema.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Connection.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/CoreFunctions.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/CustomFunctions.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/DateAndTimeFunctions.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Errors.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Expression.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/FTS4.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/FTS5.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Foundation.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Helpers.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Operators.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Query+with.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Query.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/RTree.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Result.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/SQLiteFeature.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/SQLiteVersion.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Schema.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/SchemaChanger.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/SchemaDefinitions.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/SchemaReader.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Setter.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Statement.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/URIQueryParameter.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Value.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/WindowFunctions.swift.o"
+        }
+      ],
+      "outputFilePath" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP-Manager-macOS.product/Objects.LinkFileList"
+    },
+    "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP-Manager-macOSPackageTests.product/Objects.LinkFileList" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<link-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/AddServerSheet.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/App.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/ContentView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/DatabaseManager.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/EditServerSheet.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/MCPServer.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/MCPServerService.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/OptimizedDatabaseManager.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/PreferencesView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/ServerDetailView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/ServerListView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/ServerLogsView.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOSPackageTests.build/runner.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOSTests.build/DatabaseConcurrencyTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOSTests.build/DatabaseManagerTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/AggregateFunctions.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Backup.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Blob.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Cipher.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Coding.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Collation.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Connection+Aggregation.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Connection+Attach.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Connection+Pragmas.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Connection+Schema.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Connection.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/CoreFunctions.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/CustomFunctions.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/DateAndTimeFunctions.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Errors.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Expression.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/FTS4.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/FTS5.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Foundation.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Helpers.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Operators.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Query+with.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Query.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/RTree.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Result.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/SQLiteFeature.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/SQLiteVersion.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Schema.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/SchemaChanger.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/SchemaDefinitions.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/SchemaReader.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Setter.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Statement.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/URIQueryParameter.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/Value.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/WindowFunctions.swift.o"
+        }
+      ],
+      "outputFilePath" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP-Manager-macOSPackageTests.product/Objects.LinkFileList"
+    },
+    "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/App.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Database/DatabaseManager.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Database/OptimizedDatabaseManager.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Models/MCPServer.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Services/MCPServerService.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/AddServerSheet.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/ContentView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/EditServerSheet.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/PreferencesView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/ServerDetailView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/ServerListView.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/ServerLogsView.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/sources"
+    },
+    "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOSPackageTests.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP-Manager-macOSPackageTests.derived/runner.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOSPackageTests.build/sources"
+    },
+    "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOSTests.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/Tests/DatabaseConcurrencyTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/Tests/DatabaseManagerTests.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOSTests.build/sources"
+    },
+    "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/Backup.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/Blob.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/Connection+Aggregation.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/Connection+Attach.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/Connection+Pragmas.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/Connection.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/Errors.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/Result.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/SQLiteFeature.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/SQLiteVersion.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/Statement.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/URIQueryParameter.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Core/Value.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Extensions/Cipher.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Extensions/FTS4.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Extensions/FTS5.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Extensions/RTree.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Foundation.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Helpers.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Schema/Connection+Schema.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Schema/SchemaChanger.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Schema/SchemaDefinitions.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Schema/SchemaReader.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/AggregateFunctions.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/Coding.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/Collation.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/CoreFunctions.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/CustomFunctions.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/DateAndTimeFunctions.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/Expression.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/Operators.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/Query+with.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/Query.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/Schema.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/Setter.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/SQLite.swift/Sources/SQLite/Typed/WindowFunctions.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SQLite.build/sources"
+    },
+    "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/sqlite-entitlement.plist" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<entitlement-plist>"
+        },
+        {
+          "kind" : "virtual",
+          "name" : "<com.apple.security.get-task-allow>"
+        }
+      ],
+      "outputFilePath" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/sqlite-entitlement.plist"
+    },
+    "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/sqlite.product/Objects.LinkFileList" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<link-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/SwiftToolchainCSQLite.build/sqlite3.c.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/sqlite.build/shell.c.o"
+        }
+      ],
+      "outputFilePath" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/sqlite.product/Objects.LinkFileList"
+    },
+    "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt" : {
+      "alwaysOutOfDate" : true,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<swift-get-version>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+        }
+      ],
+      "outputFilePath" : "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+    }
+  }
+}

@@ -1,0 +1,12 @@
+/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/App.swift
+/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Database/DatabaseManager.swift
+/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Database/OptimizedDatabaseManager.swift
+/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Models/MCPServer.swift
+/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Services/MCPServerService.swift
+/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/AddServerSheet.swift
+/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/ContentView.swift
+/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/EditServerSheet.swift
+/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/PreferencesView.swift
+/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/ServerDetailView.swift
+/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/ServerListView.swift
+/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/ServerLogsView.swift

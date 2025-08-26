@@ -1,0 +1,4 @@
+module MCP_Manager_macOSPackageTests {
+    header "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOSPackageTests.build/MCP-Manager-macOSPackageTests-Swift.h"
+    requires objc
+}

@@ -1,0 +1,17 @@
+{
+  "": {
+    "swift-dependencies": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOSTests.build/master.swiftdeps"
+  },
+  "/Users/jestes/mcp-manager/MCP-Manager-macOS/Tests/DatabaseConcurrencyTests.swift": {
+    "dependencies": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOSTests.build/DatabaseConcurrencyTests.d",
+    "object": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOSTests.build/DatabaseConcurrencyTests.swift.o",
+    "swiftmodule": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOSTests.build/DatabaseConcurrencyTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOSTests.build/DatabaseConcurrencyTests.swiftdeps"
+  },
+  "/Users/jestes/mcp-manager/MCP-Manager-macOS/Tests/DatabaseManagerTests.swift": {
+    "dependencies": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOSTests.build/DatabaseManagerTests.d",
+    "object": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOSTests.build/DatabaseManagerTests.swift.o",
+    "swiftmodule": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOSTests.build/DatabaseManagerTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOSTests.build/DatabaseManagerTests.swiftdeps"
+  }
+}

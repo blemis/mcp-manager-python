@@ -1,0 +1,11 @@
+{
+  "": {
+    "swift-dependencies": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOSPackageTests.build/master.swiftdeps"
+  },
+  "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP-Manager-macOSPackageTests.derived/runner.swift": {
+    "dependencies": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOSPackageTests.build/runner.d",
+    "object": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOSPackageTests.build/runner.swift.o",
+    "swiftmodule": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOSPackageTests.build/runner~partial.swiftmodule",
+    "swift-dependencies": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOSPackageTests.build/runner.swiftdeps"
+  }
+}

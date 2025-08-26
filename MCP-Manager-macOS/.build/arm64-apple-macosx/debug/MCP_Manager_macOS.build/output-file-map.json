@@ -1,0 +1,77 @@
+{
+  "": {
+    "swift-dependencies": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/master.swiftdeps"
+  },
+  "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/App.swift": {
+    "dependencies": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/App.d",
+    "object": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/App.swift.o",
+    "swiftmodule": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/App~partial.swiftmodule",
+    "swift-dependencies": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/App.swiftdeps"
+  },
+  "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Database/DatabaseManager.swift": {
+    "dependencies": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/DatabaseManager.d",
+    "object": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/DatabaseManager.swift.o",
+    "swiftmodule": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/DatabaseManager~partial.swiftmodule",
+    "swift-dependencies": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/DatabaseManager.swiftdeps"
+  },
+  "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Database/OptimizedDatabaseManager.swift": {
+    "dependencies": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/OptimizedDatabaseManager.d",
+    "object": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/OptimizedDatabaseManager.swift.o",
+    "swiftmodule": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/OptimizedDatabaseManager~partial.swiftmodule",
+    "swift-dependencies": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/OptimizedDatabaseManager.swiftdeps"
+  },
+  "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Models/MCPServer.swift": {
+    "dependencies": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/MCPServer.d",
+    "object": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/MCPServer.swift.o",
+    "swiftmodule": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/MCPServer~partial.swiftmodule",
+    "swift-dependencies": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/MCPServer.swiftdeps"
+  },
+  "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Services/MCPServerService.swift": {
+    "dependencies": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/MCPServerService.d",
+    "object": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/MCPServerService.swift.o",
+    "swiftmodule": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/MCPServerService~partial.swiftmodule",
+    "swift-dependencies": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/MCPServerService.swiftdeps"
+  },
+  "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/AddServerSheet.swift": {
+    "dependencies": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/AddServerSheet.d",
+    "object": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/AddServerSheet.swift.o",
+    "swiftmodule": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/AddServerSheet~partial.swiftmodule",
+    "swift-dependencies": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/AddServerSheet.swiftdeps"
+  },
+  "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/ContentView.swift": {
+    "dependencies": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/ContentView.d",
+    "object": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/ContentView.swift.o",
+    "swiftmodule": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/ContentView~partial.swiftmodule",
+    "swift-dependencies": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/ContentView.swiftdeps"
+  },
+  "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/EditServerSheet.swift": {
+    "dependencies": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/EditServerSheet.d",
+    "object": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/EditServerSheet.swift.o",
+    "swiftmodule": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/EditServerSheet~partial.swiftmodule",
+    "swift-dependencies": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/EditServerSheet.swiftdeps"
+  },
+  "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/PreferencesView.swift": {
+    "dependencies": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/PreferencesView.d",
+    "object": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/PreferencesView.swift.o",
+    "swiftmodule": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/PreferencesView~partial.swiftmodule",
+    "swift-dependencies": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/PreferencesView.swiftdeps"
+  },
+  "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/ServerDetailView.swift": {
+    "dependencies": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/ServerDetailView.d",
+    "object": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/ServerDetailView.swift.o",
+    "swiftmodule": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/ServerDetailView~partial.swiftmodule",
+    "swift-dependencies": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/ServerDetailView.swiftdeps"
+  },
+  "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/ServerListView.swift": {
+    "dependencies": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/ServerListView.d",
+    "object": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/ServerListView.swift.o",
+    "swiftmodule": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/ServerListView~partial.swiftmodule",
+    "swift-dependencies": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/ServerListView.swiftdeps"
+  },
+  "/Users/jestes/mcp-manager/MCP-Manager-macOS/Sources/Views/ServerLogsView.swift": {
+    "dependencies": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/ServerLogsView.d",
+    "object": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/ServerLogsView.swift.o",
+    "swiftmodule": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/ServerLogsView~partial.swiftmodule",
+    "swift-dependencies": "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/arm64-apple-macosx/debug/MCP_Manager_macOS.build/ServerLogsView.swiftdeps"
+  }
+}

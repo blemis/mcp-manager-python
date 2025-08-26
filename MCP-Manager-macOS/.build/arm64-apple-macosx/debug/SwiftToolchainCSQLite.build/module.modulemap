@@ -1,0 +1,4 @@
+module SwiftToolchainCSQLite {
+    umbrella "/Users/jestes/mcp-manager/MCP-Manager-macOS/.build/checkouts/swift-toolchain-sqlite/Sources/CSQLite/include"
+    export *
+}
