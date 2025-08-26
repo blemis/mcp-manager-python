@@ -18,6 +18,7 @@ from mcp_manager.core.claude_interface import ClaudeInterface
 from mcp_manager.core.exceptions import MCPManagerError
 from mcp_manager.core.models import Server, ServerType, ServerScope, SystemInfo
 from mcp_manager.core.database.server_state import MCPServerStateManager, ServerInfo
+from mcp_manager.core.handlers.factory import get_server_handler_factory, ServerHandlerFactory
 from mcp_manager.utils.config import get_config
 from mcp_manager.utils.logging import get_logger
 from mcp_manager.utils.docker_detection import DockerDesktopDetector
@@ -53,12 +54,71 @@ class SimpleMCPManager:
         """Initialize the manager."""
         self.claude = ClaudeInterface()
         self.db_manager = MCPServerStateManager()
+        self.handler_factory = get_server_handler_factory(manager=self)
         
         # Run migration on first use if needed
         self._ensure_migration()
         
         # Bootstrap from Claude if database is empty (first run)
         self._bootstrap_from_claude_if_empty()
+    
+    async def _enable_server_internal(self, server: Server) -> bool:
+        """
+        Internal method for enabling a server (used by handlers).
+        
+        Args:
+            server: Server to enable
+            
+        Returns:
+            True if successfully enabled
+        """
+        # Mark operation start to prevent sync loops
+        self._mark_operation_start()
+        
+        # Use full path to executable
+        from mcp_manager.utils.executable_detection import ExecutableDetector
+        full_path_command, _ = ExecutableDetector.get_command_with_full_path(server.command, server.args)
+        
+        # Add to Claude
+        success = self.claude.add_server(
+            name=server.name,
+            command=full_path_command,
+            args=server.args,
+            env=server.env
+        )
+        
+        if success:
+            # Update database
+            await self._update_server_in_catalog(server.name, enabled=True)
+            logger.info(f"Successfully enabled server: {server.name}")
+        
+        return success
+    
+    async def _disable_server_internal(self, server: Server) -> bool:
+        """
+        Internal method for disabling a server (used by handlers).
+        
+        Args:
+            server: Server to disable
+            
+        Returns:
+            True if successfully disabled
+        """
+        # Mark operation start to prevent sync loops
+        self._mark_operation_start()
+        
+        # Remove from Claude if it exists there
+        claude_server = self.claude.get_server(server.name)
+        if claude_server:
+            success = self.claude.remove_server(server.name)
+            if not success:
+                logger.debug(f"Failed to remove server '{server.name}' from Claude, but continuing with database update")
+        
+        # Update database to disabled (this is the authoritative state)
+        await self._update_server_in_catalog(server.name, enabled=False)
+        logger.info(f"Successfully disabled server: {server.name}")
+        
+        return True
     
     @classmethod
     def _mark_operation_start(cls):
@@ -320,8 +380,8 @@ class SimpleMCPManager:
                 raise MCPManagerError(error_msg)
         
         # Check if server already exists in Claude
-        server = self.claude.get_server(name)
-        if server:
+        claude_server = self.claude.get_server(name)
+        if claude_server:
             logger.debug(f"Server '{name}' is already enabled in Claude")
             return True
         
@@ -329,24 +389,10 @@ class SimpleMCPManager:
         db_servers = self.list_servers_fast()
         db_server = next((s for s in db_servers if s.name == name), None)
         if db_server:
-            # Server exists in database - add it to Claude if not already there
-            logger.debug(f"Re-syncing server '{name}' from database to Claude")
-            
-            # Use full path to executable
-            from mcp_manager.utils.executable_detection import ExecutableDetector
-            full_path_command, _ = ExecutableDetector.get_command_with_full_path(db_server.command, db_server.args)
-            
-            success = self.claude.add_server(
-                name=db_server.name,
-                command=full_path_command,
-                args=db_server.args,
-                env=db_server.env
-            )
-            if success:
-                await self._update_server_in_catalog(name, enabled=True)
-                return True
-            else:
-                return False
+            # Server exists in database - use appropriate handler to enable it
+            logger.debug(f"Enabling server '{name}' using polymorphic handler")
+            success = await self.handler_factory.enable_server(db_server)
+            return success
         
         # Check if this is a Docker Desktop server that's disabled in catalog
         catalog = await self._get_server_catalog()
@@ -473,18 +519,6 @@ class SimpleMCPManager:
         # Mark operation start to prevent sync loops
         self._mark_operation_start()
         
-        # Check if this is a Docker Desktop server first
-        if await self._is_docker_desktop_server(name):
-            logger.debug(f"Disabling Docker Desktop server: {name}")
-            success = await self._disable_docker_desktop_server_simple(name)
-            if success:
-                # Mark as disabled in catalog
-                await self._update_server_in_catalog(name, enabled=False)
-                # Server disabled successfully
-                return True
-            else:
-                raise MCPManagerError(f"Failed to disable Docker Desktop server '{name}'")
-        
         # Check database first (database is authoritative)
         db_servers = self.list_servers_fast()
         db_server = next((s for s in db_servers if s.name == name), None)
@@ -492,21 +526,10 @@ class SimpleMCPManager:
             logger.debug(f"Server '{name}' not found in database for disabling")
             return False
         
-        # Server exists in database - disable it
-        logger.debug(f"Disabling server '{name}' from database")
-        
-        # Try to remove from Claude if it exists there
-        server = self.claude.get_server(name)
-        if server:
-            success = self.claude.remove_server(name)
-            if not success:
-                logger.debug(f"Failed to remove server '{name}' from Claude, but continuing with database update")
-        
-        # Update database to disabled (this is the authoritative state)
-        await self._update_server_in_catalog(name, enabled=False)
-        
-        # Server disabled successfully
-        return True
+        # Server exists in database - use appropriate handler to disable it
+        logger.debug(f"Disabling server '{name}' using polymorphic handler")
+        success = await self.handler_factory.disable_server(db_server)
+        return success
     
     async def get_server(self, name: str) -> Optional[Server]:
         """
