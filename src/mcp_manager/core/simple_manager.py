@@ -3706,3 +3706,22 @@ class SimpleMCPManager:
         except Exception as e:
             logger.error(f"Auto-import failed: {e}")
             return 0
+    
+    async def cleanup(self):
+        """Clean up all resources and connections."""
+        try:
+            # Close handler factory
+            if hasattr(self, 'handler_factory') and self.handler_factory:
+                from mcp_manager.core.handlers.factory import close_server_handler_factory
+                await close_server_handler_factory()
+                logger.debug("Handler factory cleanup completed")
+        except Exception as e:
+            logger.warning(f"Error during manager cleanup: {e}")
+    
+    async def __aenter__(self):
+        """Async context manager entry."""
+        return self
+        
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit with cleanup."""
+        await self.cleanup()

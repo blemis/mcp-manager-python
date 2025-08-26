@@ -106,6 +106,34 @@ class CLIContext:
         self.current_context: Optional[MCPContext] = None
         self._context_cache = {}
         
+        # Register cleanup handler
+        import atexit
+        atexit.register(self._cleanup_sync)
+    
+    def _cleanup_sync(self):
+        """Synchronous cleanup for atexit handler."""
+        import asyncio
+        try:
+            # Create event loop if none exists
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_closed():
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+            
+            # Run cleanup
+            loop.run_until_complete(self.cleanup())
+        except Exception:
+            pass  # Ignore errors during cleanup
+    
+    async def cleanup(self):
+        """Clean up all resources."""
+        if self.manager:
+            await self.manager.cleanup()
+        
     def get_manager(self) -> SimpleMCPManager:
         """Get MCP manager instance."""
         if self.manager is None:

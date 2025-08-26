@@ -88,6 +88,21 @@ class DockerDesktopServerHandler(ServerHandler):
             self._gateway_client = await create_docker_gateway_client(prefer_http=True)
         return self._gateway_client
     
+    async def cleanup(self):
+        """Clean up resources including gateway client."""
+        if self._gateway_client:
+            try:
+                await self._gateway_client.stop()
+            except Exception as e:
+                logger.warning(f"Error stopping gateway client: {e}")
+            finally:
+                self._gateway_client = None
+    
+    async def close(self):
+        """Close handler and clean up all resources."""
+        await self.cleanup()
+        logger.debug("DockerDesktopServerHandler closed")
+    
     async def _get_available_dd_servers(self) -> List[str]:
         """Get list of available Docker Desktop servers via HTTP API."""
         try:
