@@ -434,46 +434,75 @@ class DockerMCPGatewayClient:
     
     async def enable_server(self, server_name: str) -> bool:
         """
-        Check if a Docker Desktop MCP server is enabled in the gateway.
-        
-        Note: The Docker MCP Gateway manages server enablement at startup.
-        This method checks if the server is already available in the current gateway.
+        Enable a Docker Desktop MCP server by updating enabled servers list.
         
         Args:
             server_name: Name of the server to enable (e.g., "SQLite", "filesystem")
             
         Returns:
-            True if server is available/enabled
+            True if server is enabled/already enabled
         """
         try:
+            # Check if already enabled
             servers = await self.list_servers()
             for server in servers:
                 if server.name == server_name:
                     logger.info(f"Server {server_name} is already enabled in gateway")
                     return True
             
-            logger.warning(f"Server {server_name} not available in current gateway configuration")
-            return False
+            # Add server to enabled list and restart gateway
+            if not hasattr(self, '_enabled_servers'):
+                self._enabled_servers = set()
+                # Get current servers as baseline
+                current_servers = await self.list_servers()
+                self._enabled_servers.update(s.name for s in current_servers)
+            
+            self._enabled_servers.add(server_name)
+            logger.info(f"Enabling server {server_name}, restarting gateway with servers: {sorted(self._enabled_servers)}")
+            
+            # Restart gateway with updated server list
+            await self._restart_gateway_with_servers(list(self._enabled_servers))
+            
+            return True
             
         except Exception as e:
-            logger.error(f"Failed to check server {server_name} availability: {e}")
+            logger.error(f"Error enabling server {server_name}: {e}")
             return False
     
     async def disable_server(self, server_name: str) -> bool:
         """
-        Disable a Docker Desktop MCP server via MCP protocol.
-        
-        Note: The Docker MCP Gateway manages server disablement at startup.
-        Individual servers cannot be disabled at runtime through MCP protocol.
+        Disable a Docker Desktop MCP server by updating enabled servers list.
         
         Args:
             server_name: Name of the server to disable
             
         Returns:
-            False as runtime disabling is not supported
+            True if successfully disabled
         """
-        logger.warning(f"Server {server_name} cannot be disabled at runtime - gateway manages servers at startup")
-        return False
+        try:
+            # Initialize enabled servers set if needed
+            if not hasattr(self, '_enabled_servers'):
+                self._enabled_servers = set()
+                # Get current servers as baseline
+                current_servers = await self.list_servers()
+                self._enabled_servers.update(s.name for s in current_servers)
+            
+            # Remove server from enabled list
+            if server_name in self._enabled_servers:
+                self._enabled_servers.remove(server_name)
+                logger.info(f"Disabling server {server_name}, restarting gateway with servers: {sorted(self._enabled_servers)}")
+                
+                # Restart gateway with updated server list
+                await self._restart_gateway_with_servers(list(self._enabled_servers))
+                
+                return True
+            else:
+                logger.info(f"Server {server_name} was not in enabled list, no action needed")
+                return True
+                
+        except Exception as e:
+            logger.error(f"Error disabling server {server_name}: {e}")
+            return False
     
     async def get_server_info(self, server_name: str) -> Optional[GatewayServerInfo]:
         """
@@ -549,6 +578,61 @@ class DockerMCPGatewayClient:
                 status_map[server_name] = result
         
         return status_map
+    
+    async def _restart_gateway_with_servers(self, server_list: List[str]):
+        """
+        Restart Docker MCP Gateway with specific list of enabled servers.
+        
+        Args:
+            server_list: List of server names to enable (e.g., ["Ref", "SQLite"])
+        """
+        try:
+            # Stop current gateway
+            if self._gateway_process:
+                logger.info("Stopping current Docker MCP Gateway process")
+                self._gateway_process.terminate()
+                try:
+                    await asyncio.wait_for(self._gateway_process.wait(), timeout=10)
+                except asyncio.TimeoutError:
+                    logger.warning("Gateway process did not terminate gracefully, killing...")
+                    self._gateway_process.kill()
+                    await self._gateway_process.wait()
+                self._gateway_process = None
+            
+            # Reset session state
+            if self._sse_response:
+                self._sse_response.close()
+                self._sse_response = None
+            self._endpoint_url = None
+            self._message_id = 0
+            self._initialized = False
+            
+            # Start gateway with new server list
+            if server_list:
+                servers_arg = ",".join(server_list)
+                logger.info(f"Starting Docker MCP Gateway with servers: {servers_arg}")
+                
+                # Start new gateway process with specific servers
+                self._gateway_process = await asyncio.create_subprocess_exec(
+                    "docker", "mcp", "gateway", "run", "--servers", servers_arg,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
+                )
+            else:
+                logger.warning("No servers to enable, not starting gateway")
+                return
+            
+            # Wait a bit for gateway to start
+            await asyncio.sleep(3)
+            
+            # Re-establish MCP session
+            await self._establish_mcp_session()
+            
+            logger.info(f"Gateway restarted successfully with servers: {server_list}")
+            
+        except Exception as e:
+            logger.error(f"Failed to restart gateway with servers {server_list}: {e}")
+            raise
     
     async def sync_servers(self, desired_servers: List[str]) -> Tuple[List[str], List[str]]:
         """
