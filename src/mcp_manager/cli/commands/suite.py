@@ -8,7 +8,8 @@ from typing import Optional
 import click
 from rich.console import Console
 
-from mcp_manager.cli.helpers import handle_errors
+from mcp_manager.cli.helpers import handle_errors, generate_install_id
+from mcp_manager.core.models import ServerScope
 
 console = Console()
 
@@ -595,7 +596,7 @@ def suite_commands(cli_context):
     @click.option("--dry-run", is_flag=True, help="Show what would be changed without making changes")
     @handle_errors
     def suite_enable(suite_name: str, dry_run: bool):
-        """Enable ONLY servers in the specified suite, disable all others. Use 'all' to enable all servers."""
+        """Enable all servers in the specified suite (additive - leaves other servers unchanged). Use 'all' to enable all servers."""
         
         async def enable_suite_async():
             try:
@@ -662,88 +663,166 @@ def suite_commands(cli_context):
                     return
                 
                 console.print(f"[blue]🎯 Enabling suite: {suite_name}[/blue]")
-                console.print("[dim]This will enable ONLY servers in this suite and disable all others[/dim]")
+                console.print("[dim]This will install missing servers and enable all servers in this suite[/dim]")
                 console.print("")
                 
-                # Get all servers
-                all_servers = await manager.list_servers()
-                
-                # Get suite membership for all servers
+                # Get suite definition and all servers in the suite
                 from mcp_manager.core.suites.database import SuiteDatabase
                 from mcp_manager.core.suites.membership import MembershipManager
                 
                 suite_db = SuiteDatabase()
                 membership_mgr = MembershipManager(suite_db)
                 
-                # Find servers in the target suite
-                suite_servers = []
-                other_servers = []
-                
-                for server in all_servers:
-                    try:
-                        suites = await membership_mgr.get_server_suites(server.name)
-                        server_suite_names = [suite[1] for suite in suites]  # suite[1] is the name
-                        
-                        # Check if server is in target suite
-                        if suite_name in server_suite_names:
-                            suite_servers.append(server)
-                        else:
-                            other_servers.append(server)
-                    except Exception:
-                        # If can't get suite info, treat as other server
-                        other_servers.append(server)
-                
-                if not suite_servers:
-                    console.print(f"[red]❌ No servers found in suite: {suite_name}[/red]")
-                    console.print("[yellow]💡 Use 'mcp-manager suite list' to see available suites[/yellow]")
+                # Get all servers defined in this suite (whether installed or not)
+                try:
+                    suite_members = await membership_mgr.get_suite_servers(suite_name)
+                    if not suite_members:
+                        console.print(f"[red]❌ No servers found in suite: {suite_name}[/red]")
+                        console.print("[yellow]💡 Use 'mcp-manager suite list' to see available suites[/yellow]")
+                        return
+                except Exception as e:
+                    console.print(f"[red]❌ Failed to get suite members: {e}[/red]")
                     return
                 
-                console.print(f"[green]📦 Servers to ENABLE ({len(suite_servers)}):[/green]")
-                for server in suite_servers:
-                    status = "already enabled" if server.enabled else "will enable"
-                    console.print(f"  ✅ {server.name} ({status})")
+                # Get all currently installed servers
+                all_installed_servers = await manager.list_servers()
+                installed_server_names = {server.name for server in all_installed_servers}
                 
-                console.print("")
-                console.print(f"[red]📦 Servers to DISABLE ({len(other_servers)}):[/red]")
-                for server in other_servers:
-                    status = "already disabled" if not server.enabled else "will disable"
-                    console.print(f"  ❌ {server.name} ({status})")
+                # Categorize suite servers: installed vs need installation
+                servers_to_install = []
+                servers_to_enable = []
+                servers_already_enabled = []
+                
+                for suite_member in suite_members:
+                    server_name = suite_member[2]  # Assuming format is (suite_id, suite_name, server_name)
+                    
+                    if server_name in installed_server_names:
+                        # Server is installed - check if enabled
+                        installed_server = next(s for s in all_installed_servers if s.name == server_name)
+                        if installed_server.enabled:
+                            servers_already_enabled.append(installed_server)
+                        else:
+                            servers_to_enable.append(installed_server)
+                    else:
+                        # Server needs installation
+                        servers_to_install.append(server_name)
+                
+                # Show what will happen
+                if servers_to_install:
+                    console.print(f"[blue]📦 Servers to INSTALL ({len(servers_to_install)}):[/blue]")
+                    for server_name in servers_to_install:
+                        console.print(f"  📥 {server_name} (needs installation)")
+                    console.print("")
+                
+                if servers_to_enable:
+                    console.print(f"[green]📦 Servers to ENABLE ({len(servers_to_enable)}):[/green]")
+                    for server in servers_to_enable:
+                        console.print(f"  ✅ {server.name} (will enable)")
+                    console.print("")
+                
+                if servers_already_enabled:
+                    console.print(f"[dim]📦 Already enabled ({len(servers_already_enabled)}):[/dim]")
+                    for server in servers_already_enabled:
+                        console.print(f"  ➡️ {server.name} (already enabled)")
+                    console.print("")
+                
+                total_suite_servers = len(servers_to_install) + len(servers_to_enable) + len(servers_already_enabled)
+                if total_suite_servers == 0:
+                    console.print(f"[red]❌ No servers found in suite: {suite_name}[/red]")
+                    return
                 
                 if not dry_run:
                     console.print("")
                     from rich.prompt import Confirm
-                    if not Confirm.ask(f"[bold]Proceed with enabling suite '{suite_name}'?[/bold]"):
+                    
+                    actions_needed = len(servers_to_install) + len(servers_to_enable)
+                    if actions_needed > 0:
+                        action_summary = []
+                        if servers_to_install:
+                            action_summary.append(f"install {len(servers_to_install)}")
+                        if servers_to_enable:
+                            action_summary.append(f"enable {len(servers_to_enable)}")
+                        
+                        confirm_msg = f"[bold]{' and '.join(action_summary)} servers for suite '{suite_name}'?[/bold]"
+                    else:
+                        confirm_msg = f"[bold]Suite '{suite_name}' is already fully enabled. Continue anyway?[/bold]"
+                        
+                    if not Confirm.ask(confirm_msg):
                         console.print("[dim]Suite enable cancelled[/dim]")
                         return
                     
                     console.print("")
-                    console.print("[blue]🔄 Applying changes...[/blue]")
+                    console.print("[blue]🔄 Processing suite servers...[/blue]")
                     
-                    # Enable suite servers
+                    installed_count = 0
                     enabled_count = 0
-                    for server in suite_servers:
-                        if not server.enabled:
-                            success = await manager.enable_server(server.name)
-                            if success:
-                                enabled_count += 1
-                                console.print(f"  [green]✅ Enabled: {server.name}[/green]")
-                            else:
-                                console.print(f"  [red]❌ Failed to enable: {server.name}[/red]")
                     
-                    # Disable other servers  
-                    disabled_count = 0
-                    for server in other_servers:
-                        if server.enabled:
-                            success = await manager.disable_server(server.name)
-                            if success:
-                                disabled_count += 1
-                                console.print(f"  [yellow]❌ Disabled: {server.name}[/yellow]")
-                            else:
-                                console.print(f"  [red]❌ Failed to disable: {server.name}[/red]")
+                    # Step 1: Install missing servers
+                    if servers_to_install:
+                        console.print("[blue]📥 Installing missing servers...[/blue]")
+                        for server_name in servers_to_install:
+                            try:
+                                # Try to discover and install the server
+                                discovery = cli_context.get_discovery()
+                                results = await discovery.discover_servers(query=server_name, limit=5)
+                                
+                                # Find exact match
+                                exact_match = next((r for r in results if r.name == server_name or 
+                                                  generate_install_id(r) == server_name), None)
+                                
+                                if exact_match:
+                                    # Install the server
+                                    install_name = generate_install_id(exact_match)
+                                    success = await manager.add_server(
+                                        name=install_name,
+                                        server_type=exact_match.server_type,
+                                        command=exact_match.install_command,
+                                        args=exact_match.install_args or [],
+                                        env={},
+                                        scope=ServerScope.USER
+                                    )
+                                    if success:
+                                        installed_count += 1
+                                        console.print(f"  [green]✅ Installed: {server_name}[/green]")
+                                    else:
+                                        console.print(f"  [red]❌ Failed to install: {server_name}[/red]")
+                                else:
+                                    console.print(f"  [yellow]⚠️ Server not found in discovery: {server_name}[/yellow]")
+                            except Exception as e:
+                                console.print(f"  [red]❌ Error installing {server_name}: {e}[/red]")
+                    
+                    # Step 2: Enable servers (including newly installed ones)
+                    if servers_to_enable or installed_count > 0:
+                        console.print("[blue]🔄 Enabling servers...[/blue]")
+                        
+                        # Refresh server list to include newly installed servers
+                        updated_servers = await manager.list_servers()
+                        
+                        for server_name in [s.name for s in servers_to_enable] + servers_to_install:
+                            server_to_enable = next((s for s in updated_servers if s.name == server_name), None)
+                            if server_to_enable and not server_to_enable.enabled:
+                                try:
+                                    success = await manager.enable_server(server_to_enable.name)
+                                    if success:
+                                        enabled_count += 1
+                                        console.print(f"  [green]✅ Enabled: {server_to_enable.name}[/green]")
+                                    else:
+                                        console.print(f"  [red]❌ Failed to enable: {server_to_enable.name}[/red]")
+                                except Exception as e:
+                                    console.print(f"  [red]❌ Error enabling {server_to_enable.name}: {e}[/red]")
                     
                     console.print("")
-                    console.print(f"[bold green]🎯 Suite '{suite_name}' enabled successfully![/bold green]")
-                    console.print(f"[dim]Enabled {enabled_count} servers, disabled {disabled_count} servers[/dim]")
+                    if installed_count > 0 or enabled_count > 0:
+                        console.print(f"[bold green]🎯 Suite '{suite_name}' activated successfully![/bold green]")
+                        summary_parts = []
+                        if installed_count > 0:
+                            summary_parts.append(f"installed {installed_count}")
+                        if enabled_count > 0:
+                            summary_parts.append(f"enabled {enabled_count}")
+                        console.print(f"[dim]{' and '.join(summary_parts)} servers[/dim]")
+                    else:
+                        console.print(f"[bold green]🎯 Suite '{suite_name}' already fully active![/bold green]")
+                        console.print(f"[dim]All servers in suite were already installed and enabled[/dim]")
                 else:
                     console.print("")
                     console.print("[dim]Dry run complete - no changes made[/dim]")

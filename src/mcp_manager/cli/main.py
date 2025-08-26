@@ -350,6 +350,7 @@ def list_cmd(scope: Optional[str], output_format: str):
             
             # Get Claude connection status for dual display
             claude_status = {}
+            docker_gateway_servers = []  # DD servers enabled in docker-gateway
             try:
                 import subprocess
                 result = subprocess.run(['claude', 'mcp', 'list'], 
@@ -364,6 +365,11 @@ def list_cmd(scope: Optional[str], output_format: str):
                             # Check status at end of line
                             if ' - ✓' in line or 'Connected' in line:
                                 claude_status[name] = "Connected"
+                                # Special parsing for docker-gateway to extract enabled DD servers
+                                if name == "docker-gateway" and "--servers" in line:
+                                    # Extract servers from: "docker mcp gateway run --servers Ref,SQLite,filesystem"
+                                    servers_part = line.split("--servers")[1].split(" - ")[0].strip()
+                                    docker_gateway_servers = [s.strip() for s in servers_part.split(",")]
                             elif ' - ✗' in line or 'Failed' in line:
                                 claude_status[name] = "Failed"
             except Exception:
@@ -381,8 +387,24 @@ def list_cmd(scope: Optional[str], output_format: str):
                 elif claude_conn == "Failed":
                     claude_status_display = "✗ Failed"
                 elif claude_conn == "Not in Claude":
-                    # Only show "-" if server is disabled AND not in Claude
-                    claude_status_display = "-" if not server.enabled else "⚠️ Not Synced"
+                    # Special handling for Docker Desktop servers - they're proxied through docker-gateway
+                    if server.server_type.value == "docker-desktop":
+                        docker_gateway_status = claude_status.get("docker-gateway", "Not in Claude")
+                        if docker_gateway_status == "Connected":
+                            # Check if this DD server is actually enabled in docker-gateway
+                            # Convert dd-Ref -> Ref for comparison
+                            server_dd_name = server.name.replace("dd-", "") if server.name.startswith("dd-") else server.name
+                            if server_dd_name in docker_gateway_servers:
+                                claude_status_display = "✓ Connected"
+                            else:
+                                claude_status_display = "⚠️ Not Enabled in DD"
+                        elif docker_gateway_status == "Failed":
+                            claude_status_display = "✗ Gateway Failed"
+                        else:
+                            claude_status_display = "⚠️ Gateway Missing"
+                    else:
+                        # Only show "-" if server is disabled AND not in Claude
+                        claude_status_display = "-" if not server.enabled else "⚠️ Not Synced"
                 else:
                     claude_status_display = claude_conn
                 
@@ -739,18 +761,13 @@ def nuke(force: bool, scope: Optional[str]):
             removed_count = 0
             for server in servers:
                 try:
-                    # Skip Docker Desktop servers that are part of docker-gateway
-                    # These need to be disabled via docker-desktop commands, not removed
-                    if server.server_type in [ServerType.DOCKER_DESKTOP] and "docker-desktop-" in server.name:
-                        console.print(f"  🔄 Skipping Docker Desktop server (handled in Step 3): {server.name}")
-                        continue
-                    
+                    # REMOVE ALL SERVERS INCLUDING DOCKER DESKTOP - NO EXCEPTIONS!
                     # Use the server's actual scope if available
                     scope_param = server.scope if server.scope else None
                     success = await manager.remove_server(server.name, scope_param)
                     if success:
                         removed_count += 1
-                        console.print(f"  ✅ Removed: {server.name} ({server.scope.value if server.scope else 'unknown'})")
+                        console.print(f"  ✅ Removed: {server.name} ({server.scope.value if server.scope else 'unknown'}) - {server.server_type.value}")
                     else:
                         console.print(f"  ⚠️ Server not found in Claude config: {server.name}")
                 except Exception as e:
@@ -777,17 +794,33 @@ def nuke(force: bool, scope: Optional[str]):
         except:
             pass
         
-        # Step 3: Disable Docker Desktop MCP servers
-        console.print("[blue]Step 3: Disabling Docker Desktop MCP servers...[/blue]")
+        # Step 3: REMOVE Docker Desktop MCP servers completely
+        console.print("[blue]Step 3: REMOVING Docker Desktop MCP servers completely...[/blue]")
         try:
             result = subprocess.run(["docker", "mcp", "server", "list"], capture_output=True, text=True)
             if result.returncode == 0:
+                removed_dd_count = 0
                 for line in result.stdout.strip().split('\n'):
                     if line and not line.startswith('NAME'):
                         parts = line.split()
-                        if len(parts) > 0 and parts[1] == 'enabled':
+                        if len(parts) > 0:
                             server_name = parts[0]
+                            # First disable, then the manager will remove from database
                             subprocess.run(["docker", "mcp", "server", "disable", server_name], capture_output=True)
+                            console.print(f"  ✅ Disabled Docker Desktop server: {server_name}")
+                            removed_dd_count += 1
+                
+                # Now remove Docker Desktop servers from our database too
+                try:
+                    if 'manager' in locals():
+                        dd_servers = [s for s in all_servers if s.server_type == ServerType.DOCKER_DESKTOP]
+                        for server in dd_servers:
+                            await manager.remove_server(server.name, server.scope)
+                            console.print(f"  🗑️ Removed from database: {server.name}")
+                except Exception as e:
+                    console.print(f"  ⚠️ Error removing Docker Desktop servers from database: {e}")
+                
+                console.print(f"  📊 Processed {removed_dd_count} Docker Desktop servers")
         except:
             pass
         

@@ -107,56 +107,14 @@ async def show_server_details_after_install(manager, server_name: str):
         console.print(f"[red]✗[/red] Failed to get server details: {e}")
 
 
-async def show_discovery_for_next_install(discovery):
-    """Show discovery results for the user to choose another server to install."""
+def show_installed_servers_summary():
+    """Show what servers you currently have installed (calls mcp-manager list)."""
     try:
-        console.print(f"\n[blue]🔍 Discovering other available MCP servers...[/blue]")
+        console.print(f"\n[blue]📋 Your Current MCP Servers:[/blue]")
         
-        # Run discovery to show what else is available
-        results = await discovery.discover_servers(limit=5)
-        
-        if not results:
-            console.print("[yellow]No servers found[/yellow]")
-            return
-        
-        from rich.table import Table
-        
-        # Create table for discovery results
-        table = Table(
-            title="Available MCP Servers",
-            show_header=True,
-            header_style="bold cyan",
-            title_style="bold cyan",
-            show_lines=True
-        )
-        
-        table.add_column("Install ID", style="green", width=25)
-        table.add_column("Type", style="blue", width=8)
-        table.add_column("Description", style="white", width=40)
-        table.add_column("Install Command", style="dim", width=35)
-        
-        # Add rows for each result
-        for result in results:
-            from mcp_manager.cli.helpers.discovery import generate_install_id
-            
-            # Generate install ID using same logic as discover command
-            install_id = generate_install_id(result)
-            
-            # Create simple install command
-            install_cmd = f"mcp-manager install-package {install_id}"
-            
-            table.add_row(
-                install_id,
-                result.server_type.value,
-                result.description[:37] + "..." if result.description and len(result.description) > 40 else (result.description or ""),
-                install_cmd[:32] + "..." if len(install_cmd) > 35 else install_cmd
-            )
-        
-        console.print("")
-        console.print(table)
-        console.print("")
-        console.print("[dim]💡 Copy and paste the install command for the server you want[/dim]")
-        console.print("[dim]   Example: [cyan]mcp-manager install-package modelcontextprotocol-filesystem[/cyan][/dim]")
+        # Import and call the existing list command function - much better than rewriting!
+        from mcp_manager.cli.main import list_cmd
+        list_cmd(scope=None, output_format="table")
         
     except Exception as e:
-        console.print(f"[red]✗[/red] Failed to discover servers: {e}")
+        console.print(f"[yellow]⚠️ Could not show server list: {e}[/yellow]")

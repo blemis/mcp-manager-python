@@ -14,7 +14,7 @@ from rich.console import Console
 from mcp_manager.core.models import ServerType
 from mcp_manager.cli.helpers import (
     handle_errors, generate_install_id, prompt_for_server_configuration,
-    show_server_details_after_install, show_discovery_for_next_install
+    show_server_details_after_install, show_installed_servers_summary
 )
 
 console = Console()
@@ -124,18 +124,50 @@ def discovery_commands(cli_context):
         table.add_column("Name", style="cyan", width=18)  # What gets stored in DB
         table.add_column("Type", style="blue", width=8)
         table.add_column("Package/Source", style="white", width=22)
+        table.add_column("Suites", style="magenta", width=10)
         table.add_column("Description", style="dim")
+        
+        # Get suite memberships for all servers (for already installed ones)
+        suite_memberships = {}
+        try:
+            from mcp_manager.core.suites.database import SuiteDatabase
+            from mcp_manager.core.suites.membership import MembershipManager
+            
+            suite_db = SuiteDatabase()
+            membership_mgr = MembershipManager(suite_db)
+            
+            # Check suite membership for each discovered server
+            for result in results:
+                install_name = generate_install_id(result)
+                try:
+                    suites = asyncio.run(membership_mgr.get_server_suites(install_name))
+                    suite_names = [suite[1] for suite in suites]  # suite[1] is the name
+                    suite_memberships[install_name] = suite_names
+                except Exception:
+                    suite_memberships[install_name] = []
+        except Exception:
+            # If suite functionality not available, use empty dict
+            suite_memberships = {}
         
         for i, result in enumerate(results, 1):
             # Use install_id as the name that will be stored
             install_name = generate_install_id(result)
+            
+            # Get suite membership
+            suites = suite_memberships.get(install_name, [])
+            suite_str = ", ".join(suites[:2])  # Show first 2 suites
+            if len(suites) > 2:
+                suite_str += f" +{len(suites)-2}"
+            elif not suites:
+                suite_str = "-"
             
             table.add_row(
                 str(i),
                 install_name,  # This is what they'll use for uninstall
                 result.server_type.value,
                 result.package or result.name,
-                (result.description[:37] + "...") if result.description and len(result.description) > 40 else (result.description or "")
+                suite_str,
+                (result.description[:30] + "...") if result.description and len(result.description) > 33 else (result.description or "")
             )
         
         console.print("")
@@ -145,7 +177,11 @@ def discovery_commands(cli_context):
         scope_flag = f" --scope {scope}" if scope else ""
         console.print(f"[dim]   [cyan]mcp-manager install-package <number>{scope_flag}[/cyan][/dim]")
         console.print(f"[dim]   Example: [cyan]mcp-manager install-package 3{scope_flag}[/cyan][/dim]")
-        console.print(f"[dim]   To uninstall later: [cyan]mcp-manager rm <name>[/cyan][/dim]")
+        console.print("")
+        console.print("[dim]💡 Suite management:[/dim]")
+        console.print(f"[dim]   Servers can be added to suites during installation[/dim]")
+        console.print(f"[dim]   Create suites: [cyan]mcp-manager suite create <name>[/cyan][/dim]")
+        console.print(f"[dim]   Enable entire suites: [cyan]mcp-manager suite enable <name>[/cyan][/dim]")
     
     
     @click.command("install-package")
@@ -300,11 +336,14 @@ def discovery_commands(cli_context):
                 
                 console.print(f"[green]✅ Successfully installed '{server_name}' in {scope} scope[/green]")
                 
+                # Offer to add to suite
+                await _offer_suite_management(server_name)
+                
                 # Show server details
                 await show_server_details_after_install(manager, server_name)
                 
-                # Show additional discovery options
-                await show_discovery_for_next_install(discovery)
+                # Show what you now have installed
+                show_installed_servers_summary()
                 
             except Exception as e:
                 console.print(f"[red]❌ Installation failed: {e}[/red]")
@@ -421,4 +460,61 @@ def discovery_commands(cli_context):
         
         asyncio.run(find_and_install())
     
+    
+    async def _offer_suite_management(server_name: str):
+        """Offer to add newly installed server to existing suites."""
+        try:
+            from mcp_manager.core.suites.database import SuiteDatabase
+            from mcp_manager.core.suites.membership import MembershipManager
+            from rich.prompt import Confirm, IntPrompt
+            
+            suite_db = SuiteDatabase()
+            membership_mgr = MembershipManager(suite_db)
+            
+            # Get all available suites
+            suites = suite_db.list_suites()
+            if not suites:
+                console.print("")
+                console.print("[dim]💡 No suites available. Create one with: [cyan]mcp-manager suite create <name>[/cyan][/dim]")
+                return
+            
+            console.print("")
+            if not Confirm.ask(f"[bold]Add '{server_name}' to an existing suite?[/bold]", default=False):
+                return
+                
+            # Show available suites
+            console.print("[blue]Available suites:[/blue]")
+            for i, suite in enumerate(suites, 1):
+                suite_id, suite_name, description, category = suite
+                desc_text = f" - {description}" if description else ""
+                console.print(f"  {i}. [cyan]{suite_name}[/cyan]{desc_text}")
+            
+            console.print(f"  0. [dim]Skip (don't add to any suite)[/dim]")
+            console.print("")
+            
+            try:
+                choice = IntPrompt.ask(
+                    f"Select suite for '{server_name}'",
+                    choices=[str(i) for i in range(len(suites) + 1)],
+                    default=0
+                )
+                
+                if choice == 0:
+                    console.print("[dim]Skipped adding to suite[/dim]")
+                    return
+                
+                # Add to selected suite
+                selected_suite = suites[choice - 1]
+                suite_id, suite_name = selected_suite[0], selected_suite[1]
+                
+                await membership_mgr.add_server_to_suite(server_name, suite_name)
+                console.print(f"[green]✅ Added '{server_name}' to suite '{suite_name}'[/green]")
+                
+            except (ValueError, IndexError, EOFError, KeyboardInterrupt):
+                console.print("[dim]Suite selection cancelled[/dim]")
+                
+        except Exception as e:
+            console.print(f"[yellow]⚠️ Suite management not available: {e}[/yellow]")
+
+
     return [discover, install_package, install]

@@ -113,10 +113,14 @@ class SimpleMCPManager:
     async def list_servers(self) -> List[Server]:
         """
         List all MCP servers from mcp-manager's database.
+        Auto-imports any missing servers from Claude before returning.
         
         Returns:
             List of servers from mcp-manager's database
         """
+        # Auto-import missing servers from Claude before listing
+        await self.auto_import_missing_servers()
+        
         return self.list_servers_fast()
     
     async def add_server(
@@ -259,10 +263,23 @@ class SimpleMCPManager:
         
         # Remove the server
         success = False
-        if name.startswith("docker-desktop-") or await self._is_docker_desktop_server(name):
-            success = await self._disable_docker_desktop_server(name)
+        # Use server type from database instead of unreliable detection
+        if server and server.server_type == ServerType.DOCKER_DESKTOP:
+            # For Docker Desktop servers: disable in Docker Desktop AND remove from database
+            disable_success = await self._disable_docker_desktop_server(name)
+            # Force removal from database regardless of Docker Desktop disable status
+            await self._remove_server_from_catalog(name)
+            success = True  # Consider successful if we removed from database
+            logger.debug(f"Docker Desktop server '{name}': disabled={disable_success}, removed from database=True")
+        elif server:
+            # For non-Docker Desktop servers, try to remove from Claude first, then force database removal
+            claude_success = self.claude.remove_server(name)
+            await self._remove_server_from_catalog(name)  # Always remove from database
+            success = True  # Consider successful if we removed from database
+            logger.debug(f"Regular server '{name}': claude_remove={claude_success}, database_remove=True")
         else:
-            success = self.claude.remove_server(name)
+            logger.error(f"Server '{name}' not found in database")
+            success = False
         
         # Clean up Docker image if removal was successful and we have an image
         if success and docker_image:
@@ -273,9 +290,7 @@ class SimpleMCPManager:
             else:
                 logger.warning(f"Docker image cleanup failed for: {docker_image}")
         
-        # Remove from our catalog if removal was successful
-        if success:
-            await self._remove_server_from_catalog(name)
+        # Database removal is now handled above for all server types
         
         return success
     
@@ -3580,3 +3595,91 @@ class SimpleMCPManager:
             
         except Exception as e:
             logger.warning(f"Bootstrap from Claude failed (continuing with empty database): {e}")
+    
+    async def auto_import_missing_servers(self):
+        """Auto-import servers from Claude that are missing from mcp-manager database."""
+        try:
+            # Get current mcp-manager servers
+            manager_servers = self.list_servers_fast()
+            manager_server_names = {server.name for server in manager_servers}
+            
+            # Get Claude servers (including docker-gateway analysis)
+            claude_servers = self.claude.list_servers()
+            claude_server_names = {server.name for server in claude_servers}
+            
+            # Special handling for Docker Desktop servers via docker-gateway
+            docker_gateway_servers = []
+            docker_gateway_server = next((s for s in claude_servers if s.name == "docker-gateway"), None)
+            if docker_gateway_server and docker_gateway_server.args:
+                # Parse --servers argument from docker-gateway
+                args_str = " ".join(docker_gateway_server.args)
+                if "--servers" in args_str:
+                    servers_part = args_str.split("--servers")[1].split()[0]  # Get next argument
+                    docker_gateway_servers = [s.strip() for s in servers_part.split(",")]
+            
+            imported_count = 0
+            
+            # Import missing Docker Desktop servers
+            for dd_server_name in docker_gateway_servers:
+                full_name = f"dd-{dd_server_name}"  # dd-Ref, dd-SQLite, etc.
+                
+                if full_name not in manager_server_names:
+                    try:
+                        # Create ServerInfo for Docker Desktop server
+                        from mcp_manager.core.database.server_state import ServerInfo, ServerType as DBServerType
+                        server_info = ServerInfo(
+                            name=full_name,
+                            server_type=DBServerType.DOCKER_DESKTOP,
+                            command="/opt/homebrew/bin/docker",
+                            args=["mcp", "gateway", "run", "--servers", dd_server_name],
+                            env={},
+                            enabled=True,  # Enabled since it's running via docker-gateway
+                            scope="user",
+                            description=f"Docker Desktop MCP server: {dd_server_name}"
+                        )
+                        self.db_manager.add_server(server_info)
+                        logger.info(f"Auto-imported missing Docker Desktop server: {full_name}")
+                        imported_count += 1
+                    except Exception as e:
+                        logger.warning(f"Failed to import Docker Desktop server {full_name}: {e}")
+            
+            # Import missing regular servers from Claude
+            for claude_server in claude_servers:
+                if claude_server.name not in manager_server_names and claude_server.name != "docker-gateway":
+                    try:
+                        from mcp_manager.core.database.server_state import ServerInfo, ServerType as DBServerType
+                        # Map server types
+                        db_server_type = DBServerType.NPM  # Default fallback
+                        if claude_server.server_type == ServerType.DOCKER:
+                            db_server_type = DBServerType.DOCKER
+                        elif claude_server.server_type == ServerType.NPM:
+                            db_server_type = DBServerType.NPM
+                        elif claude_server.server_type == ServerType.DOCKER_DESKTOP:
+                            db_server_type = DBServerType.DOCKER_DESKTOP
+                        
+                        server_info = ServerInfo(
+                            name=claude_server.name,
+                            server_type=db_server_type,
+                            command=claude_server.command,
+                            args=claude_server.args,
+                            env=claude_server.env or {},
+                            enabled=True,  # Enabled since it's in Claude
+                            scope=claude_server.scope.value if claude_server.scope else "user",
+                            description=claude_server.description
+                        )
+                        self.db_manager.add_server(server_info)
+                        logger.info(f"Auto-imported missing server: {claude_server.name}")
+                        imported_count += 1
+                    except Exception as e:
+                        logger.warning(f"Failed to import server {claude_server.name}: {e}")
+            
+            if imported_count > 0:
+                logger.info(f"Auto-import complete: {imported_count} servers imported to mcp-manager database")
+            else:
+                logger.debug("No missing servers to import")
+                
+            return imported_count
+            
+        except Exception as e:
+            logger.error(f"Auto-import failed: {e}")
+            return 0
