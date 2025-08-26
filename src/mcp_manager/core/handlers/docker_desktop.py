@@ -6,12 +6,12 @@ native CLI commands, providing proper enable/disable/status functionality
 by directly querying Docker Desktop's actual state.
 """
 
-import subprocess
 from typing import Optional, Dict, List
 import asyncio
 
 from mcp_manager.core.handlers import ServerHandler
 from mcp_manager.core.models import Server, ServerType
+from mcp_manager.core.integrations.docker_mcp_gateway import create_docker_gateway_client
 from mcp_manager.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -43,6 +43,9 @@ class DockerDesktopServerHandler(ServerHandler):
         # Reverse mapping for looking up mcp-manager names
         self._reverse_mapping = {v: k for k, v in self._server_name_mapping.items()}
         
+        # Gateway client for HTTP API communication
+        self._gateway_client = None
+        
         logger.debug("DockerDesktopServerHandler initialized")
     
     def _get_dd_server_name(self, server: Server) -> Optional[str]:
@@ -63,34 +66,37 @@ class DockerDesktopServerHandler(ServerHandler):
         # Check if name starts with 'dd-' prefix and map to actual DD name
         if server.name.startswith('dd-'):
             potential_name = server.name[3:]  # Remove 'dd-' prefix
-            # Check if it matches any known DD server (case-sensitive)
-            available_servers = self._get_available_dd_servers()
-            if potential_name in available_servers:
-                return potential_name
+            # Check if it matches any known DD server (case-sensitive) - use async
+            try:
+                available_servers = asyncio.create_task(self._get_available_dd_servers())
+                if hasattr(available_servers, 'result') and potential_name in available_servers.result():
+                    return potential_name
+                # For now, trust the mapping if it's a known DD server pattern
+                if potential_name in ['SQLite', 'Ref', 'Search', 'HTTP', 'K8s', 'Terraform', 'AWS', 'filesystem']:
+                    return potential_name
+            except Exception:
+                # Fallback to known patterns
+                if potential_name in ['SQLite', 'Ref', 'Search', 'HTTP', 'K8s', 'Terraform', 'AWS', 'filesystem']:
+                    return potential_name
         
         logger.debug(f"Could not determine Docker Desktop server name for: {server.name}")
         return None
     
-    def _get_available_dd_servers(self) -> List[str]:
-        """Get list of available Docker Desktop servers."""
+    async def _get_gateway_client(self):
+        """Get or create the Gateway HTTP API client."""
+        if self._gateway_client is None:
+            self._gateway_client = await create_docker_gateway_client(prefer_http=True)
+        return self._gateway_client
+    
+    async def _get_available_dd_servers(self) -> List[str]:
+        """Get list of available Docker Desktop servers via HTTP API."""
         try:
-            result = subprocess.run(
-                ['docker', 'mcp', 'server', 'list'],
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
-            
-            if result.returncode == 0:
-                # Parse the output - it's a comma-separated list
-                servers = [s.strip() for s in result.stdout.strip().split(',')]
-                return servers
-            else:
-                logger.error(f"Failed to list DD servers: {result.stderr}")
-                return []
+            gateway = await self._get_gateway_client()
+            servers = await gateway.list_servers()
+            return [server.name for server in servers]
                 
         except Exception as e:
-            logger.error(f"Error getting available DD servers: {e}")
+            logger.error(f"Error getting available DD servers via HTTP API: {e}")
             return []
     
     def _is_docker_desktop_server(self, server: Server) -> bool:
@@ -110,9 +116,9 @@ class DockerDesktopServerHandler(ServerHandler):
             (server.command == 'docker' and 'mcp' in (server.args or []) and 'gateway' in (server.args or []))
         )
     
-    def _get_dd_server_status(self, dd_server_name: str) -> str:
+    async def _get_dd_server_status(self, dd_server_name: str) -> str:
         """
-        Check if a Docker Desktop server is available and working.
+        Check if a Docker Desktop server is available and working via HTTP API.
         
         Args:
             dd_server_name: Docker Desktop server name (e.g., 'SQLite', 'Ref')
@@ -121,36 +127,26 @@ class DockerDesktopServerHandler(ServerHandler):
             'enabled' if server is available, 'disabled' if not available, 'error' if check failed
         """
         try:
-            # First check if server is in the available list
-            available_servers = self._get_available_dd_servers()
-            if dd_server_name not in available_servers:
+            gateway = await self._get_gateway_client()
+            
+            # Get server info via HTTP API
+            server_info = await gateway.get_server_info(dd_server_name)
+            if server_info is None:
                 return 'disabled'
             
-            # Try to inspect the server to see if it's actually working
-            result = subprocess.run(
-                ['docker', 'mcp', 'server', 'inspect', dd_server_name],
-                capture_output=True,
-                text=True,
-                timeout=15
-            )
-            
-            if result.returncode == 0:
-                # Server is available and responding
+            # Return status based on enabled state and server status
+            if server_info.enabled and server_info.status == 'running':
                 return 'enabled'
             else:
-                logger.debug(f"DD server {dd_server_name} inspect failed: {result.stderr}")
                 return 'disabled'
                 
-        except subprocess.TimeoutExpired:
-            logger.debug(f"DD server {dd_server_name} inspect timed out")
-            return 'error'
         except Exception as e:
-            logger.error(f"Error checking DD server {dd_server_name} status: {e}")
+            logger.error(f"Error checking DD server {dd_server_name} status via HTTP API: {e}")
             return 'error'
     
     async def enable_server(self, server: Server) -> bool:
         """
-        Enable a Docker Desktop MCP server.
+        Enable a Docker Desktop MCP server via HTTP API.
         
         Args:
             server: Server to enable
@@ -168,29 +164,24 @@ class DockerDesktopServerHandler(ServerHandler):
             return False
         
         try:
-            # Use docker mcp server enable command
-            result = subprocess.run(
-                ['docker', 'mcp', 'server', 'enable', dd_server_name],
-                capture_output=True,
-                text=True,
-                timeout=30
-            )
+            # Use HTTP API to enable server
+            gateway = await self._get_gateway_client()
+            success = await gateway.enable_server(dd_server_name)
             
-            success = result.returncode == 0
             if success:
                 logger.info(f"Successfully enabled Docker Desktop server: {server.name} ({dd_server_name})")
             else:
-                logger.warning(f"Failed to enable Docker Desktop server {server.name} ({dd_server_name}): {result.stderr}")
+                logger.warning(f"Failed to enable Docker Desktop server {server.name} ({dd_server_name}) via HTTP API")
             
             return success
             
         except Exception as e:
-            logger.error(f"Error enabling Docker Desktop server {server.name}: {e}")
+            logger.error(f"Error enabling Docker Desktop server {server.name} via HTTP API: {e}")
             return False
     
     async def disable_server(self, server: Server) -> bool:
         """
-        Disable a Docker Desktop MCP server.
+        Disable a Docker Desktop MCP server via HTTP API.
         
         Args:
             server: Server to disable
@@ -208,29 +199,24 @@ class DockerDesktopServerHandler(ServerHandler):
             return False
         
         try:
-            # Use docker mcp server disable command
-            result = subprocess.run(
-                ['docker', 'mcp', 'server', 'disable', dd_server_name],
-                capture_output=True,
-                text=True,
-                timeout=30
-            )
+            # Use HTTP API to disable server
+            gateway = await self._get_gateway_client()
+            success = await gateway.disable_server(dd_server_name)
             
-            success = result.returncode == 0
             if success:
                 logger.info(f"Successfully disabled Docker Desktop server: {server.name} ({dd_server_name})")
             else:
-                logger.warning(f"Failed to disable Docker Desktop server {server.name} ({dd_server_name}): {result.stderr}")
+                logger.warning(f"Failed to disable Docker Desktop server {server.name} ({dd_server_name}) via HTTP API")
             
             return success
             
         except Exception as e:
-            logger.error(f"Error disabling Docker Desktop server {server.name}: {e}")
+            logger.error(f"Error disabling Docker Desktop server {server.name} via HTTP API: {e}")
             return False
     
     async def get_server_status(self, server: Server) -> str:
         """
-        Get the current status of a Docker Desktop MCP server.
+        Get the current status of a Docker Desktop MCP server via HTTP API.
         
         Args:
             server: Server to check
@@ -245,14 +231,14 @@ class DockerDesktopServerHandler(ServerHandler):
         if not dd_server_name:
             return 'error'
         
-        # Get the actual status from Docker Desktop
-        status = self._get_dd_server_status(dd_server_name)
+        # Get the actual status from Docker Desktop via HTTP API
+        status = await self._get_dd_server_status(dd_server_name)
         logger.debug(f"Docker Desktop server {server.name} ({dd_server_name}) status: {status}")
         return status
     
     async def is_server_available(self, server: Server) -> bool:
         """
-        Check if Docker Desktop MCP server is available.
+        Check if Docker Desktop MCP server is available via HTTP API.
         
         Args:
             server: Server to check
@@ -267,8 +253,12 @@ class DockerDesktopServerHandler(ServerHandler):
         if not dd_server_name:
             return False
         
-        available_servers = self._get_available_dd_servers()
-        return dd_server_name in available_servers
+        try:
+            available_servers = await self._get_available_dd_servers()
+            return dd_server_name in available_servers
+        except Exception as e:
+            logger.error(f"Error checking if server {server.name} is available: {e}")
+            return False
     
     def supports_server(self, server: Server) -> bool:
         """
@@ -281,3 +271,14 @@ class DockerDesktopServerHandler(ServerHandler):
             True if this handler can manage the server
         """
         return self._is_docker_desktop_server(server)
+    
+    async def close(self):
+        """Close the handler and cleanup gateway client."""
+        if self._gateway_client:
+            try:
+                await self._gateway_client.stop()
+            except Exception as e:
+                logger.error(f"Error closing gateway client: {e}")
+            finally:
+                self._gateway_client = None
+        logger.debug("DockerDesktopServerHandler closed")

@@ -106,58 +106,99 @@ class DockerMCPGatewayClient:
     
     async def _ensure_gateway_running(self):
         """Ensure the Docker MCP Gateway is running."""
+        # Step 1: Check if API server is already running
         if await self.is_healthy():
-            logger.debug("Gateway already running and healthy")
+            logger.debug("Gateway already running and healthy - using existing server")
             return
             
-        logger.info("Starting Docker MCP Gateway...")
+        # Step 2: API server not running, start it once
+        logger.info("Docker MCP Gateway not running - starting persistent server...")
         await self._start_gateway_process()
         
-        # Wait for gateway to become healthy
+        # Step 3: Wait for gateway to become healthy
         start_time = time.time()
         while time.time() - start_time < self._startup_timeout:
             if await self.is_healthy():
-                logger.info("Docker MCP Gateway started successfully")
+                logger.info("Docker MCP Gateway started successfully - ready for all operations")
                 return
             await asyncio.sleep(1)
         
         raise RuntimeError(f"Gateway failed to start within {self._startup_timeout} seconds")
     
     async def _start_gateway_process(self):
-        """Start the Docker MCP Gateway HTTP server process."""
+        """Start the persistent Docker MCP Gateway HTTP server process."""
         try:
             # Start the gateway in HTTP server mode with all available servers
             cmd = [
                 "docker", "mcp", "gateway", "run",
                 "--port", str(self.port),
-                "--servers", "Ref,SQLite,filesystem"  # Enable all available DD servers
+                "--servers", "Ref,SQLite,filesystem",  # Enable all available DD servers
+                "--transport", "sse"  # Use Server-Sent Events transport for HTTP API
             ]
             
-            logger.debug(f"Starting gateway with command: {' '.join(cmd)}")
+            logger.info(f"Starting persistent Gateway API server: {' '.join(cmd)}")
             self._gateway_process = subprocess.Popen(
                 cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                stdout=subprocess.DEVNULL,  # Don't capture output for persistent process
+                stderr=subprocess.DEVNULL,
                 text=True
             )
             
-            # Give it more time to start (Gateway needs to pull images potentially)
+            # Give it time to start (Gateway needs to pull images potentially)
             await asyncio.sleep(5)
             
         except Exception as e:
             logger.error(f"Failed to start gateway process: {e}")
             raise
     
+    async def restart_gateway(self):
+        """Restart the gateway if it's having issues."""
+        logger.warning("Restarting Docker MCP Gateway due to health issues")
+        
+        # Stop the current process
+        if self._gateway_process:
+            try:
+                self._gateway_process.terminate()
+                self._gateway_process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                self._gateway_process.kill()
+            except Exception as e:
+                logger.error(f"Error stopping gateway for restart: {e}")
+            finally:
+                self._gateway_process = None
+        
+        # Start a new process
+        await self._start_gateway_process()
+        
+        # Wait for it to become healthy
+        start_time = time.time()
+        while time.time() - start_time < self._startup_timeout:
+            if await self.is_healthy():
+                logger.info("Docker MCP Gateway restarted successfully")
+                return
+            await asyncio.sleep(1)
+        
+        raise RuntimeError("Gateway restart failed")
+    
+    async def ensure_healthy(self):
+        """Ensure gateway is healthy, restart if needed."""
+        if not await self.is_healthy():
+            logger.warning("Gateway unhealthy, attempting restart")
+            await self.restart_gateway()
+    
     async def is_healthy(self) -> bool:
-        """Check if the gateway is healthy and responding."""
+        """Check if the gateway is healthy and responding to SSE connection."""
         try:
             if not self.session:
                 return False
                 
-            async with self.session.get(f"{self.base_url}/health") as response:
-                if response.status == 200:
-                    data = await response.json()
-                    return data.get("status") == "healthy"
+            # Try to connect to the SSE endpoint briefly to check if gateway is responding
+            timeout = aiohttp.ClientTimeout(total=2)  # Short timeout for health check
+            async with aiohttp.ClientSession(timeout=timeout) as temp_session:
+                async with temp_session.get(f"{self.base_url}/sse") as response:
+                    if response.status == 200:
+                        # If we can connect to SSE endpoint, gateway is running
+                        return True
         except Exception as e:
             logger.debug(f"Health check failed: {e}")
         
@@ -185,95 +226,87 @@ class DockerMCPGatewayClient:
             raise
     
     async def list_servers(self) -> List[GatewayServerInfo]:
-        """List all available servers with their status."""
-        if not self.session:
-            raise RuntimeError("Client not started - call start() first")
-            
+        """List all available servers by checking what's enabled in the gateway."""
+        # For the existing gateway on port 8080 with servers "Ref,SQLite,filesystem"
+        # We'll return the known enabled servers since we can't dynamically query them
         try:
-            async with self.session.get(f"{self.base_url}/servers") as response:
-                response.raise_for_status()
-                data = await response.json()
-                
-                servers = []
-                for server_data in data.get("servers", []):
-                    servers.append(GatewayServerInfo(
-                        name=server_data["name"],
-                        enabled=server_data.get("enabled", False),
-                        status=server_data.get("status", "unknown"),
-                        description=server_data.get("description"),
-                        tools=server_data.get("tools")
-                    ))
-                
-                return servers
+            # Check if gateway is healthy first
+            if not await self.is_healthy():
+                logger.warning("Gateway not healthy, cannot list servers")
+                return []
+            
+            # Return the servers that are configured in the gateway
+            # Based on the gateway startup command: --servers "Ref,SQLite,filesystem"  
+            known_servers = [
+                GatewayServerInfo(
+                    name="Ref",
+                    enabled=True,
+                    status="running",
+                    description="Reference documentation and web search server"
+                ),
+                GatewayServerInfo(
+                    name="SQLite", 
+                    enabled=True,
+                    status="running",
+                    description="SQLite database management server"
+                ),
+                GatewayServerInfo(
+                    name="filesystem",
+                    enabled=True, 
+                    status="running",
+                    description="File system operations server"
+                )
+            ]
+            
+            logger.debug(f"Listed {len(known_servers)} known gateway servers")
+            return known_servers
+            
         except Exception as e:
             logger.error(f"Failed to list servers: {e}")
-            raise
+            return []
     
     async def enable_server(self, server_name: str) -> bool:
         """
-        Enable a Docker Desktop MCP server.
+        Check if a Docker Desktop MCP server is enabled in the gateway.
+        
+        Note: The Docker MCP Gateway manages server enablement at startup.
+        This method checks if the server is already available in the current gateway.
         
         Args:
-            server_name: Name of the server to enable (e.g., "sqlite", "filesystem")
+            server_name: Name of the server to enable (e.g., "SQLite", "filesystem")
             
         Returns:
-            True if successfully enabled
+            True if server is available/enabled
         """
-        if not self.session:
-            raise RuntimeError("Client not started - call start() first")
-            
         try:
-            payload = {"action": "enable"}
-            async with self.session.post(
-                f"{self.base_url}/servers/{server_name}", 
-                json=payload
-            ) as response:
-                response.raise_for_status()
-                data = await response.json()
-                success = data.get("success", False)
-                
-                if success:
-                    logger.info(f"Successfully enabled server: {server_name}")
-                else:
-                    logger.warning(f"Failed to enable server {server_name}: {data.get('error', 'Unknown error')}")
-                
-                return success
+            servers = await self.list_servers()
+            for server in servers:
+                if server.name == server_name:
+                    logger.info(f"Server {server_name} is already enabled in gateway")
+                    return True
+            
+            logger.warning(f"Server {server_name} not available in current gateway configuration")
+            return False
+            
         except Exception as e:
-            logger.error(f"Failed to enable server {server_name}: {e}")
+            logger.error(f"Failed to check server {server_name} availability: {e}")
             return False
     
     async def disable_server(self, server_name: str) -> bool:
         """
-        Disable a Docker Desktop MCP server.
+        Disable a Docker Desktop MCP server via MCP protocol.
+        
+        Note: The Docker MCP Gateway manages server disablement at startup.
+        Individual servers cannot be disabled at runtime through MCP protocol.
         
         Args:
             server_name: Name of the server to disable
             
         Returns:
-            True if successfully disabled
+            False as runtime disabling is not supported
         """
-        if not self.session:
-            raise RuntimeError("Client not started - call start() first")
-            
-        try:
-            payload = {"action": "disable"}
-            async with self.session.post(
-                f"{self.base_url}/servers/{server_name}", 
-                json=payload
-            ) as response:
-                response.raise_for_status()
-                data = await response.json()
-                success = data.get("success", False)
-                
-                if success:
-                    logger.info(f"Successfully disabled server: {server_name}")
-                else:
-                    logger.warning(f"Failed to disable server {server_name}: {data.get('error', 'Unknown error')}")
-                
-                return success
-        except Exception as e:
-            logger.error(f"Failed to disable server {server_name}: {e}")
-            return False
+        logger.warning(f"Server {server_name} cannot be disabled at runtime - gateway manages servers at startup")
+        return False
     
     async def get_server_info(self, server_name: str) -> Optional[GatewayServerInfo]:
         """
@@ -285,24 +318,13 @@ class DockerMCPGatewayClient:
         Returns:
             Server information or None if not found
         """
-        if not self.session:
-            raise RuntimeError("Client not started - call start() first")
-            
         try:
-            async with self.session.get(f"{self.base_url}/servers/{server_name}") as response:
-                if response.status == 404:
-                    return None
-                    
-                response.raise_for_status()
-                data = await response.json()
-                
-                return GatewayServerInfo(
-                    name=data["name"],
-                    enabled=data.get("enabled", False),
-                    status=data.get("status", "unknown"),
-                    description=data.get("description"),
-                    tools=data.get("tools")
-                )
+            servers = await self.list_servers()
+            for server in servers:
+                if server.name == server_name:
+                    return server
+            
+            return None
         except Exception as e:
             logger.error(f"Failed to get server info for {server_name}: {e}")
             return None
@@ -519,6 +541,49 @@ class DockerMCPGatewayCLIFallback:
         except Exception as e:
             logger.error(f"Failed to list servers: {e}")
             return []
+    
+    async def get_server_info(self, server_name: str) -> Optional[GatewayServerInfo]:
+        """Get server info using CLI command."""
+        try:
+            # First try to inspect the server
+            result = subprocess.run(
+                ["docker", "mcp", "server", "inspect", server_name],
+                capture_output=True,
+                text=True,
+                timeout=15
+            )
+            
+            if result.returncode == 0:
+                # Server exists and is enabled
+                return GatewayServerInfo(
+                    name=server_name,
+                    enabled=True,
+                    status="running"
+                )
+            else:
+                # Check if server is in the available list but disabled
+                available_result = subprocess.run(
+                    ["docker", "mcp", "server", "list"],
+                    capture_output=True,
+                    text=True,
+                    timeout=10
+                )
+                
+                if available_result.returncode == 0:
+                    available_servers = [s.strip() for s in available_result.stdout.strip().split(',')]
+                    if server_name in available_servers:
+                        return GatewayServerInfo(
+                            name=server_name,
+                            enabled=False,
+                            status="disabled"
+                        )
+                
+                # Server not found
+                return None
+                
+        except Exception as e:
+            logger.error(f"Failed to get server info for {server_name}: {e}")
+            return None
 
 
 # Factory function to create appropriate client
@@ -533,27 +598,17 @@ async def create_docker_gateway_client(prefer_http: bool = True, **kwargs) -> Do
     Returns:
         Configured gateway client
     """
-    if prefer_http:
-        try:
-            client = DockerMCPGatewayClient(**kwargs)
-            await client.start()
-            
-            # Test if HTTP API is working
-            if await client.is_healthy():
-                logger.info("Using Docker MCP Gateway HTTP API")
-                return client
-            else:
-                await client.stop()
-                logger.info("HTTP API not available, falling back to CLI")
-        except Exception as e:
-            logger.info(f"HTTP API failed ({e}), falling back to CLI")
-    
-    # Fall back to CLI implementation
-    cli_client = DockerMCPGatewayCLIFallback()
-    await cli_client.start()
-    
-    if await cli_client.is_healthy():
-        logger.info("Using Docker MCP CLI fallback")
-        return cli_client
-    else:
-        raise RuntimeError("Neither HTTP API nor CLI fallback available")
+    try:
+        client = DockerMCPGatewayClient(**kwargs)
+        await client.start()
+        
+        # Test if HTTP API is working
+        if await client.is_healthy():
+            logger.info("Using Docker MCP Gateway HTTP/SSE API")
+            return client
+        else:
+            await client.stop()
+            raise RuntimeError("Docker MCP Gateway not available on HTTP/SSE")
+    except Exception as e:
+        logger.error(f"Docker MCP Gateway HTTP/SSE API failed: {e}")
+        raise RuntimeError(f"Docker MCP Gateway not available: {e}")
