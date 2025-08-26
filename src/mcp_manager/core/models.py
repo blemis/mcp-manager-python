@@ -75,6 +75,7 @@ class Server(BaseModel):
     last_started: Optional[datetime] = Field(default=None, description="Last start time")
     last_error: Optional[str] = Field(default=None, description="Last error message")
     restart_count: int = Field(default=0, description="Number of restarts")
+    claude_status: str = Field(default="unknown", description="Claude connection status")
     
     @field_validator("name")
     @classmethod

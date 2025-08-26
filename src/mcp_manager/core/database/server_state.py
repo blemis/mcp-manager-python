@@ -48,6 +48,7 @@ class ServerInfo:
     package: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    claude_status: str = "unknown"  # 'connected', 'failed', 'not_in_claude', 'gateway_missing', etc.
 
 @dataclass
 class ServerStatusInfo:
@@ -225,10 +226,13 @@ class MCPServerStateManager:
         """Ultra-fast config file access - <50ms target."""
         try:
             with sqlite3.connect(str(self.db_path)) as conn:
+                # Ensure we get fresh data - no caching!
+                conn.execute("PRAGMA synchronous = NORMAL")
+                conn.execute("PRAGMA cache_size = 0")  # Disable SQLite cache
                 conn.row_factory = sqlite3.Row
                 cursor = conn.execute("""
                     SELECT name, server_type, command, args, env, enabled, scope, 
-                           description, install_id, package, created_at, updated_at
+                           description, install_id, package, created_at, updated_at, claude_status
                     FROM mcp_server_registry
                     ORDER BY name
                 """)
@@ -247,7 +251,8 @@ class MCPServerStateManager:
                         install_id=row['install_id'],
                         package=row['package'],
                         created_at=datetime.fromisoformat(row['created_at']) if row['created_at'] else None,
-                        updated_at=datetime.fromisoformat(row['updated_at']) if row['updated_at'] else None
+                        updated_at=datetime.fromisoformat(row['updated_at']) if row['updated_at'] else None,
+                        claude_status=row['claude_status'] if 'claude_status' in row.keys() else 'unknown'
                     ))
                 
                 return servers
@@ -444,6 +449,30 @@ class MCPServerStateManager:
                     
         except Exception as e:
             logger.error(f"Failed to update server {name} status: {e}")
+            return False
+    
+    def update_claude_status(self, name: str, claude_status: str) -> bool:
+        """Update server Claude connection status."""
+        try:
+            with sqlite3.connect(str(self.db_path)) as conn:
+                now = datetime.now(timezone.utc).isoformat()
+                cursor = conn.execute("""
+                    UPDATE mcp_server_registry 
+                    SET claude_status = ?, updated_at = ?
+                    WHERE name = ?
+                """, (claude_status, now, name))
+                
+                if cursor.rowcount > 0:
+                    # Clear runtime cache
+                    self.runtime_cache.clear()
+                    logger.debug(f"Updated server {name} Claude status to {claude_status}")
+                    return True
+                else:
+                    logger.warning(f"Server {name} not found for Claude status update")
+                    return False
+                    
+        except Exception as e:
+            logger.error(f"Failed to update server {name} Claude status: {e}")
             return False
     
     def _calculate_config_hash(self, server_info: ServerInfo) -> str:

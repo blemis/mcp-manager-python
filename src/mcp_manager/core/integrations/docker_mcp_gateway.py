@@ -461,6 +461,10 @@ class DockerMCPGatewayClient:
             enabled_servers = [row[0].replace('dd-', '') for row in cursor.fetchall()]
             conn.close()
             
+            # Add the server we're enabling to the list if not already there
+            if server_name not in enabled_servers:
+                enabled_servers.append(server_name)
+            
             logger.info(f"Enabling server {server_name}, gateway will serve: {sorted(enabled_servers)}")
             
             # Restart gateway with all enabled servers
@@ -491,6 +495,10 @@ class DockerMCPGatewayClient:
             cursor.execute("SELECT name FROM mcp_server_registry WHERE enabled = 1 AND name LIKE 'dd-%'")
             enabled_servers = [row[0].replace('dd-', '') for row in cursor.fetchall()]
             conn.close()
+            
+            # Remove the server we're disabling from the list
+            if server_name in enabled_servers:
+                enabled_servers.remove(server_name)
             
             logger.info(f"Disabling server {server_name}, gateway will serve: {sorted(enabled_servers)}")
             
@@ -580,35 +588,62 @@ class DockerMCPGatewayClient:
     
     async def _restart_gateway_with_servers(self, server_list: List[str]):
         """
-        Restart Docker MCP Gateway with specific list of enabled servers.
+        Update Claude's docker-gateway configuration with new server list.
+        This keeps the gateway process running but updates what Claude sees.
         
         Args:
             server_list: List of server names to enable (e.g., ["Ref", "SQLite"])
         """
+        from mcp_manager.core.claude_interface import ClaudeInterface
         import subprocess
         
-        # 1. Kill ANY existing gateway processes
-        logger.info("Stopping any existing Docker MCP Gateway processes")
-        subprocess.run(["pkill", "-f", "docker.*mcp.*gateway"], capture_output=True)
-        await asyncio.sleep(1)  # Give it time to die
-        
-        # 2. Update Claude's configuration
-        if server_list:
-            servers_arg = ",".join(server_list)
-            logger.info(f"Updating Claude config with servers: {servers_arg}")
+        try:
+            # Initialize Claude interface
+            claude = ClaudeInterface()
             
-            subprocess.run(["claude", "mcp", "remove", "docker-gateway"], capture_output=True, check=False)
-            subprocess.run(["claude", "mcp", "add", "docker-gateway", f"docker mcp gateway run --servers {servers_arg}"], capture_output=True, check=False)
+            # Remove existing docker-gateway from Claude config
+            # Try removing from different scopes until successful
+            removed = False
+            for scope in ["user", "project", "local"]:
+                try:
+                    result = subprocess.run(
+                        [claude.claude_path, "mcp", "remove", "--scope", scope, "docker-gateway"],
+                        capture_output=True,
+                        text=True,
+                        timeout=30,
+                    )
+                    if result.returncode == 0:
+                        logger.debug(f"Removed existing docker-gateway from {scope} scope")
+                        removed = True
+                        break
+                except Exception:
+                    continue
             
-            logger.info(f"Gateway will be started by Claude with servers: {server_list}")
-        else:
-            logger.warning("No servers enabled, removing gateway from Claude")
-            subprocess.run(["claude", "mcp", "remove", "docker-gateway"], capture_output=True, check=False)
-        
-        # Reset our session state since gateway restarted
-        self._initialized = False
-        self._endpoint_url = None
-        self._message_id = 0
+            if not removed:
+                logger.warning("docker-gateway not found in any scope, adding new entry")
+            
+            # Only add gateway if we have servers to expose
+            if server_list:
+                # Re-add docker-gateway with updated server list
+                servers_arg = ",".join(server_list)
+                success = claude.add_server(
+                    name="docker-gateway",
+                    command="docker",
+                    args=["mcp", "gateway", "run", "--servers", servers_arg],
+                    env=None,
+                )
+                
+                if success:
+                    logger.info(f"Updated docker-gateway configuration with servers: {server_list}")
+                else:
+                    logger.error("Failed to add docker-gateway to Claude Code")
+                    raise RuntimeError("Failed to update docker-gateway configuration")
+            else:
+                logger.info("No servers enabled, docker-gateway removed from Claude configuration")
+            
+        except Exception as e:
+            logger.error(f"Failed to update docker-gateway configuration: {e}")
+            raise
     
     async def sync_servers(self, desired_servers: List[str]) -> Tuple[List[str], List[str]]:
         """

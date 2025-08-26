@@ -287,6 +287,20 @@ def cli(ctx: click.Context, debug: bool, verbose: bool, config_dir: Optional[Pat
 
 
 # Core server management commands
+@cli.command("sync-status")
+@handle_errors
+def sync_status():
+    """Sync Claude connection status to database."""
+    manager, context = cli_context.auto_sync_and_get_manager()
+    
+    console.print("[blue]Syncing Claude status to database...[/blue]")
+    updated_count = asyncio.run(manager.sync_claude_status())
+    
+    if updated_count > 0:
+        console.print(f"[green]✅ Updated status for {updated_count} servers[/green]")
+    else:
+        console.print("[yellow]No status changes detected[/yellow]")
+
 @cli.command("list")
 @click.option(
     "--scope", "-s",
@@ -376,33 +390,8 @@ def list_cmd(scope: Optional[str], output_format: str):
                 # If suite functionality not available, use empty dict
                 server_suites = {}
             
-            # Get Claude connection status for dual display
-            claude_status = {}
-            docker_gateway_servers = []  # DD servers enabled in docker-gateway
-            try:
-                import subprocess
-                result = subprocess.run(['claude', 'mcp', 'list'], 
-                                     capture_output=True, text=True, timeout=10)
-                if result.returncode == 0:
-                    lines = result.stdout.strip().split('\n')
-                    for line in lines:
-                        # Parse format: "server-name: command - ✓ Connected" or "server-name: command - ✗ Failed to connect"
-                        if ':' in line and (' - ✓' in line or ' - ✗' in line):
-                            # Extract server name (everything before first ':')
-                            name = line.split(':', 1)[0].strip()
-                            # Check status at end of line
-                            if ' - ✓' in line or 'Connected' in line:
-                                claude_status[name] = "Connected"
-                                # Special parsing for docker-gateway to extract enabled DD servers
-                                if name == "docker-gateway" and "--servers" in line:
-                                    # Extract servers from: "docker mcp gateway run --servers Ref,SQLite,filesystem"
-                                    servers_part = line.split("--servers")[1].split(" - ")[0].strip()
-                                    docker_gateway_servers = [s.strip() for s in servers_part.split(",")]
-                            elif ' - ✗' in line or 'Failed' in line:
-                                claude_status[name] = "Failed"
-            except Exception:
-                # If Claude status check fails, continue without it
-                pass
+            # Get Claude status from database (already synced)
+            # No dynamic checks - database is the source of truth!
             
             # Get real-time status using polymorphic handlers
             real_status = {}
@@ -436,34 +425,26 @@ def list_cmd(scope: Optional[str], output_format: str):
                 else:
                     db_status = f"❓ {server_status.title()}"
                 
-                claude_conn = claude_status.get(server.name, "Not in Claude")
+                # Use database claude_status - it's the source of truth!
+                claude_conn = server.claude_status
                 
-                # Claude status should reflect actual Claude state, not database state
-                if claude_conn == "Connected":
+                # Display Claude status from database
+                if claude_conn == "connected":
                     claude_status_display = "✓ Connected"
-                elif claude_conn == "Failed":
+                elif claude_conn == "failed":
                     claude_status_display = "✗ Failed"
-                elif claude_conn == "Not in Claude":
-                    # Special handling for Docker Desktop servers - they're proxied through docker-gateway
-                    if server.server_type.value == "docker-desktop":
-                        docker_gateway_status = claude_status.get("docker-gateway", "Not in Claude")
-                        if docker_gateway_status == "Connected":
-                            # Check if this DD server is actually enabled in docker-gateway
-                            # Convert dd-Ref -> Ref for comparison
-                            server_dd_name = server.name.replace("dd-", "") if server.name.startswith("dd-") else server.name
-                            if server_dd_name in docker_gateway_servers:
-                                claude_status_display = "✓ Connected"
-                            else:
-                                claude_status_display = "⚠️ Not Enabled in DD"
-                        elif docker_gateway_status == "Failed":
-                            claude_status_display = "✗ Gateway Failed"
-                        else:
-                            claude_status_display = "⚠️ Gateway Missing"
-                    else:
-                        # Only show "-" if server is disabled AND not in Claude
-                        claude_status_display = "-" if not server.enabled else "⚠️ Not Synced"
+                elif claude_conn == "not_in_claude":
+                    claude_status_display = "⚠️ Not in Claude"
+                elif claude_conn == "not_enabled_in_dd":
+                    claude_status_display = "⚠️ Not Enabled in DD"
+                elif claude_conn == "gateway_failed":
+                    claude_status_display = "✗ Gateway Failed"
+                elif claude_conn == "gateway_missing":
+                    claude_status_display = "⚠️ Gateway Missing"
+                elif claude_conn == "unknown":
+                    claude_status_display = "❓ Unknown"
                 else:
-                    claude_status_display = claude_conn
+                    claude_status_display = f"❓ {claude_conn}"
                 
                 scope_str = server.scope.value if server.scope else "unknown" 
                 command_str = f"{server.command} {' '.join(server.args)}"

@@ -231,7 +231,8 @@ class DockerDesktopServerHandler(ServerHandler):
     
     async def get_server_status(self, server: Server) -> str:
         """
-        Get the current status of a Docker Desktop MCP server via HTTP API.
+        Get the current status of a Docker Desktop MCP server from database.
+        The database is the source of truth for enabled/disabled status.
         
         Args:
             server: Server to check
@@ -242,14 +243,12 @@ class DockerDesktopServerHandler(ServerHandler):
         if not self._is_docker_desktop_server(server):
             return 'unavailable'
         
-        dd_server_name = self._get_dd_server_name(server)
-        if not dd_server_name:
-            return 'error'
-        
-        # Get the actual status from Docker Desktop via HTTP API
-        status = await self._get_dd_server_status(dd_server_name)
-        logger.debug(f"Docker Desktop server {server.name} ({dd_server_name}) status: {status}")
-        return status
+        # Return the database status - that's the source of truth!
+        # The server object passed in has the current database state
+        if server.enabled:
+            return 'enabled'
+        else:
+            return 'disabled'
     
     async def is_server_available(self, server: Server) -> bool:
         """

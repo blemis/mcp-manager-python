@@ -161,7 +161,8 @@ class SimpleMCPManager:
                     env=db_server.env,
                     enabled=db_server.enabled,
                     scope=ServerScope.USER if db_server.scope == "user" else ServerScope.GLOBAL,
-                    server_type=ServerType(db_server.server_type.value)
+                    server_type=ServerType(db_server.server_type.value),
+                    claude_status=db_server.claude_status
                 ))
             
             return servers
@@ -173,14 +174,12 @@ class SimpleMCPManager:
     async def list_servers(self) -> List[Server]:
         """
         List all MCP servers from mcp-manager's database.
-        Auto-imports any missing servers from Claude before returning.
+        This is a pure database read - no imports, no modifications.
         
         Returns:
             List of servers from mcp-manager's database
         """
-        # Auto-import missing servers from Claude before listing
-        await self.auto_import_missing_servers()
-        
+        # Pure database read - no side effects!
         return self.list_servers_fast()
     
     async def add_server(
@@ -389,9 +388,25 @@ class SimpleMCPManager:
         db_servers = self.list_servers_fast()
         db_server = next((s for s in db_servers if s.name == name), None)
         if db_server:
-            # Server exists in database - use appropriate handler to enable it
+            # Update database state FIRST (so handler can see the correct state)
+            logger.debug(f"Updating database to enable server '{name}'")
+            db_success = self.db_manager.update_server_status(name, enabled=True)
+            if not db_success:
+                logger.error(f"Failed to update database for server {name}")
+                return False
+            
+            # Now use appropriate handler to enable it
             logger.debug(f"Enabling server '{name}' using polymorphic handler")
             success = await self.handler_factory.enable_server(db_server)
+            
+            # If handler failed, revert database change
+            if not success:
+                logger.warning(f"Handler failed to enable {name}, reverting database")
+                self.db_manager.update_server_status(name, enabled=False)
+            else:
+                # Sync Claude status after successful enable
+                await self.sync_claude_status()
+            
             return success
         
         # Check if this is a Docker Desktop server that's disabled in catalog
@@ -526,9 +541,25 @@ class SimpleMCPManager:
             logger.debug(f"Server '{name}' not found in database for disabling")
             return False
         
-        # Server exists in database - use appropriate handler to disable it
+        # Update database state FIRST (so handler can see the correct state)
+        logger.debug(f"Updating database to disable server '{name}'")
+        db_success = self.db_manager.update_server_status(name, enabled=False)
+        if not db_success:
+            logger.error(f"Failed to update database for server {name}")
+            return False
+        
+        # Now use appropriate handler to disable it
         logger.debug(f"Disabling server '{name}' using polymorphic handler")
         success = await self.handler_factory.disable_server(db_server)
+        
+        # If handler failed, revert database change
+        if not success:
+            logger.warning(f"Handler failed to disable {name}, reverting database")
+            self.db_manager.update_server_status(name, enabled=True)
+        else:
+            # Sync Claude status after successful disable
+            await self.sync_claude_status()
+        
         return success
     
     async def get_server(self, name: str) -> Optional[Server]:
@@ -542,6 +573,86 @@ class SimpleMCPManager:
             Server object if found, None otherwise
         """
         return self.claude.get_server(name)
+    
+    async def sync_claude_status(self) -> int:
+        """
+        Sync Claude connection status to database for all servers.
+        This checks the actual Claude configuration and updates the database.
+        
+        Returns:
+            Number of servers updated
+        """
+        import subprocess
+        updated_count = 0
+        
+        try:
+            # Get all servers from database
+            db_servers = self.list_servers_fast()
+            
+            # Get Claude's actual status
+            claude_status = {}
+            docker_gateway_servers = []
+            
+            try:
+                # Check Claude MCP servers
+                result = subprocess.run(['claude', 'mcp', 'list'], 
+                                     capture_output=True, text=True, timeout=10)
+                
+                if result.returncode == 0:
+                    lines = result.stdout.strip().split('\n')
+                    for line in lines:
+                        # Parse format: "server-name: command - ✓ Connected" or "✗ Failed"
+                        if ':' in line and (' - ✓' in line or ' - ✗' in line):
+                            name = line.split(':', 1)[0].strip()
+                            
+                            if ' - ✓' in line or 'Connected' in line:
+                                claude_status[name] = "connected"
+                                
+                                # Special parsing for docker-gateway
+                                if name == "docker-gateway" and "--servers" in line:
+                                    servers_part = line.split("--servers")[1].split(" - ")[0].strip()
+                                    docker_gateway_servers = [s.strip() for s in servers_part.split(",")]
+                            elif ' - ✗' in line or 'Failed' in line:
+                                claude_status[name] = "failed"
+            except Exception as e:
+                logger.warning(f"Failed to get Claude status: {e}")
+            
+            # Update database with Claude status for each server
+            for server in db_servers:
+                new_status = "unknown"
+                
+                if server.server_type.value == "docker-desktop":
+                    # Docker Desktop servers are proxied through docker-gateway
+                    if "docker-gateway" in claude_status:
+                        # Check if this DD server is in the gateway
+                        server_dd_name = server.name.replace("dd-", "") if server.name.startswith("dd-") else server.name
+                        
+                        if claude_status["docker-gateway"] == "connected":
+                            if server_dd_name in docker_gateway_servers:
+                                new_status = "connected"
+                            else:
+                                new_status = "not_enabled_in_dd"
+                        else:
+                            new_status = "gateway_failed"
+                    else:
+                        new_status = "gateway_missing"
+                else:
+                    # Regular servers - check Claude directly
+                    if server.name in claude_status:
+                        new_status = claude_status[server.name]
+                    else:
+                        new_status = "not_in_claude"
+                
+                # Update database if status changed
+                if self.db_manager.update_claude_status(server.name, new_status):
+                    updated_count += 1
+            
+            logger.info(f"Synced Claude status for {updated_count} servers")
+            return updated_count
+            
+        except Exception as e:
+            logger.error(f"Failed to sync Claude status: {e}")
+            return 0
     
     def server_exists(self, name: str) -> bool:
         """
@@ -557,8 +668,6 @@ class SimpleMCPManager:
     
     async def _enable_docker_desktop_server(self, name: str, command: str, args: List[str]) -> bool:
         """Enable a Docker Desktop MCP server and sync with Claude Code."""
-        import subprocess
-        
         try:
             # Extract the actual server name (remove dd- or docker-desktop- prefix if present)
             if name.startswith("docker-desktop-"):
@@ -570,22 +679,33 @@ class SimpleMCPManager:
             
             logger.debug(f"Enabling Docker Desktop MCP server: {server_name}")
             
-            # Step 1: Enable the server in Docker Desktop
-            result = subprocess.run(
-                [self.claude.docker_path, "mcp", "server", "enable", server_name],
-                capture_output=True,
-                text=True,
-                timeout=30,
-            )
+            # Add to registry.yaml
+            import yaml
+            from pathlib import Path
             
-            if result.returncode != 0:
-                logger.error(f"Failed to enable Docker Desktop server {server_name}: {result.stderr}")
-                return False
+            registry_path = Path.home() / ".docker" / "mcp" / "registry.yaml"
+            registry_path.parent.mkdir(parents=True, exist_ok=True)
             
-            logger.debug(f"Successfully enabled {server_name} in Docker Desktop")
+            # Load existing registry or create new
+            if registry_path.exists():
+                with open(registry_path) as f:
+                    registry_data = yaml.safe_load(f) or {}
+            else:
+                registry_data = {}
             
-            # Step 2: Sync all Docker Desktop servers to Claude Code
-            # Refresh the gateway to include the newly enabled server
+            if "registry" not in registry_data:
+                registry_data["registry"] = {}
+            
+            # Add the server to registry
+            registry_data["registry"][server_name] = {"ref": ""}
+            
+            # Write back
+            with open(registry_path, 'w') as f:
+                yaml.dump(registry_data, f, default_flow_style=False)
+            
+            logger.debug(f"Added {server_name} to Docker MCP registry")
+            
+            # Refresh the gateway configuration in Claude
             sync_success = await self._refresh_docker_gateway()
             
             if sync_success:
@@ -622,6 +742,8 @@ class SimpleMCPManager:
     async def _refresh_docker_gateway(self) -> bool:
         """Refresh docker-gateway by removing and re-adding it with updated servers."""
         try:
+            import subprocess
+            
             # Remove existing gateway if it exists - try all scopes
             if self.claude.server_exists("docker-gateway"):
                 # Try removing from different scopes until successful
@@ -3665,10 +3787,22 @@ class SimpleMCPManager:
                         imported_count += 1
                     except Exception as e:
                         logger.warning(f"Failed to import Docker Desktop server {full_name}: {e}")
+                else:
+                    # Server already exists in DB - update enabled state based on gateway presence
+                    # Servers in the gateway are enabled, servers not in gateway should stay as-is
+                    existing_server = next((s for s in manager_servers if s.name == full_name), None)
+                    if existing_server and not existing_server.enabled:
+                        # Server is disabled in DB but appears in gateway - update to enabled
+                        self.db_manager.update_server_status(full_name, enabled=True)
+                        logger.info(f"Re-enabled Docker Desktop server {full_name} (found in gateway)")
             
-            # Import missing regular servers from Claude
+            # Import missing regular servers from Claude (but skip docker-gateway - it's infrastructure)
             for claude_server in claude_servers:
-                if claude_server.name not in manager_server_names and claude_server.name != "docker-gateway":
+                # Skip docker-gateway - it's infrastructure, not a user-facing server
+                if claude_server.name == "docker-gateway":
+                    continue
+                    
+                if claude_server.name not in manager_server_names:
                     try:
                         from mcp_manager.core.database.server_state import ServerInfo, ServerType as DBServerType
                         # Map server types

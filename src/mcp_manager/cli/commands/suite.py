@@ -9,7 +9,7 @@ import click
 from rich.console import Console
 
 from mcp_manager.cli.helpers import handle_errors, generate_install_id
-from mcp_manager.core.models import ServerScope
+from mcp_manager.core.models import ServerScope, ServerType
 
 console = Console()
 
@@ -565,7 +565,7 @@ def suite_commands(cli_context):
                             continue
                         
                         # Remove server from Claude Code
-                        from mcp_manager.core.models import ServerScope
+                        from mcp_manager.core.models import ServerScope, ServerType
                         success = await manager.remove_server(server_name, ServerScope.USER)
                         
                         if success:
@@ -762,22 +762,17 @@ def suite_commands(cli_context):
                         console.print("[blue]📥 Installing missing servers...[/blue]")
                         for server_name in servers_to_install:
                             try:
-                                # Try to discover and install the server
-                                discovery = cli_context.get_discovery()
-                                results = await discovery.discover_servers(query=server_name, limit=5)
-                                
-                                # Find exact match
-                                exact_match = next((r for r in results if r.name == server_name or 
-                                                  generate_install_id(r) == server_name), None)
-                                
-                                if exact_match:
-                                    # Install the server
-                                    install_name = generate_install_id(exact_match)
+                                # Special handling for Docker Desktop servers
+                                if server_name.startswith('dd-'):
+                                    # Extract the Docker Desktop server name
+                                    dd_server_name = server_name.replace('dd-', '')
+                                    
+                                    # For Docker Desktop servers, we need to add them directly
                                     success = await manager.add_server(
-                                        name=install_name,
-                                        server_type=exact_match.server_type,
-                                        command=exact_match.install_command,
-                                        args=exact_match.install_args or [],
+                                        name=server_name,
+                                        server_type=ServerType.DOCKER_DESKTOP,
+                                        command="/opt/homebrew/bin/docker",
+                                        args=["mcp", "gateway", "run", "--servers", dd_server_name],
                                         env={},
                                         scope=ServerScope.USER
                                     )
@@ -787,7 +782,32 @@ def suite_commands(cli_context):
                                     else:
                                         console.print(f"  [red]❌ Failed to install: {server_name}[/red]")
                                 else:
-                                    console.print(f"  [yellow]⚠️ Server not found in discovery: {server_name}[/yellow]")
+                                    # Try to discover and install the server
+                                    discovery = cli_context.get_discovery()
+                                    results = await discovery.discover_servers(query=server_name, limit=5)
+                                    
+                                    # Find exact match
+                                    exact_match = next((r for r in results if r.name == server_name or 
+                                                      generate_install_id(r) == server_name), None)
+                                    
+                                    if exact_match:
+                                        # Install the server
+                                        install_name = generate_install_id(exact_match)
+                                        success = await manager.add_server(
+                                            name=install_name,
+                                            server_type=exact_match.server_type,
+                                            command=exact_match.install_command,
+                                            args=exact_match.install_args or [],
+                                            env={},
+                                            scope=ServerScope.USER
+                                        )
+                                        if success:
+                                            installed_count += 1
+                                            console.print(f"  [green]✅ Installed: {server_name}[/green]")
+                                        else:
+                                            console.print(f"  [red]❌ Failed to install: {server_name}[/red]")
+                                    else:
+                                        console.print(f"  [yellow]⚠️ Server not found in discovery: {server_name}[/yellow]")
                             except Exception as e:
                                 console.print(f"  [red]❌ Error installing {server_name}: {e}[/red]")
                     
