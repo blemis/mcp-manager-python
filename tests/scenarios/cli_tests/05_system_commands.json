@@ -1,0 +1,141 @@
+{
+  "test_suite_name": "System Commands",
+  "test_suite_description": "Comprehensive tests for system information and configuration commands",
+  "category": "system",
+  "priority": "high",
+  "test_scenarios": [
+    {
+      "test_name": "system_info_basic",
+      "description": "Test comprehensive system information display",
+      "command": "mcp-manager system-info",
+      "expected_output_contains": [
+        "System Information",
+        "MCP Manager Version:",
+        "Python Version:",
+        "Operating System:",
+        "Configuration"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 15
+    },
+    {
+      "test_name": "config_display_basic",
+      "description": "Test configuration display",
+      "command": "mcp-manager config",
+      "expected_output_contains": [
+        "Current Configuration",
+        "Configuration"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 15
+    },
+    {
+      "test_name": "check_sync_basic",
+      "description": "Test synchronization check between MCP Manager and Claude Code",
+      "command": "mcp-manager check-sync",
+      "expected_output_contains": [
+        "Synchronization Check",
+        "Claude Code",
+        "MCP Manager"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 20
+    },
+    {
+      "test_name": "server_details_existing_server",
+      "description": "Test detailed information for existing server",
+      "command": "mcp-manager server-details Ref",
+      "expected_output_contains": [
+        "Server Details",
+        "Ref",
+        "docker-desktop",
+        "Command:",
+        "Status:"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 15
+    },
+    {
+      "test_name": "server_details_nonexistent",
+      "description": "Test server details for nonexistent server",
+      "command": "mcp-manager server-details nonexistent-server",
+      "expected_output_contains": [
+        "Server 'nonexistent-server' not found",
+        "Available servers:"
+      ],
+      "expected_exit_code": 1,
+      "timeout": 15
+    },
+    {
+      "test_name": "server_details_filesystem",
+      "description": "Test details for filesystem server",
+      "command": "mcp-manager server-details filesystem",
+      "expected_output_contains": [
+        "Server Details",
+        "filesystem",
+        "docker-desktop",
+        "Docker Desktop MCP server"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 15
+    },
+    {
+      "test_name": "monitor_status_basic",
+      "description": "Test monitoring system status",
+      "command": "mcp-manager monitor-status",
+      "expected_output_contains": [
+        "Monitoring System Status",
+        "Status"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 15
+    },
+    {
+      "test_name": "mode_status_basic",
+      "description": "Test current operational mode status",
+      "command": "mcp-manager mode status",
+      "expected_output_contains": [
+        "Current Mode",
+        "Operational Mode"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 15
+    },
+    {
+      "test_name": "mode_switch_help",
+      "description": "Test mode switch command help",
+      "command": "mcp-manager mode switch --help",
+      "expected_output_contains": [
+        "Switch operational mode",
+        "--mode"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 10
+    },
+    {
+      "test_name": "system_info_verbose_check",
+      "description": "Test system info includes expected components",
+      "command": "mcp-manager system-info",
+      "expected_output_contains": [
+        "Database Status:",
+        "Server Count:",
+        "Suite Count:",
+        "Configuration Files:"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 15
+    },
+    {
+      "test_name": "check_sync_detailed",
+      "description": "Test sync check provides detailed information",
+      "command": "mcp-manager check-sync",
+      "expected_output_contains": [
+        "servers",
+        "sync",
+        "Claude Code"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 20
+    }
+  ]
+}

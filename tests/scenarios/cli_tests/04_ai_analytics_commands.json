@@ -1,0 +1,213 @@
+{
+  "test_suite_name": "AI and Analytics Commands",
+  "test_suite_description": "Comprehensive tests for AI curation and analytics functionality",
+  "category": "ai_analytics",
+  "priority": "high",
+  "test_scenarios": [
+    {
+      "test_name": "ai_status_basic",
+      "description": "Test AI curation system status",
+      "command": "mcp-manager ai status",
+      "expected_output_contains": [
+        "AI Curation System Status"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 15
+    },
+    {
+      "test_name": "ai_setup_help",
+      "description": "Test AI setup command help",
+      "command": "mcp-manager ai setup --help",
+      "expected_output_contains": [
+        "Setup AI curation system",
+        "--api-key",
+        "--model",
+        "--temperature"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 10
+    },
+    {
+      "test_name": "ai_test_without_setup",
+      "description": "Test AI system when not configured",
+      "command": "mcp-manager ai test",
+      "expected_output_contains": [
+        "AI curation system",
+        "not configured",
+        "Setup required"
+      ],
+      "expected_exit_code": 1,
+      "timeout": 15
+    },
+    {
+      "test_name": "ai_curate_help",
+      "description": "Test AI curate command help",
+      "command": "mcp-manager ai curate --help",
+      "expected_output_contains": [
+        "Run AI curation",
+        "--query",
+        "--limit"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 10
+    },
+    {
+      "test_name": "ai_remove_when_not_configured",
+      "description": "Test removing AI config when none exists",
+      "command": "mcp-manager ai remove",
+      "expected_output_contains": [
+        "AI configuration",
+        "not found",
+        "removed"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 10
+    },
+    {
+      "test_name": "analytics_summary_basic",
+      "description": "Test analytics summary command",
+      "command": "mcp-manager analytics summary",
+      "expected_output_contains": [
+        "Usage Analytics Summary",
+        "Total Servers:",
+        "Analytics"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 20
+    },
+    {
+      "test_name": "analytics_query_help",
+      "description": "Test analytics query command help",
+      "command": "mcp-manager analytics query --help",
+      "expected_output_contains": [
+        "Query analytics",
+        "--category",
+        "--days",
+        "--format"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 10
+    },
+    {
+      "test_name": "analytics_query_basic",
+      "description": "Test basic analytics query",
+      "command": "mcp-manager analytics query --category usage --days 7",
+      "expected_output_contains": [
+        "Analytics Query",
+        "category: usage"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 20
+    },
+    {
+      "test_name": "analytics_query_json_format",
+      "description": "Test analytics query with JSON format",
+      "command": "mcp-manager analytics query --format json --days 1",
+      "expected_output_contains": [
+        "{",
+        "}"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 20
+    },
+    {
+      "test_name": "tools_search_basic",
+      "description": "Test basic tool search",
+      "command": "mcp-manager tools search --category file-system",
+      "expected_output_contains": [
+        "Tool Search Results",
+        "file-system"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 20
+    },
+    {
+      "test_name": "tools_search_with_tags",
+      "description": "Test tool search with tags",
+      "command": "mcp-manager tools search --tags development --limit 5",
+      "expected_output_contains": [
+        "Tool Search",
+        "development"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 20
+    },
+    {
+      "test_name": "tools_list_basic",
+      "description": "Test basic tool listing",
+      "command": "mcp-manager tools list",
+      "expected_output_contains": [
+        "Tool Registry",
+        "tools"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 20
+    },
+    {
+      "test_name": "tools_list_by_category",
+      "description": "Test tool listing by category",
+      "command": "mcp-manager tools list --category ai",
+      "expected_output_contains": [
+        "Tool Registry",
+        "category: ai"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 20
+    },
+    {
+      "test_name": "quality_status_basic",
+      "description": "Test quality system status",
+      "command": "mcp-manager quality status",
+      "expected_output_contains": [
+        "Quality System Status",
+        "Quality"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 15
+    },
+    {
+      "test_name": "quality_rankings_basic",
+      "description": "Test quality rankings display",
+      "command": "mcp-manager quality rankings",
+      "expected_output_contains": [
+        "Quality Rankings",
+        "Server"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 20
+    },
+    {
+      "test_name": "quality_feedback_help",
+      "description": "Test quality feedback command help",
+      "command": "mcp-manager quality feedback --help",
+      "expected_output_contains": [
+        "Submit quality feedback",
+        "feedback"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 10
+    },
+    {
+      "test_name": "quality_report_basic",
+      "description": "Test quality report generation",
+      "command": "mcp-manager quality report",
+      "expected_output_contains": [
+        "Quality Report",
+        "report"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 25
+    },
+    {
+      "test_name": "quality_cleanup_basic",
+      "description": "Test quality cleanup command",
+      "command": "mcp-manager quality cleanup",
+      "expected_output_contains": [
+        "Quality cleanup",
+        "cleanup"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 20
+    }
+  ]
+}

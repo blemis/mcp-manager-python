@@ -1,0 +1,236 @@
+{
+  "test_suite_name": "Suite Management",
+  "test_suite_description": "Comprehensive tests for MCP server suite management",
+  "category": "suite",
+  "priority": "high",
+  "test_scenarios": [
+    {
+      "test_name": "suite_list_empty",
+      "description": "Test listing suites when none exist",
+      "setup_commands": [
+        "mcp-manager suite delete test-suite --force 2>/dev/null || true",
+        "mcp-manager suite delete dev-tools --force 2>/dev/null || true",
+        "mcp-manager suite delete custom-test-suite --force 2>/dev/null || true"
+      ],
+      "command": "mcp-manager suite list",
+      "expected_output_contains": [
+        "No suites configured",
+        "Create your first suite with:",
+        "mcp-manager suite create"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 15
+    },
+    {
+      "test_name": "suite_create_basic",
+      "description": "Test creating a basic suite",
+      "command": "mcp-manager suite create \"Test Suite\" --description \"A test suite\"",
+      "expected_output_contains": ["Suite 'Test Suite' created successfully"],
+      "expected_exit_code": 0,
+      "timeout": 15,
+      "cleanup_commands": ["mcp-manager suite delete test-suite --force"]
+    },
+    {
+      "test_name": "suite_create_with_category",
+      "description": "Test creating a suite with category",
+      "command": "mcp-manager suite create \"Dev Tools\" --description \"Development tools\" --category development",
+      "expected_output_contains": ["Suite 'Dev Tools' created successfully"],
+      "expected_exit_code": 0,
+      "timeout": 15,
+      "cleanup_commands": ["mcp-manager suite delete dev-tools --force"]
+    },
+    {
+      "test_name": "suite_create_custom_id",
+      "description": "Test creating a suite with custom ID",
+      "command": "mcp-manager suite create \"Custom Suite\" --suite-id custom-test-suite",
+      "expected_output_contains": ["Suite 'Custom Suite' created successfully", "custom-test-suite"],
+      "expected_exit_code": 0,
+      "timeout": 15,
+      "cleanup_commands": ["mcp-manager suite delete custom-test-suite --force"]
+    },
+    {
+      "test_name": "suite_list_with_suites",
+      "description": "Test listing suites after creating some",
+      "setup_commands": [
+        "mcp-manager suite create \"Test Suite 1\" --description \"First test suite\"",
+        "mcp-manager suite create \"Test Suite 2\" --description \"Second test suite\" --category testing"
+      ],
+      "command": "mcp-manager suite list",
+      "expected_output_contains": [
+        "MCP Server Suites",
+        "Test Suite 1",
+        "Test Suite 2"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 15,
+      "cleanup_commands": [
+        "mcp-manager suite delete test-suite-1 --force",
+        "mcp-manager suite delete test-suite-2 --force"
+      ]
+    },
+    {
+      "test_name": "suite_list_by_category",
+      "description": "Test listing suites filtered by category",
+      "setup_commands": [
+        "mcp-manager suite create \"Dev Suite\" --category development",
+        "mcp-manager suite create \"Test Suite\" --category testing"
+      ],
+      "command": "mcp-manager suite list --category development",
+      "expected_output_contains": ["Dev Suite"],
+      "expected_exit_code": 0,
+      "timeout": 15,
+      "cleanup_commands": [
+        "mcp-manager suite delete dev-suite --force",
+        "mcp-manager suite delete test-suite --force"
+      ]
+    },
+    {
+      "test_name": "suite_show_basic",
+      "description": "Test showing suite details",
+      "setup_commands": ["mcp-manager suite create \"Show Test\" --description \"Suite for show test\""],
+      "command": "mcp-manager suite show show-test",
+      "expected_output_contains": [
+        "Suite: Show Test",
+        "Description: Suite for show test",
+        "This suite has no servers yet"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 15,
+      "cleanup_commands": ["mcp-manager suite delete show-test --force"]
+    },
+    {
+      "test_name": "suite_show_nonexistent",
+      "description": "Test showing details of nonexistent suite",
+      "command": "mcp-manager suite show nonexistent-suite",
+      "expected_output_contains": [
+        "Suite 'nonexistent-suite' not found",
+        "Available suites:"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 15
+    },
+    {
+      "test_name": "suite_add_server_basic",
+      "description": "Test adding an existing database server to a suite",
+      "setup_commands": [
+        "mcp-manager suite create \"Server Test\" --description \"Suite for server test\""
+      ],
+      "command": "mcp-manager suite add server-test Ref --role member --priority 50",
+      "expected_output_contains": ["Added Ref to suite server-test"],
+      "expected_exit_code": 0,
+      "timeout": 15,
+      "cleanup_commands": [
+        "mcp-manager suite delete server-test --force"
+      ]
+    },
+    {
+      "test_name": "suite_add_server_different_roles",
+      "description": "Test adding existing database servers with different roles",
+      "setup_commands": [
+        "mcp-manager suite create \"Role Test\" --description \"Suite for role testing\""
+      ],
+      "command": "mcp-manager suite add role-test filesystem --role primary --priority 90 && mcp-manager suite add role-test aws-diagram --role optional --priority 10",
+      "expected_output_contains": ["Added filesystem to suite role-test"],
+      "expected_exit_code": 0,
+      "timeout": 20,
+      "cleanup_commands": [
+        "mcp-manager suite delete role-test --force"
+      ]
+    },
+    {
+      "test_name": "suite_remove_server",
+      "description": "Test removing a server from a suite",
+      "setup_commands": [
+        "mcp-manager suite create \"Remove Test\" --description \"Suite for remove test\"",
+        "mcp-manager add remove-server --type custom --command echo --args remove",
+        "mcp-manager suite add remove-test remove-server --role member"
+      ],
+      "command": "mcp-manager suite remove remove-test remove-server",
+      "expected_output_contains": ["Removed remove-server from suite remove-test"],
+      "expected_exit_code": 0,
+      "timeout": 20,
+      "cleanup_commands": [
+        "mcp-manager suite delete remove-test --force",
+        "mcp-manager remove remove-server --force"
+      ]
+    },
+    {
+      "test_name": "suite_delete_basic",
+      "description": "Test deleting a suite with force flag",
+      "setup_commands": ["mcp-manager suite create \"Delete Test\" --description \"Suite to be deleted\""],
+      "command": "mcp-manager suite delete delete-test --force",
+      "expected_output_contains": ["Suite 'Delete Test' deleted successfully"],
+      "expected_exit_code": 0,
+      "timeout": 15
+    },
+    {
+      "test_name": "suite_summary",
+      "description": "Test suite summary command",
+      "setup_commands": [
+        "mcp-manager suite create \"Summary Test 1\" --category testing",
+        "mcp-manager suite create \"Summary Test 2\" --category development"
+      ],
+      "command": "mcp-manager suite summary",
+      "expected_output_contains": [
+        "Suite Summary",
+        "Total Suites:",
+        "By Category:"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 15,
+      "cleanup_commands": [
+        "mcp-manager suite delete summary-test-1 --force",
+        "mcp-manager suite delete summary-test-2 --force"
+      ]
+    },
+    {
+      "test_name": "install_suite_temp_dry_run",
+      "description": "Test installing a suite with dry run",
+      "setup_commands": [
+        "mcp-manager suite create \"Install Test\" --description \"Suite for install test\"",
+        "mcp-manager add install-server --type custom --command echo --args install",
+        "mcp-manager suite add install-test install-server --role member"
+      ],
+      "command": "mcp-manager suite install install-test --dry-run",
+      "expected_output_contains": [
+        "Dry run",
+        "showing what would be installed",
+        "install-server"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 20,
+      "cleanup_commands": [
+        "mcp-manager suite delete install-test --force",
+        "mcp-manager remove install-server --force"
+      ]
+    },
+    {
+      "test_name": "install_suite_temp_nonexistent",
+      "description": "Test installing a nonexistent suite",
+      "command": "mcp-manager suite install nonexistent-suite",
+      "expected_output_contains": [
+        "Suite 'nonexistent-suite' not found",
+        "Available suites:"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 15
+    },
+    {
+      "test_name": "suite_help_commands",
+      "description": "Test suite command help",
+      "command": "mcp-manager suite --help",
+      "expected_output_contains": [
+        "Manage MCP server suites",
+        "list",
+        "create",
+        "add",
+        "remove",
+        "delete",
+        "show",
+        "summary"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 10
+    }
+  ]
+}

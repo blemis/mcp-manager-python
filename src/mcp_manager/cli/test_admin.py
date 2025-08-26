@@ -8,9 +8,31 @@ from typing import Optional
 
 from mcp_manager.core.test_management.category_manager import TestCategoryManager
 from mcp_manager.core.test_management.models import TestScope
+from mcp_manager.core.suites.suite_manager import SuiteManager
+from mcp_manager.core.discovery import ServerDiscovery
 from mcp_manager.utils.logging import get_logger
+from pathlib import Path
 
 logger = get_logger(__name__)
+
+
+async def _get_server_description(server_name: str, server_type: str) -> str:
+    """Get server description from registry database."""
+    try:
+        from ..database.registry import MCPServerRegistry
+        
+        registry = MCPServerRegistry()
+        server_info = await registry.get_server(server_name)
+        
+        if server_info and server_info.description:
+            return server_info.description
+        
+        # Fallback for servers not in registry yet
+        return f"{server_type} MCP server: {server_name}"
+        
+    except Exception as e:
+        logger.error(f"Failed to get server description for {server_name}: {e}")
+        return f"{server_type} MCP server: {server_name}"
 
 
 @click.group(name='test-admin')
@@ -159,6 +181,141 @@ def init_defaults():
             
     except Exception as e:
         click.echo(f"❌ Error initializing defaults: {e}")
+
+
+@test_admin.command()
+def list_suites():
+    """List all test suites and their MCP servers."""
+    try:
+        # Use test database path
+        test_db_path = Path(__file__).parent.parent.parent.parent / "tests" / "fixtures" / "test_suites.db"
+        suite_manager = SuiteManager(test_db_path)
+        
+        async def list_all_suites():
+            suites = await suite_manager.list_suites()
+            
+            if not suites:
+                click.echo("No test suites found.")
+                return
+            
+            click.echo(f"\n📋 Found {len(suites)} test suites:")
+            click.echo("=" * 80)
+            
+            for suite in suites:
+                click.echo(f"\n🎯 {suite.name} ({suite.id})")
+                click.echo(f"   Description: {suite.description}")
+                click.echo(f"   Category: {suite.category}")
+                click.echo(f"   Created: {suite.created_at.strftime('%Y-%m-%d %H:%M')}")
+                
+                if suite.memberships:
+                    click.echo(f"   📦 MCP Servers ({len(suite.memberships)}):")
+                    
+                    # Sort by priority (highest first)
+                    sorted_memberships = sorted(suite.memberships, key=lambda m: m.priority, reverse=True)
+                    
+                    for membership in sorted_memberships:
+                        role_emoji = {
+                            "primary": "🎯",
+                            "secondary": "⚡", 
+                            "optional": "🔧",
+                            "member": "📦"
+                        }.get(membership.role, "📦")
+                        
+                        type_emoji = {
+                            "docker-desktop": "🐳",
+                            "npm": "📦",
+                            "custom": "⚙️"
+                        }.get(membership.server_type, "❓")
+                        
+                        click.echo(f"      {role_emoji}{type_emoji} {membership.server_name}")
+                        click.echo(f"         Role: {membership.role} (priority: {membership.priority})")
+                        click.echo(f"         Type: {membership.server_type}")
+                        if membership.server_command:
+                            click.echo(f"         Command: {membership.server_command}")
+                        
+                        # Add server description from registry
+                        description = await _get_server_description(membership.server_name, membership.server_type)
+                        if description:
+                            click.echo(f"         Description: {description}")
+                else:
+                    click.echo("   📦 No MCP servers configured")
+        
+        asyncio.run(list_all_suites())
+        
+    except Exception as e:
+        click.echo(f"❌ Error listing suites: {e}")
+
+
+@test_admin.command()
+@click.argument('suite_id')
+def show_suite(suite_id: str):
+    """Show detailed information about a specific test suite."""
+    try:
+        # Use test database path
+        test_db_path = Path(__file__).parent.parent.parent.parent / "tests" / "fixtures" / "test_suites.db"
+        suite_manager = SuiteManager(test_db_path)
+        
+        async def show_suite_details():
+            suite = await suite_manager.get_suite(suite_id)
+            
+            if not suite:
+                click.echo(f"❌ Suite '{suite_id}' not found")
+                return
+            
+            click.echo(f"\n🎯 Suite Details: {suite.name}")
+            click.echo("=" * 60)
+            click.echo(f"ID: {suite.id}")
+            click.echo(f"Description: {suite.description}")
+            click.echo(f"Category: {suite.category}")
+            click.echo(f"Created: {suite.created_at.strftime('%Y-%m-%d %H:%M:%S')}")
+            click.echo(f"Updated: {suite.updated_at.strftime('%Y-%m-%d %H:%M:%S')}")
+            
+            if suite.config:
+                click.echo(f"Config: {suite.config}")
+            
+            if suite.memberships:
+                click.echo(f"\n📦 MCP Servers ({len(suite.memberships)}):")
+                click.echo("-" * 40)
+                
+                # Sort by priority (highest first) 
+                sorted_memberships = sorted(suite.memberships, key=lambda m: m.priority, reverse=True)
+                
+                for i, membership in enumerate(sorted_memberships, 1):
+                    role_emoji = {
+                        "primary": "🎯",
+                        "secondary": "⚡",
+                        "optional": "🔧", 
+                        "member": "📦"
+                    }.get(membership.role, "📦")
+                    
+                    type_emoji = {
+                        "docker-desktop": "🐳",
+                        "npm": "📦",
+                        "custom": "⚙️"
+                    }.get(membership.server_type, "❓")
+                    
+                    click.echo(f"\n{i}. {role_emoji}{type_emoji} {membership.server_name}")
+                    
+                    # Add description from registry
+                    description = await _get_server_description(membership.server_name, membership.server_type)
+                    if description:
+                        click.echo(f"   Description: {description}")
+                    
+                    click.echo(f"   Role: {membership.role}")
+                    click.echo(f"   Priority: {membership.priority}")
+                    click.echo(f"   Type: {membership.server_type}")
+                    click.echo(f"   Command: {membership.server_command}")
+                    click.echo(f"   Added: {membership.added_at.strftime('%Y-%m-%d %H:%M:%S')}")
+                    
+                    if membership.config_overrides:
+                        click.echo(f"   Config: {membership.config_overrides}")
+            else:
+                click.echo("\n📦 No MCP servers configured in this suite")
+        
+        asyncio.run(show_suite_details())
+        
+    except Exception as e:
+        click.echo(f"❌ Error showing suite: {e}")
 
 
 if __name__ == '__main__':

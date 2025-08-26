@@ -3807,7 +3807,7 @@ class SimpleMCPManager:
                     user_query=response.query,
                     recommendations_count=len(response.recommendations),
                     llm_provider=response.llm_provider,
-                    model_used=response.model_used,
+                    llm_model=response.llm_model,
                     processing_time_ms=response.processing_time_ms,
                     tools_analyzed=response.total_tools_analyzed,
                     context_data=request.context
@@ -3839,7 +3839,7 @@ class SimpleMCPManager:
                 "total_tools_analyzed": response.total_tools_analyzed,
                 "processing_time_ms": response.processing_time_ms,
                 "llm_provider": response.llm_provider,
-                "model_used": response.model_used,
+                "llm_model": response.llm_model,
                 "metadata": response.metadata
             }
             

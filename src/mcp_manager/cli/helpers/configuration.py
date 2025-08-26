@@ -5,7 +5,7 @@ Server configuration helper functions.
 import os
 import sqlite3
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List, Dict, Any
 
 import yaml
 from rich.console import Console
@@ -16,10 +16,65 @@ from mcp_manager.core.models import ServerType
 console = Console()
 
 
-def prompt_for_server_configuration(server_name: str, server_type: ServerType, package: Optional[str], test_mode: bool = False) -> Optional[dict]:
+def _prompt_from_requirements(server_name: str, requirements: List[Dict[str, Any]], test_mode: bool = False) -> Optional[dict]:
+    """Prompt user based on requirements specification."""
+    from rich.prompt import Prompt
+    
+    if not requirements or test_mode:
+        return None
+    
+    console.print(f"[blue]ℹ {server_name} requires additional configuration[/blue]")
+    
+    config = {}
+    final_args = []
+    
+    for req in requirements:
+        req_type = req.get("type")
+        prompt = req.get("prompt", f"Enter {req_type}")
+        default = req.get("default")
+        required = req.get("required", False)
+        
+        if req_type == "directory_access":
+            console.print(f"[dim]{prompt}[/dim]")
+            directory = Prompt.ask("Directory path", default=default)
+            if directory:
+                # Add volume mount to final args
+                final_args.extend(["-v", f"{directory}:{directory}"])
+                config["directory_access"] = directory
+        
+        else:
+            # Generic handling for all requirement types
+            is_sensitive = any(keyword in req_type.lower() for keyword in ['api_key', 'token', 'password', 'secret'])
+            
+            if is_sensitive:
+                value = Prompt.ask(prompt, password=True)
+            else:
+                value = Prompt.ask(prompt, default=default)
+            
+            if value:
+                # Store with requirement type as key
+                config[req_type] = value
+                
+                # Set environment variable if specified
+                env_var_name = req.get("env_var_name")
+                if env_var_name:
+                    config[env_var_name] = value
+    
+    # Return configuration with generated args
+    if final_args:
+        config["args"] = final_args
+    
+    return config if config else None
+
+
+def prompt_for_server_configuration(server_name: str, server_type: ServerType, package: Optional[str], test_mode: bool = False, requirements: List[Dict[str, Any]] = None) -> Optional[dict]:
     """Prompt user for server configuration if needed."""
     
-    # Define servers that need configuration
+    # Use new requirements system if available
+    if requirements:
+        return _prompt_from_requirements(server_name, requirements, test_mode)
+    
+    # Fallback to old system
     config_requirements = {
         # Filesystem servers
         'filesystem': {
@@ -102,7 +157,9 @@ def prompt_for_server_configuration(server_name: str, server_type: ServerType, p
             if server_type == ServerType.DOCKER_DESKTOP:
                 config['directory'] = value
             else:
-                config['args'].append(value)
+                # For Docker containers, add volume mount and directory path as final arg
+                config['args'].extend(['-v', f'{value}:{value}'])
+                config['final_args'] = [value]  # Directory path goes after image name
                 
         elif server_key == 'sqlite':
             # Create database file if it doesn't exist

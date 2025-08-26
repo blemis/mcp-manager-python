@@ -1,0 +1,162 @@
+{
+  "schema_version": "1.0",
+  "test_suite_name": "Core Commands",
+  "test_suite_description": "Collection-agnostic tests for core MCP Manager CLI commands",
+  "category": "core",
+  "priority": "critical",
+  "collection_requirements": {
+    "collection_type": "any",
+    "server_types": [],
+    "min_servers": 0
+  },
+  "metadata": {
+    "created_date": "2025-01-26",
+    "created_by": "system", 
+    "tags": ["cli", "core", "collection-agnostic"],
+    "estimated_duration_seconds": 45,
+    "compatibility": {
+      "npm_servers": true,
+      "docker_desktop_servers": true,
+      "docker_hub_servers": true,
+      "empty_state": true
+    }
+  },
+  "test_scenarios": [
+    {
+      "test_name": "help_command",
+      "description": "Test main help command displays correctly",
+      "command": "mcp-manager --help",
+      "expected_output_contains": [
+        "Enterprise-grade MCP server management tool",
+        "Usage:",
+        "--debug",
+        "--verbose",
+        "--menu"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 10
+    },
+    {
+      "test_name": "version_command", 
+      "description": "Test version display",
+      "command": "mcp-manager --version",
+      "expected_output_contains": ["MCP Manager"],
+      "expected_exit_code": 0,
+      "timeout": 5
+    },
+    {
+      "test_name": "list_empty_servers",
+      "description": "Test list command with no servers configured",
+      "command": "mcp-manager list",
+      "expected_output_contains": [
+        "No MCP servers configured",
+        "Discover and install servers with:",
+        "mcp-manager discover"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 10
+    },
+    {
+      "test_name": "list_json_output",
+      "description": "Test list command with JSON output format",
+      "command": "mcp-manager list --output-format json",
+      "expected_output_contains": ["[]"],
+      "expected_exit_code": 0,
+      "timeout": 10
+    },
+    {
+      "test_name": "list_with_scope_filter",
+      "description": "Test list command with scope filter",
+      "command": "mcp-manager list --scope user",
+      "expected_exit_code": 0,
+      "timeout": 10
+    },
+    {
+      "test_name": "add_server_minimal",
+      "description": "Test adding a custom server with minimal options",
+      "command": "mcp-manager add test-server --type custom --command echo --args hello",
+      "expected_output_contains": ["Added server 'test-server' successfully"],
+      "expected_exit_code": 0,
+      "timeout": 15,
+      "cleanup_commands": ["mcp-manager remove test-server --force"]
+    },
+    {
+      "test_name": "add_server_with_env",
+      "description": "Test adding a server with environment variables",
+      "command": "mcp-manager add env-server --type custom --command node --args server.js --env NODE_ENV=test --env PORT=3000",
+      "expected_output_contains": ["Added server 'env-server' successfully"],
+      "expected_exit_code": 0,
+      "timeout": 15,
+      "cleanup_commands": ["mcp-manager remove env-server --force"]
+    },
+    {
+      "test_name": "list_after_adding_servers",
+      "description": "Test list command shows servers after adding them", 
+      "command": "mcp-manager list",
+      "expected_output_contains": [
+        "test-server",
+        "env-server"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 10,
+      "depends_on": ["add_server_minimal", "add_server_with_env"]
+    },
+    {
+      "test_name": "enable_command_help",
+      "description": "Test enable command help (collection-agnostic)",
+      "command": "mcp-manager enable --help",
+      "expected_output_contains": ["Enable an MCP server", "Usage:", "--help"],
+      "expected_exit_code": 0,
+      "timeout": 10,
+      "collection_state": "any"
+    },
+    {
+      "test_name": "disable_command_help",
+      "description": "Test disable command help (collection-agnostic)",
+      "command": "mcp-manager disable --help",
+      "expected_output_contains": ["Disable an MCP server", "Usage:", "--help"],
+      "expected_exit_code": 0,
+      "timeout": 10,
+      "collection_state": "any"
+    },
+    {
+      "test_name": "add_server_invalid_type",
+      "description": "Test adding server with invalid type",
+      "command": "mcp-manager add bad-server --type invalid-type",
+      "expected_exit_code": 2,
+      "timeout": 10
+    },
+    {
+      "test_name": "remove_nonexistent_server",
+      "description": "Test removing a server that doesn't exist",
+      "command": "mcp-manager remove nonexistent-server --force",
+      "expected_output_contains": ["not found", "could not be removed"],
+      "expected_exit_code": 1,
+      "timeout": 10
+    },
+    {
+      "test_name": "enable_nonexistent_server",
+      "description": "Test enabling a server that doesn't exist",
+      "command": "mcp-manager enable nonexistent-server",
+      "expected_output_contains": ["not found", "could not be enabled"],
+      "expected_exit_code": 1,
+      "timeout": 10
+    },
+    {
+      "test_name": "disable_nonexistent_server",
+      "description": "Test disabling a server that doesn't exist",
+      "command": "mcp-manager disable nonexistent-server",
+      "expected_output_contains": ["not found", "could not be disabled"],
+      "expected_exit_code": 1,
+      "timeout": 10
+    },
+    {
+      "test_name": "nuke_dry_run",
+      "description": "Test nuclear cleanup without force flag (should prompt)",
+      "command": "printf 'n\\n' | mcp-manager nuke",
+      "expected_output_contains": ["WARNING", "Operation cancelled"],
+      "expected_exit_code": 0,
+      "timeout": 15
+    }
+  ]
+}

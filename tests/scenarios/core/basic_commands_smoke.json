@@ -1,0 +1,118 @@
+{
+  "schema_version": "1.0",
+  "scenario": {
+    "id": "basic_commands_smoke_test",
+    "name": "Basic Commands Smoke Test",
+    "description": "Critical smoke test validating core CLI functionality that every user would try first. Tests application startup, help system, and basic command availability.",
+    "created_by": "migration",
+    "category": "smoke",
+    "confidence_score": 0.98,
+    "ai_reasoning": "Migrated from existing TestSmokeTests class. This is fundamental functionality that must always work.",
+    "tags": ["smoke", "critical", "cli", "help", "startup"],
+    "priority": "critical"
+  },
+  "mcp_requirements": {
+    "required_servers": [],
+    "optional_servers": [],
+    "scope": "isolated",
+    "deduplication_key": "basic_cli_smoke",
+    "resource_requirements": {
+      "min_memory_mb": 64,
+      "max_execution_time_seconds": 30,
+      "parallel_safe": true
+    }
+  },
+  "test_steps": [
+    {
+      "step_id": 1,
+      "action": "cli_command",
+      "command": "--help",
+      "expect": "success",
+      "timeout": 10,
+      "setup_required": false,
+      "cleanup_on_failure": false,
+      "retry_count": 0,
+      "description": "Verify application starts and responds to help command"
+    },
+    {
+      "step_id": 2,
+      "action": "validation",
+      "parameters": {
+        "validate_type": "help_output",
+        "required_sections": ["Usage:", "Commands:", "Options:"]
+      },
+      "expect": "contains",
+      "expect_value": "Usage:",
+      "timeout": 5,
+      "description": "Validate help output contains required sections"
+    },
+    {
+      "step_id": 3,
+      "action": "validation",
+      "parameters": {
+        "validate_type": "core_commands_present",
+        "required_commands": ["add", "remove", "list", "discover", "suite", "quality", "install", "status", "system-info"]
+      },
+      "expect": "contains",
+      "expect_value": "list",
+      "timeout": 5,
+      "description": "Verify all core commands are available in help"
+    },
+    {
+      "step_id": 4,
+      "action": "cli_command",
+      "command": "nonexistent-command",
+      "expect": "failure",
+      "timeout": 10,
+      "description": "Test error handling with invalid command"
+    },
+    {
+      "step_id": 5,
+      "action": "cli_command",
+      "command": "list",
+      "expect": "success",
+      "timeout": 15,
+      "description": "Test baseline list command functionality"
+    }
+  ],
+  "validation": {
+    "success_criteria": [
+      {
+        "type": "all_steps_pass",
+        "description": "All test steps must complete successfully"
+      },
+      {
+        "type": "specific_output",
+        "description": "Help command shows usage information",
+        "value": "Usage:"
+      },
+      {
+        "type": "specific_output",
+        "description": "Core commands are available",
+        "value": "Commands:"
+      }
+    ],
+    "failure_conditions": [
+      {
+        "type": "timeout",
+        "description": "Any step takes longer than expected",
+        "value": "30"
+      },
+      {
+        "type": "error_output",
+        "description": "Application fails to start or respond",
+        "value": "command not found"
+      }
+    ],
+    "cleanup_required": false,
+    "cleanup_steps": []
+  },
+  "metadata": {
+    "created_date": "2025-07-25T15:20:00Z",
+    "last_modified": "2025-07-25T15:20:00Z",
+    "execution_count": 0,
+    "success_rate": 0.0,
+    "average_duration": 0.0,
+    "related_scenarios": ["basic_commands_comprehensive", "error_handling_basic"]
+  }
+}

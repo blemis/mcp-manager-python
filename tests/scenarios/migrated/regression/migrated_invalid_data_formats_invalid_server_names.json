@@ -1,0 +1,67 @@
+{
+  "schema_version": "1.0",
+  "scenario": {
+    "id": "invalid_data_formats_invalid_server_names",
+    "name": "Test server names with invalid characters or formats",
+    "description": "Test server names with invalid characters or formats.",
+    "created_by": "migration",
+    "category": "regression",
+    "confidence_score": 0.85,
+    "ai_reasoning": "Automatically migrated from pytest test TestInvalidDataFormats.test_invalid_server_names",
+    "tags": [
+      "server"
+    ],
+    "priority": "medium"
+  },
+  "mcp_requirements": {
+    "required_servers": [],
+    "optional_servers": [],
+    "scope": "isolated",
+    "deduplication_key": "regression_invalid_data_formats_invalid_server_names",
+    "resource_requirements": {
+      "min_memory_mb": 64,
+      "max_execution_time_seconds": 60,
+      "parallel_safe": true
+    }
+  },
+  "test_steps": [
+    {
+      "step_id": 1,
+      "action": "cli_command",
+      "command": "--help",
+      "expect": "success",
+      "timeout": 15,
+      "description": "Placeholder command - requires manual conversion"
+    }
+  ],
+  "validation": {
+    "success_criteria": [
+      {
+        "type": "all_steps_pass",
+        "description": "All test steps must complete successfully"
+      }
+    ],
+    "failure_conditions": [
+      {
+        "type": "timeout",
+        "description": "Test steps timeout",
+        "value": "300"
+      }
+    ],
+    "cleanup_required": true,
+    "cleanup_steps": [
+      {
+        "action": "reset_config",
+        "ignore_errors": true
+      }
+    ]
+  },
+  "metadata": {
+    "created_date": "2025-07-25T12:12:39.345961",
+    "last_modified": "2025-07-25T12:12:39.345961",
+    "execution_count": 0,
+    "success_rate": 0.0,
+    "average_duration": 0.0,
+    "related_scenarios": []
+  }
+}

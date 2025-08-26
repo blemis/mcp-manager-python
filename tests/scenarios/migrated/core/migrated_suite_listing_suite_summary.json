@@ -1,0 +1,131 @@
+{
+  "schema_version": "1.0",
+  "scenario": {
+    "id": "suite_listing_suite_summary",
+    "name": "Test suite summary statistics",
+    "description": "Test suite summary statistics.",
+    "created_by": "migration",
+    "category": "core",
+    "confidence_score": 0.85,
+    "ai_reasoning": "Automatically migrated from pytest test TestSuiteListing.test_suite_summary",
+    "tags": [],
+    "priority": "high"
+  },
+  "mcp_requirements": {
+    "required_servers": [
+      {
+        "name": "modelcontextprotocol-filesystem",
+        "type": "npm",
+        "priority": "high",
+        "purpose": "Test MCP Manager deployment and Claude Code integration"
+      },
+      {
+        "name": "dd-SQLite",
+        "type": "docker-desktop",
+        "priority": "high",
+        "purpose": "Test MCP Manager deployment and Claude Code integration"
+      },
+      {
+        "name": "dd-http",
+        "type": "docker-desktop",
+        "priority": "high",
+        "purpose": "Test MCP Manager deployment and Claude Code integration"
+      }
+    ],
+    "optional_servers": [],
+    "scope": "user",
+    "deduplication_key": "core_suite_listing_suite_summary",
+    "resource_requirements": {
+      "min_memory_mb": 160,
+      "max_execution_time_seconds": 150,
+      "parallel_safe": false
+    }
+  },
+  "test_steps": [
+    {
+      "step_id": 1,
+      "action": "cli_command",
+      "command": "suite create summary-suite-1 --description 'Summary test 1'",
+      "expect": "success",
+      "timeout": 30,
+      "setup_required": false,
+      "cleanup_on_failure": true,
+      "retry_count": 0,
+      "description": "Execute: suite create summary-suite-1 --description 'Summary test 1'"
+    },
+    {
+      "step_id": 2,
+      "action": "cli_command",
+      "command": "suite add summary-suite-1 filesystem",
+      "expect": "success",
+      "timeout": 30,
+      "setup_required": false,
+      "cleanup_on_failure": true,
+      "retry_count": 0,
+      "description": "Execute: suite add summary-suite-1 filesystem"
+    },
+    {
+      "step_id": 3,
+      "action": "cli_command",
+      "command": "suite create summary-suite-2 --description 'Summary test 2'",
+      "expect": "success",
+      "timeout": 30,
+      "setup_required": false,
+      "cleanup_on_failure": true,
+      "retry_count": 0,
+      "description": "Execute: suite create summary-suite-2 --description 'Summary test 2'"
+    },
+    {
+      "step_id": 4,
+      "action": "cli_command",
+      "command": "suite add summary-suite-2 sqlite",
+      "expect": "success",
+      "timeout": 30,
+      "setup_required": false,
+      "cleanup_on_failure": true,
+      "retry_count": 0,
+      "description": "Execute: suite add summary-suite-2 sqlite"
+    },
+    {
+      "step_id": 5,
+      "action": "cli_command",
+      "command": "suite add summary-suite-2 http",
+      "expect": "success",
+      "timeout": 30,
+      "setup_required": false,
+      "cleanup_on_failure": true,
+      "retry_count": 0,
+      "description": "Execute: suite add summary-suite-2 http"
+    }
+  ],
+  "validation": {
+    "success_criteria": [
+      {
+        "type": "all_steps_pass",
+        "description": "All test steps must complete successfully"
+      }
+    ],
+    "failure_conditions": [
+      {
+        "type": "timeout",
+        "description": "Test steps timeout",
+        "value": "300"
+      }
+    ],
+    "cleanup_required": true,
+    "cleanup_steps": [
+      {
+        "action": "reset_config",
+        "ignore_errors": true
+      }
+    ]
+  },
+  "metadata": {
+    "created_date": "2025-07-25T12:12:39.353738",
+    "last_modified": "2025-07-25T12:12:39.353739",
+    "execution_count": 0,
+    "success_rate": 0.0,
+    "average_duration": 0.0,
+    "related_scenarios": []
+  }
+}

@@ -1,0 +1,178 @@
+{
+  "timestamp": "2025-07-26T13:54:35.991551",
+  "summary": {
+    "total_scenarios": 15,
+    "successful_scenarios": 0,
+    "failed_scenarios": 15,
+    "success_rate": 0.0,
+    "total_duration": 0.02763986587524414,
+    "average_duration": 0.0018426577250162761
+  },
+  "scenarios": [
+    {
+      "id": "unknown",
+      "name": "Unknown Scenario",
+      "success": false,
+      "duration": 0.0023970603942871094,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": false,
+      "error": "Validation failed: [\"Schema validation error: 'schema_version' is a required property\"]"
+    },
+    {
+      "id": "unknown",
+      "name": "Unknown Scenario",
+      "success": false,
+      "duration": 0.0018417835235595703,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": false,
+      "error": "Validation failed: [\"Schema validation error: 'schema_version' is a required property\"]"
+    },
+    {
+      "id": "unknown",
+      "name": "Unknown Scenario",
+      "success": false,
+      "duration": 0.0019512176513671875,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": false,
+      "error": "Validation failed: [\"Schema validation error: 'schema_version' is a required property\"]"
+    },
+    {
+      "id": "unknown",
+      "name": "Unknown Scenario",
+      "success": false,
+      "duration": 0.001728057861328125,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": false,
+      "error": "Validation failed: [\"Schema validation error: 'schema_version' is a required property\"]"
+    },
+    {
+      "id": "unknown",
+      "name": "Unknown Scenario",
+      "success": false,
+      "duration": 0.0017347335815429688,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": false,
+      "error": "Validation failed: [\"Schema validation error: 'schema_version' is a required property\"]"
+    },
+    {
+      "id": "unknown",
+      "name": "Unknown Scenario",
+      "success": false,
+      "duration": 0.002310037612915039,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": false,
+      "error": "Validation failed: [\"Schema validation error: 'schema_version' is a required property\"]"
+    },
+    {
+      "id": "unknown",
+      "name": "Unknown Scenario",
+      "success": false,
+      "duration": 0.0017001628875732422,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": false,
+      "error": "Validation failed: [\"Schema validation error: 'schema_version' is a required property\"]"
+    },
+    {
+      "id": "unknown",
+      "name": "Unknown Scenario",
+      "success": false,
+      "duration": 0.001683950424194336,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": false,
+      "error": "Validation failed: [\"Schema validation error: 'schema_version' is a required property\"]"
+    },
+    {
+      "id": "unknown",
+      "name": "Unknown Scenario",
+      "success": false,
+      "duration": 0.0016851425170898438,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": false,
+      "error": "Validation failed: [\"Schema validation error: 'schema_version' is a required property\"]"
+    },
+    {
+      "id": "unknown",
+      "name": "Unknown Scenario",
+      "success": false,
+      "duration": 0.0016779899597167969,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": false,
+      "error": "Validation failed: [\"Schema validation error: 'schema_version' is a required property\"]"
+    },
+    {
+      "id": "unknown",
+      "name": "Unknown Scenario",
+      "success": false,
+      "duration": 0.001834869384765625,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": false,
+      "error": "Validation failed: [\"Schema validation error: 'schema_version' is a required property\"]"
+    },
+    {
+      "id": "unknown",
+      "name": "Unknown Scenario",
+      "success": false,
+      "duration": 0.0018339157104492188,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": false,
+      "error": "Validation failed: [\"Schema validation error: 'schema_version' is a required property\"]"
+    },
+    {
+      "id": "unknown",
+      "name": "Unknown Scenario",
+      "success": false,
+      "duration": 0.0018298625946044922,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": false,
+      "error": "Validation failed: [\"Schema validation error: 'schema_version' is a required property\"]"
+    },
+    {
+      "id": "unknown",
+      "name": "Unknown Scenario",
+      "success": false,
+      "duration": 0.0017330646514892578,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": false,
+      "error": "Validation failed: [\"Schema validation error: 'schema_version' is a required property\"]"
+    },
+    {
+      "id": "unknown",
+      "name": "Unknown Scenario",
+      "success": false,
+      "duration": 0.0016980171203613281,
+      "steps_executed": 0,
+      "steps_passed": 0,
+      "validation_results": {},
+      "cleanup_performed": false,
+      "error": "Validation failed: [\"Schema validation error: 'schema_version' is a required property\"]"
+    }
+  ]
+}

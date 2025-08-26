@@ -1,0 +1,343 @@
+{
+  "timestamp": "2025-07-26 15:44:24",
+  "category": "suite",
+  "summary": {
+    "total_tests": 16,
+    "passed": 7,
+    "failed": 9,
+    "success_rate": "43.8%",
+    "total_duration": "3.46s"
+  },
+  "failed_tests": [
+    {
+      "test_name": "suite_list_empty",
+      "description": "Test listing suites when none exist",
+      "command": "mcp-manager suite list",
+      "error_message": "Missing output: ['No suites configured', 'Create your first suite with:', 'mcp-manager suite create']",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "stdout": "\n                                                MCP Server Suites (3 total)                                                 \n\u250f\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2533\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2533\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2533\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2533\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2513\n\u2503 Suite ID             \u2503 Name                      \u2503 Category        \u2503 Servers  \u2503 Description                              \u2503\n\u2521\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2547\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2547\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2547\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2547\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2529\n\u2502 custom-test-suite    \u2502 Custom Suite              \u2502 custom          \u2502 0        \u2502 Custom suite: Custom Suite               \u2502\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u253c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u253c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u253c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u253c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502 dev-tools            \u2502 Dev Tools                 \u2502 development     \u2502 0        \u2502 Development tools                        \u2502\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u253c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u253c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u253c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u253c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502 test-suite           \u2502 Test Suite                \u2502 custom          \u2502 0        \u2502 A test suite                             \u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n\n\ud83d\udca1 To install a suite: mcp-manager install-suite --suite-name <suite-id>\n\ud83d\udca1 To view suite details: mcp-manager suite show <suite-id>\n",
+      "stderr": "",
+      "expected_output": [
+        "No suites configured",
+        "Create your first suite with:",
+        "mcp-manager suite create"
+      ],
+      "missing_output": [
+        "No suites configured",
+        "Create your first suite with:",
+        "mcp-manager suite create"
+      ],
+      "duration": 0.17769384384155273
+    },
+    {
+      "test_name": "suite_list_with_suites",
+      "description": "Test listing suites after creating some",
+      "command": "mcp-manager suite list",
+      "error_message": "Missing output: ['Test Suite 1', 'Test Suite 2']",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "stdout": "\n                                                MCP Server Suites (3 total)                                                 \n\u250f\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2533\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2533\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2533\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2533\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2513\n\u2503 Suite ID             \u2503 Name                      \u2503 Category        \u2503 Servers  \u2503 Description                              \u2503\n\u2521\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2547\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2547\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2547\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2547\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2529\n\u2502 custom-test-suite    \u2502 Custom Suite              \u2502 custom          \u2502 0        \u2502 Custom suite: Custom Suite               \u2502\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u253c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u253c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u253c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u253c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502 dev-tools            \u2502 Dev Tools                 \u2502 development     \u2502 0        \u2502 Development tools                        \u2502\n\u251c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u253c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u253c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u253c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u253c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2524\n\u2502 test-suite           \u2502 Test Suite                \u2502 custom          \u2502 0        \u2502 A test suite                             \u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n\n\ud83d\udca1 To install a suite: mcp-manager install-suite --suite-name <suite-id>\n\ud83d\udca1 To view suite details: mcp-manager suite show <suite-id>\n",
+      "stderr": "",
+      "expected_output": [
+        "MCP Server Suites",
+        "Test Suite 1",
+        "Test Suite 2"
+      ],
+      "missing_output": [
+        "Test Suite 1",
+        "Test Suite 2"
+      ],
+      "duration": 0.17264509201049805
+    },
+    {
+      "test_name": "suite_list_by_category",
+      "description": "Test listing suites filtered by category",
+      "command": "mcp-manager suite list --category development",
+      "error_message": "Missing output: ['Dev Suite']",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "stdout": "\n                                                MCP Server Suites (1 total)                                                 \n\u250f\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2533\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2533\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2533\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2533\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2513\n\u2503 Suite ID             \u2503 Name                      \u2503 Category        \u2503 Servers  \u2503 Description                              \u2503\n\u2521\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2547\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2547\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2547\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2547\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2529\n\u2502 dev-tools            \u2502 Dev Tools                 \u2502 development     \u2502 0        \u2502 Development tools                        \u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n\n\ud83d\udca1 To install a suite: mcp-manager install-suite --suite-name <suite-id>\n\ud83d\udca1 To view suite details: mcp-manager suite show <suite-id>\n",
+      "stderr": "",
+      "expected_output": [
+        "Dev Suite"
+      ],
+      "missing_output": [
+        "Dev Suite"
+      ],
+      "duration": 0.17321085929870605
+    },
+    {
+      "test_name": "suite_show_basic",
+      "description": "Test showing suite details",
+      "command": "mcp-manager suite show show-test",
+      "error_message": "Missing output: ['Suite: Show Test', 'Description: Suite for show test', 'This suite has no servers yet']",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "stdout": "\u274c Suite 'show-test' not found\n\ud83d\udca1 Available suites:\n   \u2022 custom-test-suite: Custom Suite\n   \u2022 dev-tools: Dev Tools\n   \u2022 test-suite: Test Suite\n",
+      "stderr": "",
+      "expected_output": [
+        "Suite: Show Test",
+        "Description: Suite for show test",
+        "This suite has no servers yet"
+      ],
+      "missing_output": [
+        "Suite: Show Test",
+        "Description: Suite for show test",
+        "This suite has no servers yet"
+      ],
+      "duration": 0.17736196517944336
+    },
+    {
+      "test_name": "suite_add_server_basic",
+      "description": "Test adding an existing database server to a suite",
+      "command": "mcp-manager suite add server-test Ref --role member --priority 50",
+      "error_message": "Missing output: ['Added Ref to suite server-test']; Stderr: [07/26/25 15:44:22] ERROR    Suite server-test does not exist                                                                               \n",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "stdout": "Adding Ref to suite server-test as member...\n\u274c Failed to add server to suite\n",
+      "stderr": "[07/26/25 15:44:22] ERROR    Suite server-test does not exist                                                                               \n",
+      "expected_output": [
+        "Added Ref to suite server-test"
+      ],
+      "missing_output": [
+        "Added Ref to suite server-test"
+      ],
+      "duration": 0.18042778968811035
+    },
+    {
+      "test_name": "suite_add_server_different_roles",
+      "description": "Test adding existing database servers with different roles",
+      "command": "mcp-manager suite add role-test filesystem --role primary --priority 90 && mcp-manager suite add role-test aws-diagram --role optional --priority 10",
+      "error_message": "Missing output: ['Added filesystem to suite role-test']; Stderr: [07/26/25 15:44:22] ERROR    Suite role-test does not exist                                                                                 \n[07/26/25 15:44:22] ERROR    Suite role-test does not exist",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "stdout": "Adding filesystem to suite role-test as primary...\n\u274c Failed to add server to suite\nAdding aws-diagram to suite role-test as optional...\n\u274c Failed to add server to suite\n",
+      "stderr": "[07/26/25 15:44:22] ERROR    Suite role-test does not exist                                                                                 \n[07/26/25 15:44:22] ERROR    Suite role-test does not exist                                                                                 \n",
+      "expected_output": [
+        "Added filesystem to suite role-test"
+      ],
+      "missing_output": [
+        "Added filesystem to suite role-test"
+      ],
+      "duration": 0.3560147285461426
+    },
+    {
+      "test_name": "suite_remove_server",
+      "description": "Test removing a server from a suite",
+      "command": "mcp-manager suite remove remove-test remove-server",
+      "error_message": "Missing output: ['Removed remove-server from suite remove-test']; Stderr: [07/26/25 15:44:22] WARNING  Server remove-server not found in suite remove-test                                                            \n",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "stdout": "Removing remove-server from suite remove-test...\n\u274c Failed to remove server from suite\n",
+      "stderr": "[07/26/25 15:44:22] WARNING  Server remove-server not found in suite remove-test                                                            \n",
+      "expected_output": [
+        "Removed remove-server from suite remove-test"
+      ],
+      "missing_output": [
+        "Removed remove-server from suite remove-test"
+      ],
+      "duration": 0.17328882217407227
+    },
+    {
+      "test_name": "suite_delete_basic",
+      "description": "Test deleting a suite with force flag",
+      "command": "mcp-manager suite delete delete-test --force",
+      "error_message": "Missing output: [\"Suite 'Delete Test' deleted successfully\"]",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "stdout": "\u274c Suite 'delete-test' not found\n",
+      "stderr": "",
+      "expected_output": [
+        "Suite 'Delete Test' deleted successfully"
+      ],
+      "missing_output": [
+        "Suite 'Delete Test' deleted successfully"
+      ],
+      "duration": 0.18376708030700684
+    },
+    {
+      "test_name": "install_suite_temp_dry_run",
+      "description": "Test installing a suite with dry run",
+      "command": "mcp-manager suite install install-test --dry-run",
+      "error_message": "Missing output: ['Dry run', 'showing what would be installed', 'install-server']",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "stdout": "\u274c Suite 'install-test' not found\n\ud83d\udca1 Available suites:\n   \u2022 custom-test-suite: Custom suite: Custom Suite\n   \u2022 dev-tools: Development tools\n   \u2022 test-suite: A test suite\n",
+      "stderr": "",
+      "expected_output": [
+        "Dry run",
+        "showing what would be installed",
+        "install-server"
+      ],
+      "missing_output": [
+        "Dry run",
+        "showing what would be installed",
+        "install-server"
+      ],
+      "duration": 0.17751502990722656
+    }
+  ],
+  "all_results": [
+    {
+      "test_name": "suite_list_empty",
+      "description": "Test listing suites when none exist",
+      "command": "mcp-manager suite list",
+      "success": false,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.17769384384155273,
+      "error_message": "Missing output: ['No suites configured', 'Create your first suite with:', 'mcp-manager suite create']"
+    },
+    {
+      "test_name": "suite_create_basic",
+      "description": "Test creating a basic suite",
+      "command": "mcp-manager suite create \"Test Suite\" --description \"A test suite\"",
+      "success": true,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.18355703353881836,
+      "error_message": null
+    },
+    {
+      "test_name": "suite_create_with_category",
+      "description": "Test creating a suite with category",
+      "command": "mcp-manager suite create \"Dev Tools\" --description \"Development tools\" --category development",
+      "success": true,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.17273402214050293,
+      "error_message": null
+    },
+    {
+      "test_name": "suite_create_custom_id",
+      "description": "Test creating a suite with custom ID",
+      "command": "mcp-manager suite create \"Custom Suite\" --suite-id custom-test-suite",
+      "success": true,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.17469000816345215,
+      "error_message": null
+    },
+    {
+      "test_name": "suite_list_with_suites",
+      "description": "Test listing suites after creating some",
+      "command": "mcp-manager suite list",
+      "success": false,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.17264509201049805,
+      "error_message": "Missing output: ['Test Suite 1', 'Test Suite 2']"
+    },
+    {
+      "test_name": "suite_list_by_category",
+      "description": "Test listing suites filtered by category",
+      "command": "mcp-manager suite list --category development",
+      "success": false,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.17321085929870605,
+      "error_message": "Missing output: ['Dev Suite']"
+    },
+    {
+      "test_name": "suite_show_basic",
+      "description": "Test showing suite details",
+      "command": "mcp-manager suite show show-test",
+      "success": false,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.17736196517944336,
+      "error_message": "Missing output: ['Suite: Show Test', 'Description: Suite for show test', 'This suite has no servers yet']"
+    },
+    {
+      "test_name": "suite_show_nonexistent",
+      "description": "Test showing details of nonexistent suite",
+      "command": "mcp-manager suite show nonexistent-suite",
+      "success": true,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.17467212677001953,
+      "error_message": null
+    },
+    {
+      "test_name": "suite_add_server_basic",
+      "description": "Test adding an existing database server to a suite",
+      "command": "mcp-manager suite add server-test Ref --role member --priority 50",
+      "success": false,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.18042778968811035,
+      "error_message": "Missing output: ['Added Ref to suite server-test']; Stderr: [07/26/25 15:44:22] ERROR    Suite server-test does not exist                                                                               \n"
+    },
+    {
+      "test_name": "suite_add_server_different_roles",
+      "description": "Test adding existing database servers with different roles",
+      "command": "mcp-manager suite add role-test filesystem --role primary --priority 90 && mcp-manager suite add role-test aws-diagram --role optional --priority 10",
+      "success": false,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.3560147285461426,
+      "error_message": "Missing output: ['Added filesystem to suite role-test']; Stderr: [07/26/25 15:44:22] ERROR    Suite role-test does not exist                                                                                 \n[07/26/25 15:44:22] ERROR    Suite role-test does not exist"
+    },
+    {
+      "test_name": "suite_remove_server",
+      "description": "Test removing a server from a suite",
+      "command": "mcp-manager suite remove remove-test remove-server",
+      "success": false,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.17328882217407227,
+      "error_message": "Missing output: ['Removed remove-server from suite remove-test']; Stderr: [07/26/25 15:44:22] WARNING  Server remove-server not found in suite remove-test                                                            \n"
+    },
+    {
+      "test_name": "suite_delete_basic",
+      "description": "Test deleting a suite with force flag",
+      "command": "mcp-manager suite delete delete-test --force",
+      "success": false,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.18376708030700684,
+      "error_message": "Missing output: [\"Suite 'Delete Test' deleted successfully\"]"
+    },
+    {
+      "test_name": "suite_summary",
+      "description": "Test suite summary command",
+      "command": "mcp-manager suite summary",
+      "success": true,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.6305546760559082,
+      "error_message": null
+    },
+    {
+      "test_name": "install_suite_temp_dry_run",
+      "description": "Test installing a suite with dry run",
+      "command": "mcp-manager suite install install-test --dry-run",
+      "success": false,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.17751502990722656,
+      "error_message": "Missing output: ['Dry run', 'showing what would be installed', 'install-server']"
+    },
+    {
+      "test_name": "install_suite_temp_nonexistent",
+      "description": "Test installing a nonexistent suite",
+      "command": "mcp-manager suite install nonexistent-suite",
+      "success": true,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.17647004127502441,
+      "error_message": null
+    },
+    {
+      "test_name": "suite_help_commands",
+      "description": "Test suite command help",
+      "command": "mcp-manager suite --help",
+      "success": true,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.17407989501953125,
+      "error_message": null
+    }
+  ]
+}

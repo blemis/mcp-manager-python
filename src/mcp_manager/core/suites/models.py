@@ -18,6 +18,8 @@ class SuiteMembership:
     priority: int  # 1-100, higher = more important
     config_overrides: Dict[str, Any]
     added_at: datetime
+    server_type: str = "custom"  # 'npm', 'docker-desktop', 'custom'
+    server_command: str = ""     # Installation command for the server
 
 
 @dataclass

@@ -1,0 +1,25 @@
+{
+  "timestamp": "2025-07-25T13:46:01.476625",
+  "summary": {
+    "total_scenarios": 1,
+    "successful_scenarios": 1,
+    "failed_scenarios": 0,
+    "success_rate": 100.0,
+    "total_duration": 0.9180688858032227,
+    "average_duration": 0.9180688858032227
+  },
+  "scenarios": [
+    {
+      "id": "default_basic_commands_test",
+      "name": "Default Basic Commands Test",
+      "success": true,
+      "duration": 0.9180688858032227,
+      "steps_executed": 1,
+      "steps_passed": 1,
+      "validation_results": {
+        "all_steps_pass": true
+      },
+      "cleanup_performed": true
+    }
+  ]
+}

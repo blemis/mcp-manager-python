@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RCC>
+    <qresource prefix="/">
+        <!-- Stylesheets -->
+        <file alias="styles/main.qss">styles/main.qss</file>
+        
+        <!-- Application Icons -->
+        <file alias="icons/app_icon.svg">icons/app_icon.svg</file>
+        
+        <!-- Status Icons -->
+        <file alias="icons/server_online.svg">icons/server_online.svg</file>
+        <file alias="icons/server_offline.svg">icons/server_offline.svg</file>
+        <file alias="icons/server_error.svg">icons/server_error.svg</file>
+        
+        <!-- UI Control Icons -->
+        <file alias="icons/search.svg">icons/search.svg</file>
+        <file alias="icons/chevron-down.svg">icons/chevron-down.svg</file>
+        <file alias="icons/arrow-right.svg">icons/arrow-right.svg</file>
+        <file alias="icons/arrow-down.svg">icons/arrow-down.svg</file>
+        <file alias="icons/checkmark.svg">icons/checkmark.svg</file>
+        <file alias="icons/radio-dot.svg">icons/radio-dot.svg</file>
+        
+        <!-- Window Control Icons -->
+        <file alias="icons/close.svg">icons/close.svg</file>
+        <file alias="icons/restore.svg">icons/restore.svg</file>
+        
+        <!-- Action Icons -->
+        <file alias="icons/add.svg">icons/add.svg</file>
+        <file alias="icons/remove.svg">icons/remove.svg</file>
+        <file alias="icons/settings.svg">icons/settings.svg</file>
+        <file alias="icons/refresh.svg">icons/refresh.svg</file>
+        
+        <!-- Status Indicator Icons -->
+        <file alias="icons/info.svg">icons/info.svg</file>
+        <file alias="icons/warning.svg">icons/warning.svg</file>
+        <file alias="icons/error.svg">icons/error.svg</file>
+        <file alias="icons/success.svg">icons/success.svg</file>
+        
+        <!-- Service/Provider Icons -->
+        <file alias="icons/docker.svg">icons/docker.svg</file>
+        <file alias="icons/npm.svg">icons/npm.svg</file>
+        <file alias="icons/claude.svg">icons/claude.svg</file>
+    </qresource>
+</RCC>

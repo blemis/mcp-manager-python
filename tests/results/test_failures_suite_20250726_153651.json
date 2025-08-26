@@ -1,0 +1,414 @@
+{
+  "timestamp": "2025-07-26 15:36:51",
+  "category": "suite",
+  "summary": {
+    "total_tests": 16,
+    "passed": 3,
+    "failed": 13,
+    "success_rate": "18.8%",
+    "total_duration": "3.27s"
+  },
+  "failed_tests": [
+    {
+      "test_name": "suite_create_basic",
+      "description": "Test creating a basic suite",
+      "command": "mcp-manager suite create \"Test Suite\" --description \"A test suite\"",
+      "error_message": "Exit code 2 != expected 0; Missing output: [\"Suite 'Test Suite' created successfully\"]; Stderr: Usage: mcp-manager suite create [OPTIONS] NAME\nTry 'mcp-manager suite create --help' for help.\n\nError: Got unexpected extra arguments (Suite\" test suite\")\n",
+      "exit_code": 2,
+      "expected_exit_code": 0,
+      "stdout": "",
+      "stderr": "Usage: mcp-manager suite create [OPTIONS] NAME\nTry 'mcp-manager suite create --help' for help.\n\nError: Got unexpected extra arguments (Suite\" test suite\")\n",
+      "expected_output": [
+        "Suite 'Test Suite' created successfully"
+      ],
+      "missing_output": [
+        "Suite 'Test Suite' created successfully"
+      ],
+      "duration": 0.16973114013671875
+    },
+    {
+      "test_name": "suite_create_with_category",
+      "description": "Test creating a suite with category",
+      "command": "mcp-manager suite create \"Dev Tools\" --description \"Development tools\" --category development",
+      "error_message": "Exit code 2 != expected 0; Missing output: [\"Suite 'Dev Tools' created successfully\"]; Stderr: Usage: mcp-manager suite create [OPTIONS] NAME\nTry 'mcp-manager suite create --help' for help.\n\nError: Got unexpected extra arguments (Tools\" tools\")\n",
+      "exit_code": 2,
+      "expected_exit_code": 0,
+      "stdout": "",
+      "stderr": "Usage: mcp-manager suite create [OPTIONS] NAME\nTry 'mcp-manager suite create --help' for help.\n\nError: Got unexpected extra arguments (Tools\" tools\")\n",
+      "expected_output": [
+        "Suite 'Dev Tools' created successfully"
+      ],
+      "missing_output": [
+        "Suite 'Dev Tools' created successfully"
+      ],
+      "duration": 0.16945481300354004
+    },
+    {
+      "test_name": "suite_create_custom_id",
+      "description": "Test creating a suite with custom ID",
+      "command": "mcp-manager suite create \"Custom Suite\" --suite-id custom-test-suite",
+      "error_message": "Exit code 2 != expected 0; Missing output: [\"Suite 'Custom Suite' created successfully\", 'custom-test-suite']; Stderr: Usage: mcp-manager suite create [OPTIONS] NAME\nTry 'mcp-manager suite create --help' for help.\n\nError: Got unexpected extra argument (Suite\")\n",
+      "exit_code": 2,
+      "expected_exit_code": 0,
+      "stdout": "",
+      "stderr": "Usage: mcp-manager suite create [OPTIONS] NAME\nTry 'mcp-manager suite create --help' for help.\n\nError: Got unexpected extra argument (Suite\")\n",
+      "expected_output": [
+        "Suite 'Custom Suite' created successfully",
+        "custom-test-suite"
+      ],
+      "missing_output": [
+        "Suite 'Custom Suite' created successfully",
+        "custom-test-suite"
+      ],
+      "duration": 0.1693880558013916
+    },
+    {
+      "test_name": "suite_list_with_suites",
+      "description": "Test listing suites after creating some",
+      "command": "mcp-manager suite list",
+      "error_message": "Missing output: ['MCP Server Suites', 'Test Suite 1', 'Test Suite 2']",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "stdout": "No suites configured\n\ud83d\udca1 Create your first suite with:\n   mcp-manager suite create my-suite --description 'My custom suite'\n",
+      "stderr": "",
+      "expected_output": [
+        "MCP Server Suites",
+        "Test Suite 1",
+        "Test Suite 2"
+      ],
+      "missing_output": [
+        "MCP Server Suites",
+        "Test Suite 1",
+        "Test Suite 2"
+      ],
+      "duration": 0.17000985145568848
+    },
+    {
+      "test_name": "suite_list_by_category",
+      "description": "Test listing suites filtered by category",
+      "command": "mcp-manager suite list --category development",
+      "error_message": "Missing output: ['Dev Suite']",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "stdout": "No suites found in category 'development'\n",
+      "stderr": "",
+      "expected_output": [
+        "Dev Suite"
+      ],
+      "missing_output": [
+        "Dev Suite"
+      ],
+      "duration": 0.17561817169189453
+    },
+    {
+      "test_name": "suite_show_basic",
+      "description": "Test showing suite details",
+      "command": "mcp-manager suite show show-test",
+      "error_message": "Missing output: ['Suite: Show Test', 'Description: Suite for show test', 'This suite has no servers yet']",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "stdout": "\u274c Suite 'show-test' not found\n\ud83d\udca1 Available suites:\n",
+      "stderr": "",
+      "expected_output": [
+        "Suite: Show Test",
+        "Description: Suite for show test",
+        "This suite has no servers yet"
+      ],
+      "missing_output": [
+        "Suite: Show Test",
+        "Description: Suite for show test",
+        "This suite has no servers yet"
+      ],
+      "duration": 0.17835497856140137
+    },
+    {
+      "test_name": "suite_add_server_basic",
+      "description": "Test adding an existing database server to a suite",
+      "command": "mcp-manager suite add server-test Ref --role member --priority 50",
+      "error_message": "Missing output: ['Added Ref to suite server-test']; Stderr: [07/26/25 15:36:49] ERROR    Suite server-test does not exist                                                                               \n",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "stdout": "Adding Ref to suite server-test as member...\n\u274c Failed to add server to suite\n",
+      "stderr": "[07/26/25 15:36:49] ERROR    Suite server-test does not exist                                                                               \n",
+      "expected_output": [
+        "Added Ref to suite server-test"
+      ],
+      "missing_output": [
+        "Added Ref to suite server-test"
+      ],
+      "duration": 0.17631101608276367
+    },
+    {
+      "test_name": "suite_add_server_different_roles",
+      "description": "Test adding existing database servers with different roles",
+      "command": "mcp-manager suite add role-test filesystem --role primary --priority 90 && mcp-manager suite add role-test aws-diagram --role optional --priority 10",
+      "error_message": "Exit code 2 != expected 0; Missing output: ['Added filesystem to suite role-test']; Stderr: Usage: mcp-manager suite add [OPTIONS] SUITE_ID SERVER_NAME\nTry 'mcp-manager suite add --help' for help.\n\nError: Got unexpected extra arguments (&& mcp-manager suite add role-test aws-diagram)\n",
+      "exit_code": 2,
+      "expected_exit_code": 0,
+      "stdout": "",
+      "stderr": "Usage: mcp-manager suite add [OPTIONS] SUITE_ID SERVER_NAME\nTry 'mcp-manager suite add --help' for help.\n\nError: Got unexpected extra arguments (&& mcp-manager suite add role-test aws-diagram)\n",
+      "expected_output": [
+        "Added filesystem to suite role-test"
+      ],
+      "missing_output": [
+        "Added filesystem to suite role-test"
+      ],
+      "duration": 0.17421913146972656
+    },
+    {
+      "test_name": "suite_remove_server",
+      "description": "Test removing a server from a suite",
+      "command": "mcp-manager suite remove remove-test remove-server",
+      "error_message": "Missing output: ['Removed remove-server from suite remove-test']; Stderr: [07/26/25 15:36:49] WARNING  Server remove-server not found in suite remove-test                                                            \n",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "stdout": "Removing remove-server from suite remove-test...\n\u274c Failed to remove server from suite\n",
+      "stderr": "[07/26/25 15:36:49] WARNING  Server remove-server not found in suite remove-test                                                            \n",
+      "expected_output": [
+        "Removed remove-server from suite remove-test"
+      ],
+      "missing_output": [
+        "Removed remove-server from suite remove-test"
+      ],
+      "duration": 0.1738271713256836
+    },
+    {
+      "test_name": "suite_delete_basic",
+      "description": "Test deleting a suite with force flag",
+      "command": "mcp-manager suite delete delete-test --force",
+      "error_message": "Missing output: [\"Suite 'Delete Test' deleted successfully\"]",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "stdout": "\u274c Suite 'delete-test' not found\n",
+      "stderr": "",
+      "expected_output": [
+        "Suite 'Delete Test' deleted successfully"
+      ],
+      "missing_output": [
+        "Suite 'Delete Test' deleted successfully"
+      ],
+      "duration": 0.17148208618164062
+    },
+    {
+      "test_name": "suite_summary",
+      "description": "Test suite summary command",
+      "command": "mcp-manager suite summary",
+      "error_message": "Missing output: ['By Category:']",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "stdout": "\ud83d\udcca Suite Summary\nTotal Suites: 0\nTotal Server Memberships: 0\nExpanded Server Count: 0 (Docker Desktop servers counted individually)\nActive Suites: 0\n",
+      "stderr": "",
+      "expected_output": [
+        "Suite Summary",
+        "Total Suites:",
+        "By Category:"
+      ],
+      "missing_output": [
+        "By Category:"
+      ],
+      "duration": 0.6448109149932861
+    },
+    {
+      "test_name": "install_suite_temp_dry_run",
+      "description": "Test installing a suite with dry run",
+      "command": "mcp-manager install-suite-temp install-test --dry-run",
+      "error_message": "Exit code 2 != expected 0; Missing output: ['Dry run', 'showing what would be installed', 'install-server']; Stderr: Usage: mcp-manager [OPTIONS] COMMAND [ARGS]...\nTry 'mcp-manager --help' for help.\n\nError: No such command 'install-suite-temp'.\n",
+      "exit_code": 2,
+      "expected_exit_code": 0,
+      "stdout": "",
+      "stderr": "Usage: mcp-manager [OPTIONS] COMMAND [ARGS]...\nTry 'mcp-manager --help' for help.\n\nError: No such command 'install-suite-temp'.\n",
+      "expected_output": [
+        "Dry run",
+        "showing what would be installed",
+        "install-server"
+      ],
+      "missing_output": [
+        "Dry run",
+        "showing what would be installed",
+        "install-server"
+      ],
+      "duration": 0.17770600318908691
+    },
+    {
+      "test_name": "install_suite_temp_nonexistent",
+      "description": "Test installing a nonexistent suite",
+      "command": "mcp-manager install-suite-temp nonexistent-suite",
+      "error_message": "Exit code 2 != expected 0; Missing output: [\"Suite 'nonexistent-suite' not found\", 'Available suites:']; Stderr: Usage: mcp-manager [OPTIONS] COMMAND [ARGS]...\nTry 'mcp-manager --help' for help.\n\nError: No such command 'install-suite-temp'.\n",
+      "exit_code": 2,
+      "expected_exit_code": 0,
+      "stdout": "",
+      "stderr": "Usage: mcp-manager [OPTIONS] COMMAND [ARGS]...\nTry 'mcp-manager --help' for help.\n\nError: No such command 'install-suite-temp'.\n",
+      "expected_output": [
+        "Suite 'nonexistent-suite' not found",
+        "Available suites:"
+      ],
+      "missing_output": [
+        "Suite 'nonexistent-suite' not found",
+        "Available suites:"
+      ],
+      "duration": 0.17024683952331543
+    }
+  ],
+  "all_results": [
+    {
+      "test_name": "suite_list_empty",
+      "description": "Test listing suites when none exist",
+      "command": "mcp-manager suite list",
+      "success": true,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.2019519805908203,
+      "error_message": null
+    },
+    {
+      "test_name": "suite_create_basic",
+      "description": "Test creating a basic suite",
+      "command": "mcp-manager suite create \"Test Suite\" --description \"A test suite\"",
+      "success": false,
+      "exit_code": 2,
+      "expected_exit_code": 0,
+      "duration": 0.16973114013671875,
+      "error_message": "Exit code 2 != expected 0; Missing output: [\"Suite 'Test Suite' created successfully\"]; Stderr: Usage: mcp-manager suite create [OPTIONS] NAME\nTry 'mcp-manager suite create --help' for help.\n\nError: Got unexpected extra arguments (Suite\" test suite\")\n"
+    },
+    {
+      "test_name": "suite_create_with_category",
+      "description": "Test creating a suite with category",
+      "command": "mcp-manager suite create \"Dev Tools\" --description \"Development tools\" --category development",
+      "success": false,
+      "exit_code": 2,
+      "expected_exit_code": 0,
+      "duration": 0.16945481300354004,
+      "error_message": "Exit code 2 != expected 0; Missing output: [\"Suite 'Dev Tools' created successfully\"]; Stderr: Usage: mcp-manager suite create [OPTIONS] NAME\nTry 'mcp-manager suite create --help' for help.\n\nError: Got unexpected extra arguments (Tools\" tools\")\n"
+    },
+    {
+      "test_name": "suite_create_custom_id",
+      "description": "Test creating a suite with custom ID",
+      "command": "mcp-manager suite create \"Custom Suite\" --suite-id custom-test-suite",
+      "success": false,
+      "exit_code": 2,
+      "expected_exit_code": 0,
+      "duration": 0.1693880558013916,
+      "error_message": "Exit code 2 != expected 0; Missing output: [\"Suite 'Custom Suite' created successfully\", 'custom-test-suite']; Stderr: Usage: mcp-manager suite create [OPTIONS] NAME\nTry 'mcp-manager suite create --help' for help.\n\nError: Got unexpected extra argument (Suite\")\n"
+    },
+    {
+      "test_name": "suite_list_with_suites",
+      "description": "Test listing suites after creating some",
+      "command": "mcp-manager suite list",
+      "success": false,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.17000985145568848,
+      "error_message": "Missing output: ['MCP Server Suites', 'Test Suite 1', 'Test Suite 2']"
+    },
+    {
+      "test_name": "suite_list_by_category",
+      "description": "Test listing suites filtered by category",
+      "command": "mcp-manager suite list --category development",
+      "success": false,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.17561817169189453,
+      "error_message": "Missing output: ['Dev Suite']"
+    },
+    {
+      "test_name": "suite_show_basic",
+      "description": "Test showing suite details",
+      "command": "mcp-manager suite show show-test",
+      "success": false,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.17835497856140137,
+      "error_message": "Missing output: ['Suite: Show Test', 'Description: Suite for show test', 'This suite has no servers yet']"
+    },
+    {
+      "test_name": "suite_show_nonexistent",
+      "description": "Test showing details of nonexistent suite",
+      "command": "mcp-manager suite show nonexistent-suite",
+      "success": true,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.1734910011291504,
+      "error_message": null
+    },
+    {
+      "test_name": "suite_add_server_basic",
+      "description": "Test adding an existing database server to a suite",
+      "command": "mcp-manager suite add server-test Ref --role member --priority 50",
+      "success": false,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.17631101608276367,
+      "error_message": "Missing output: ['Added Ref to suite server-test']; Stderr: [07/26/25 15:36:49] ERROR    Suite server-test does not exist                                                                               \n"
+    },
+    {
+      "test_name": "suite_add_server_different_roles",
+      "description": "Test adding existing database servers with different roles",
+      "command": "mcp-manager suite add role-test filesystem --role primary --priority 90 && mcp-manager suite add role-test aws-diagram --role optional --priority 10",
+      "success": false,
+      "exit_code": 2,
+      "expected_exit_code": 0,
+      "duration": 0.17421913146972656,
+      "error_message": "Exit code 2 != expected 0; Missing output: ['Added filesystem to suite role-test']; Stderr: Usage: mcp-manager suite add [OPTIONS] SUITE_ID SERVER_NAME\nTry 'mcp-manager suite add --help' for help.\n\nError: Got unexpected extra arguments (&& mcp-manager suite add role-test aws-diagram)\n"
+    },
+    {
+      "test_name": "suite_remove_server",
+      "description": "Test removing a server from a suite",
+      "command": "mcp-manager suite remove remove-test remove-server",
+      "success": false,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.1738271713256836,
+      "error_message": "Missing output: ['Removed remove-server from suite remove-test']; Stderr: [07/26/25 15:36:49] WARNING  Server remove-server not found in suite remove-test                                                            \n"
+    },
+    {
+      "test_name": "suite_delete_basic",
+      "description": "Test deleting a suite with force flag",
+      "command": "mcp-manager suite delete delete-test --force",
+      "success": false,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.17148208618164062,
+      "error_message": "Missing output: [\"Suite 'Delete Test' deleted successfully\"]"
+    },
+    {
+      "test_name": "suite_summary",
+      "description": "Test suite summary command",
+      "command": "mcp-manager suite summary",
+      "success": false,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.6448109149932861,
+      "error_message": "Missing output: ['By Category:']"
+    },
+    {
+      "test_name": "install_suite_temp_dry_run",
+      "description": "Test installing a suite with dry run",
+      "command": "mcp-manager install-suite-temp install-test --dry-run",
+      "success": false,
+      "exit_code": 2,
+      "expected_exit_code": 0,
+      "duration": 0.17770600318908691,
+      "error_message": "Exit code 2 != expected 0; Missing output: ['Dry run', 'showing what would be installed', 'install-server']; Stderr: Usage: mcp-manager [OPTIONS] COMMAND [ARGS]...\nTry 'mcp-manager --help' for help.\n\nError: No such command 'install-suite-temp'.\n"
+    },
+    {
+      "test_name": "install_suite_temp_nonexistent",
+      "description": "Test installing a nonexistent suite",
+      "command": "mcp-manager install-suite-temp nonexistent-suite",
+      "success": false,
+      "exit_code": 2,
+      "expected_exit_code": 0,
+      "duration": 0.17024683952331543,
+      "error_message": "Exit code 2 != expected 0; Missing output: [\"Suite 'nonexistent-suite' not found\", 'Available suites:']; Stderr: Usage: mcp-manager [OPTIONS] COMMAND [ARGS]...\nTry 'mcp-manager --help' for help.\n\nError: No such command 'install-suite-temp'.\n"
+    },
+    {
+      "test_name": "suite_help_commands",
+      "description": "Test suite command help",
+      "command": "mcp-manager suite --help",
+      "success": true,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.1733260154724121,
+      "error_message": null
+    }
+  ]
+}

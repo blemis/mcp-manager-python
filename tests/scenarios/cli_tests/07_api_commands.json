@@ -1,0 +1,96 @@
+{
+  "test_suite_name": "API Server Commands",
+  "test_suite_description": "Tests for API server management and endpoints",
+  "category": "api",
+  "priority": "high",
+  "test_scenarios": [
+    {
+      "test_name": "api_help",
+      "description": "Test API command group help",
+      "command": "mcp-manager api --help",
+      "expected_output_contains": [
+        "API server management",
+        "start",
+        "stop",
+        "status",
+        "test",
+        "create-key"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 10
+    },
+    {
+      "test_name": "api_start_help",
+      "description": "Test API start command help",
+      "command": "mcp-manager api start --help",
+      "expected_output_contains": [
+        "Start API server",
+        "--host",
+        "--port"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 10
+    },
+    {
+      "test_name": "api_status_when_not_running",
+      "description": "Test API status when server is not running",
+      "command": "mcp-manager api status",
+      "expected_output_contains": [
+        "API Server Status",
+        "not running",
+        "stopped"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 15
+    },
+    {
+      "test_name": "api_stop_when_not_running",
+      "description": "Test API stop when server is not running",
+      "command": "mcp-manager api stop",
+      "expected_output_contains": [
+        "API server",
+        "not running",
+        "stopped"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 15
+    },
+    {
+      "test_name": "api_test_help",
+      "description": "Test API test command help",
+      "command": "mcp-manager api test --help",
+      "expected_output_contains": [
+        "Test API endpoints",
+        "test"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 10
+    },
+    {
+      "test_name": "api_create_key_help",
+      "description": "Test API create-key command help",
+      "command": "mcp-manager api create-key --help",
+      "expected_output_contains": [
+        "Create API authentication key",
+        "--name",
+        "--scopes",
+        "--expires-days"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 10
+    },
+    {
+      "test_name": "api_test_without_server",
+      "description": "Test API endpoints when server is not running",
+      "command": "mcp-manager api test",
+      "expected_output_contains": [
+        "API test",
+        "connection",
+        "failed",
+        "not running"
+      ],
+      "expected_exit_code": 1,
+      "timeout": 20
+    }
+  ]
+}

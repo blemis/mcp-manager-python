@@ -1,0 +1,102 @@
+{
+  "test_suite_name": "Test Admin Commands",
+  "test_suite_description": "Tests for administrative testing and development commands",
+  "category": "test_admin",
+  "priority": "low",
+  "test_scenarios": [
+    {
+      "test_name": "test_admin_help",
+      "description": "Test test-admin command group help",
+      "command": "mcp-manager test-admin --help",
+      "expected_output_contains": [
+        "Administrative testing commands",
+        "create-test-data",
+        "run-stress-test",
+        "validate-config",
+        "benchmark",
+        "generate-report",
+        "reset-test-env",
+        "load-test-suite"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 10
+    },
+    {
+      "test_name": "test_admin_create_test_data",
+      "description": "Test creating test data for development",
+      "command": "mcp-manager test-admin create-test-data",
+      "expected_output_contains": [
+        "Creating test data",
+        "test data"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 30
+    },
+    {
+      "test_name": "test_admin_validate_config",
+      "description": "Test system configuration validation",
+      "command": "mcp-manager test-admin validate-config",
+      "expected_output_contains": [
+        "Configuration validation",
+        "validation"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 20
+    },
+    {
+      "test_name": "test_admin_generate_report",
+      "description": "Test system report generation",
+      "command": "mcp-manager test-admin generate-report",
+      "expected_output_contains": [
+        "System report",
+        "report"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 30
+    },
+    {
+      "test_name": "test_admin_benchmark_help",
+      "description": "Test benchmark command help",
+      "command": "mcp-manager test-admin benchmark --help",
+      "expected_output_contains": [
+        "Run performance benchmarks",
+        "benchmark"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 10
+    },
+    {
+      "test_name": "test_admin_run_stress_test_help",
+      "description": "Test stress test command help",
+      "command": "mcp-manager test-admin run-stress-test --help",
+      "expected_output_contains": [
+        "Run system stress test",
+        "stress test"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 10
+    },
+    {
+      "test_name": "test_admin_reset_test_env_help",
+      "description": "Test reset test environment command help",
+      "command": "mcp-manager test-admin reset-test-env --help",
+      "expected_output_contains": [
+        "Reset test environment",
+        "reset"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 10
+    },
+    {
+      "test_name": "test_admin_load_test_suite_help",
+      "description": "Test load test suite command help",
+      "command": "mcp-manager test-admin load-test-suite --help",
+      "expected_output_contains": [
+        "Load comprehensive test suite",
+        "test suite"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 10
+    }
+  ]
+}

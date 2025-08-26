@@ -102,6 +102,28 @@ class MembershipManager:
             logger.error(f"Failed to get suites for server {server_name}: {e}")
             return []
     
+    async def get_suite_servers(self, suite_id: str) -> List[Tuple[str, str, str, int]]:
+        """Get all servers that belong to a specific suite."""
+        try:
+            with self.db.get_row_connection() as conn:
+                cursor = conn.execute("""
+                    SELECT sm.suite_id, s.name AS suite_name, sm.server_name, sm.priority
+                    FROM suite_memberships sm
+                    JOIN mcp_suites s ON s.id = sm.suite_id
+                    WHERE sm.suite_id = ?
+                    ORDER BY sm.priority DESC
+                """, (suite_id,))
+                
+                results = []
+                for row in cursor.fetchall():
+                    results.append((row['suite_id'], row['suite_name'], row['server_name'], row['priority']))
+                
+                return results
+                
+        except Exception as e:
+            logger.error(f"Failed to get servers for suite {suite_id}: {e}")
+            return []
+    
     async def update_server_suites_field(self, server: Server) -> bool:
         """Update a server's suites field based on database memberships."""
         try:

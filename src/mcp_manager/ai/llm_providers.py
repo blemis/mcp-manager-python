@@ -101,7 +101,7 @@ class LLMResponse(BaseModel):
     
     content: str = Field(description="Response content")
     usage_tokens: Optional[int] = Field(default=None, description="Tokens used in request")
-    model_used: Optional[str] = Field(default=None, description="Model that generated the response")
+    llm_model: Optional[str] = Field(default=None, description="Model that generated the response")
     provider: Optional[str] = Field(default=None, description="Provider that handled the request")
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional response metadata")
 
@@ -169,12 +169,12 @@ class BaseLLMProvider(ABC):
         pass
     
     def _create_response(self, content: str, usage_tokens: Optional[int] = None,
-                        model_used: Optional[str] = None, **metadata) -> LLMResponse:
+                        llm_model: Optional[str] = None, **metadata) -> LLMResponse:
         """Create a standardized LLMResponse object."""
         return LLMResponse(
             content=content,
             usage_tokens=usage_tokens,
-            model_used=model_used or self.config.get_default_model(),
+            llm_model=llm_model or self.config.get_default_model(),
             provider=self.config.provider.value,
             metadata=metadata
         )

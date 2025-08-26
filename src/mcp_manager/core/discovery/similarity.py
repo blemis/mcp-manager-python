@@ -89,9 +89,10 @@ class SimilarityDetector:
                 name = name[:-len(suffix)]
                 break
         
-        # Remove common prefixes
+        # Remove common prefixes (order matters - longer prefixes first)
         prefixes_to_remove = [
-            'mcp-', 'mcp_', '@modelcontextprotocol/', '@', 'dd-', 'docker-',
+            'docker-desktop-', 'docker-mcp-', '@modelcontextprotocol/', 
+            'mcp-', 'mcp_', 'docker-', 'dd-', '@', 
             'official-', 'npm-', 'node-'
         ]
         

@@ -1,0 +1,72 @@
+{
+  "schema_version": "1.0",
+  "scenario": {
+    "id": "suite_installation_suite_installation_actual",
+    "name": "Test actual suite installation - the bug that was fixed",
+    "description": "Test actual suite installation - the bug that was fixed.",
+    "created_by": "migration",
+    "category": "core",
+    "confidence_score": 0.85,
+    "ai_reasoning": "Automatically migrated from pytest test TestSuiteInstallation.test_suite_installation_actual",
+    "tags": [],
+    "priority": "high"
+  },
+  "mcp_requirements": {
+    "required_servers": [
+      {
+        "name": "modelcontextprotocol-filesystem",
+        "type": "npm",
+        "priority": "high",
+        "purpose": "Test MCP Manager deployment and Claude Code integration"
+      }
+    ],
+    "optional_servers": [],
+    "scope": "user",
+    "deduplication_key": "core_suite_installation_suite_installation_actual",
+    "resource_requirements": {
+      "min_memory_mb": 96,
+      "max_execution_time_seconds": 90,
+      "parallel_safe": true
+    }
+  },
+  "test_steps": [
+    {
+      "step_id": 1,
+      "action": "cli_command",
+      "command": "--help",
+      "expect": "success",
+      "timeout": 15,
+      "description": "Placeholder command - requires manual conversion"
+    }
+  ],
+  "validation": {
+    "success_criteria": [
+      {
+        "type": "all_steps_pass",
+        "description": "All test steps must complete successfully"
+      }
+    ],
+    "failure_conditions": [
+      {
+        "type": "timeout",
+        "description": "Test steps timeout",
+        "value": "300"
+      }
+    ],
+    "cleanup_required": true,
+    "cleanup_steps": [
+      {
+        "action": "reset_config",
+        "ignore_errors": true
+      }
+    ]
+  },
+  "metadata": {
+    "created_date": "2025-07-25T12:12:39.355153",
+    "last_modified": "2025-07-25T12:12:39.355154",
+    "execution_count": 0,
+    "success_rate": 0.0,
+    "average_duration": 0.0,
+    "related_scenarios": []
+  }
+}

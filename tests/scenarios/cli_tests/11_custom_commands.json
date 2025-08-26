@@ -1,0 +1,40 @@
+{
+  "test_suite_name": "Test Export Feature",
+  "test_suite_description": "Test export data functionality",
+  "category": "custom",
+  "priority": "medium",
+  "collection_requirements": {
+    "collection_type": "any",
+    "server_types": [],
+    "min_servers": 0
+  },
+  "metadata": {
+    "created_date": "2025-07-26",
+    "created_by": "user",
+    "tags": [
+      "cli",
+      "custom",
+      "collection-agnostic"
+    ],
+    "estimated_duration_seconds": 3,
+    "compatibility": {
+      "npm_servers": true,
+      "docker_desktop_servers": true,
+      "docker_hub_servers": true,
+      "empty_state": true
+    }
+  },
+  "test_scenarios": [
+    {
+      "test_name": "export_help",
+      "description": "Test mcp-manager export command help",
+      "command": "mcp-manager export --help",
+      "expected_output_contains": [
+        "export",
+        "--help"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 10
+    }
+  ]
+}

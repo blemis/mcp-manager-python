@@ -1,0 +1,25 @@
+{
+  "timestamp": "2025-07-25T12:12:39.375803",
+  "total_files_converted": 6,
+  "total_scenarios_created": 124,
+  "scenarios_per_file": 20.666666666666668,
+  "categories": {
+    "core": 65,
+    "integration": 23,
+    "regression": 24,
+    "workflow": 12
+  },
+  "priorities": {
+    "critical": 1,
+    "high": 69,
+    "medium": 54
+  },
+  "files_converted": [
+    "/Users/jestes/mcp-manager/tests/test_workflows.py",
+    "/Users/jestes/mcp-manager/tests/test_quality_tracking.py",
+    "/Users/jestes/mcp-manager/tests/test_error_handling.py",
+    "/Users/jestes/mcp-manager/tests/test_suite_management.py",
+    "/Users/jestes/mcp-manager/tests/test_basic_commands.py",
+    "/Users/jestes/mcp-manager/tests/test_server_management.py"
+  ]
+}

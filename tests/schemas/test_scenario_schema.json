@@ -1,0 +1,390 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MCP Manager Test Scenario Schema",
+  "description": "JSON schema for AI-generated test scenarios in MCP Manager testing system",
+  "version": "1.0",
+  "type": "object",
+  "required": ["schema_version", "scenario", "mcp_requirements", "test_steps", "validation"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+$",
+      "description": "Schema version for compatibility tracking"
+    },
+    "scenario": {
+      "type": "object",
+      "required": ["id", "name", "description", "created_by", "category"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9_-]+$",
+          "description": "Unique scenario identifier (lowercase, alphanumeric, hyphens, underscores)"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 100,
+          "description": "Human-readable scenario name"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 500,
+          "description": "Detailed description of what this scenario tests"
+        },
+        "created_by": {
+          "type": "string",
+          "enum": ["ai", "admin", "system", "migration"],
+          "description": "Source that created this scenario"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["core", "workflow", "integration", "performance", "security", "regression", "smoke", "basic-commands", "server-management", "suite-management", "quality-tracking", "error-handling", "workflows"],
+          "description": "Test category for organization and filtering"
+        },
+        "confidence_score": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "AI confidence in scenario quality (0.0 to 1.0)"
+        },
+        "ai_reasoning": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "AI explanation for why this scenario was recommended"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9_-]+$"
+          },
+          "uniqueItems": true,
+          "description": "Searchable tags for scenario discovery"
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["critical", "high", "medium", "low"],
+          "default": "medium",
+          "description": "Test execution priority"
+        }
+      }
+    },
+    "mcp_requirements": {
+      "type": "object",
+      "required": ["scope"],
+      "properties": {
+        "required_servers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "type", "priority"],
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "MCP server name or install ID"
+              },
+              "type": {
+                "type": "string",
+                "enum": ["npm", "docker", "docker-desktop", "custom"],
+                "description": "Server installation type"
+              },
+              "priority": {
+                "type": "string",
+                "enum": ["critical", "high", "medium", "low"],
+                "description": "Server importance for this test"
+              },
+              "version": {
+                "type": "string",
+                "description": "Specific version requirement (optional)"
+              },
+              "config": {
+                "type": "object",
+                "description": "Server-specific configuration requirements"
+              }
+            }
+          },
+          "description": "MCP servers that must be available for test execution"
+        },
+        "optional_servers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "type"],
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Optional MCP server name"
+              },
+              "type": {
+                "type": "string",
+                "enum": ["npm", "docker", "docker-desktop", "custom"]
+              },
+              "purpose": {
+                "type": "string",
+                "description": "Why this optional server enhances the test"
+              }
+            }
+          },
+          "description": "Optional servers that enhance test coverage but aren't required"
+        },
+        "scope": {
+          "type": "string",
+          "enum": ["user", "project", "mixed", "isolated"],
+          "description": "Configuration scope for test execution"
+        },
+        "deduplication_key": {
+          "type": ["string", "null"],
+          "pattern": "^[a-z0-9_-]+$",
+          "description": "Key for detecting duplicate functionality across scenarios"
+        },
+        "resource_requirements": {
+          "type": "object",
+          "properties": {
+            "min_memory_mb": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Minimum memory requirement in MB"
+            },
+            "max_execution_time_seconds": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 3600,
+              "description": "Maximum allowed execution time"
+            },
+            "parallel_safe": {
+              "type": "boolean",
+              "default": true,
+              "description": "Whether test can run in parallel with others"
+            }
+          }
+        }
+      }
+    },
+    "test_steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["step_id", "action", "expect"],
+        "properties": {
+          "step_id": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Sequential step identifier"
+          },
+          "action": {
+            "type": "string",
+            "enum": ["cli_command", "setup", "cleanup", "validation", "wait", "file_check"],
+            "description": "Type of action to perform"
+          },
+          "command": {
+            "type": "string",
+            "description": "CLI command to execute (for cli_command action)"
+          },
+          "parameters": {
+            "type": "object",
+            "description": "Action-specific parameters"
+          },
+          "expect": {
+            "type": "string",
+            "enum": ["success", "failure", "timeout", "contains", "not_contains", "regex_match", "custom"],
+            "description": "Expected outcome type"
+          },
+          "expect_value": {
+            "type": "string",
+            "description": "Expected value for contains/regex_match expectations"
+          },
+          "timeout": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 300,
+            "default": 30,
+            "description": "Step timeout in seconds"
+          },
+          "setup_required": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether step requires setup from previous steps"
+          },
+          "cleanup_on_failure": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether to run cleanup if step fails"
+          },
+          "retry_count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 3,
+            "default": 0,
+            "description": "Number of retries on failure"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 200,
+            "description": "Human-readable step description"
+          }
+        }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "required": ["success_criteria"],
+      "properties": {
+        "success_criteria": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["type", "description"],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["all_steps_pass", "specific_output", "file_exists", "state_change", "performance", "custom"],
+                "description": "Type of success criteria"
+              },
+              "description": {
+                "type": "string",
+                "description": "Human-readable success criteria"
+              },
+              "value": {
+                "type": "string",
+                "description": "Expected value for criteria validation"
+              }
+            }
+          },
+          "minItems": 1,
+          "description": "Criteria that must be met for test success"
+        },
+        "failure_conditions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["type", "description"],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["timeout", "error_output", "unexpected_state", "resource_exhaustion", "custom"],
+                "description": "Type of failure condition"
+              },
+              "description": {
+                "type": "string",
+                "description": "Failure condition description"
+              },
+              "value": {
+                "type": "string",
+                "description": "Failure condition threshold or pattern"
+              }
+            }
+          },
+          "description": "Conditions that indicate test failure"
+        },
+        "cleanup_strategy": {
+          "type": "string",
+          "enum": ["none", "minimal", "full", "suite_preserve", "custom"],
+          "default": "minimal",
+          "description": "Overall cleanup strategy for this test"
+        },
+        "cleanup_timing": {
+          "type": "string", 
+          "enum": ["after_each_step", "after_test", "on_failure_only", "never"],
+          "default": "after_test",
+          "description": "When to perform cleanup operations"
+        },
+        "preserve_state": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["suite_servers", "user_config", "project_config", "cache", "logs"]
+          },
+          "uniqueItems": true,
+          "description": "What state to preserve during cleanup"
+        },
+        "cleanup_required": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether cleanup is required after test execution"
+        },
+        "cleanup_steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["action"],
+            "properties": {
+              "action": {
+                "type": "string",
+                "enum": ["remove_servers", "remove_test_servers", "reset_config", "clear_cache", "custom_command", "preserve_suite"],
+                "description": "Cleanup action type"
+              },
+              "target": {
+                "type": "string",
+                "enum": ["all", "test_only", "non_suite", "specific"],
+                "default": "test_only",
+                "description": "What to target for cleanup"
+              },
+              "server_pattern": {
+                "type": "string",
+                "pattern": "^[a-zA-Z0-9_*-]+$",
+                "description": "Pattern to match servers for cleanup (supports wildcards)"
+              },
+              "command": {
+                "type": "string",
+                "description": "Custom cleanup command"
+              },
+              "ignore_errors": {
+                "type": "boolean",
+                "default": true,
+                "description": "Whether to ignore cleanup errors"
+              },
+              "condition": {
+                "type": "string",
+                "enum": ["always", "on_success", "on_failure", "if_exists"],
+                "default": "always",
+                "description": "When to execute this cleanup step"
+              }
+            }
+          },
+          "description": "Steps to clean up after test execution"
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "created_date": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 creation timestamp"
+        },
+        "last_modified": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 last modification timestamp"
+        },
+        "execution_count": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "description": "Number of times scenario has been executed"
+        },
+        "success_rate": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Historical success rate (0.0 to 1.0)"
+        },
+        "average_duration": {
+          "type": "number",
+          "minimum": 0.0,
+          "description": "Average execution time in seconds"
+        },
+        "related_scenarios": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "IDs of related or dependent scenarios"
+        }
+      }
+    }
+  }
+}

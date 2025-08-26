@@ -5,7 +5,7 @@ A comprehensive tool for managing MCP (Model Context Protocol) servers
 with modern TUI and CLI interfaces.
 """
 
-__version__ = "1.0.0"
+__version__ = "2.0.0"
 __author__ = "Claude & Human Collaboration"
 __email__ = "noreply@anthropic.com"
 __description__ = "Enterprise-grade MCP server management tool"

@@ -80,7 +80,7 @@ class DockerDiscovery:
                                     description=description or f"Docker MCP server: {server_name}",
                                     author=namespace,
                                     server_type=ServerType.DOCKER,
-                                    install_command="docker",
+                                    install_command=self._get_docker_path(),
                                     install_args=["run", "-i", "--rm", "--pull", "always", f"{full_name}:latest"],
                                     keywords=["mcp", "docker", server_name],
                                     downloads=repo.get("pull_count"),
@@ -153,7 +153,7 @@ class DockerDiscovery:
                                     description=description or f"Docker MCP server: {server_name}",
                                     author=namespace,
                                     server_type=ServerType.DOCKER,
-                                    install_command="docker",
+                                    install_command=self._get_docker_path(),
                                     install_args=["run", "-i", "--rm", "--pull", "always", f"{name}:latest"],
                                     keywords=["mcp", "docker", server_name],
                                     downloads=repo.get("pull_count"),
@@ -208,8 +208,8 @@ class DockerDiscovery:
                     version=server_info.get("version", "latest"),
                     description=server_info.get("description", f"Docker Desktop MCP server: {server_name}"),
                     server_type=ServerType.DOCKER_DESKTOP,
-                    install_command="docker",
-                    install_args=["mcp", "server", "enable", server_name],
+                    install_command=self._get_docker_path(),
+                    install_args=["mcp", "gateway", "run", "--servers", server_name],
                     keywords=["mcp", "docker-desktop", server_name],
                 )
                 results.append(result)
@@ -223,7 +223,7 @@ class DockerDiscovery:
                         version="latest",
                         description=f"Docker Desktop MCP Gateway - currently provides: {', '.join(enabled_servers)}",
                         server_type=ServerType.DOCKER_DESKTOP,
-                        install_command="docker",
+                        install_command=self._get_docker_path(),
                         install_args=["mcp", "gateway", "run", "--servers", ",".join(enabled_servers)],
                         keywords=["mcp", "docker-desktop", "gateway"] + enabled_servers,
                     )
@@ -392,3 +392,16 @@ class DockerDiscovery:
         except Exception as e:
             logger.warning(f"Failed to update Docker MCP catalog: {e}")
             return False
+    
+    def _get_docker_path(self) -> str:
+        """Get full path to docker executable."""
+        try:
+            from mcp_manager.utils.executable_detection import ExecutableDetector
+            docker_path = ExecutableDetector.get_docker_path()
+            if not docker_path:
+                logger.error("Docker executable not found - Docker MCP servers will fail")
+                return "docker"  # Fallback
+            return docker_path
+        except Exception as e:
+            logger.error(f"Failed to detect docker path: {e}")
+            return "docker"  # Fallback

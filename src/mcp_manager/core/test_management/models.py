@@ -5,6 +5,7 @@ Data models for test category and suite management.
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Any
 from enum import Enum
+from datetime import datetime
 
 
 class TestScope(Enum):
@@ -76,3 +77,35 @@ class TestExecution:
     def __post_init__(self):
         if self.servers_deployed is None:
             self.servers_deployed = []
+
+
+@dataclass
+class TestScenario:
+    """Represents a JSON test scenario stored in the database."""
+    
+    id: str
+    name: str
+    description: str
+    category: str
+    priority: str
+    created_by: str  # "ai", "admin", "system", "migration"
+    scenario_json: str  # The full JSON scenario as string
+    tags: List[str] = None
+    confidence_score: float = 0.0
+    ai_reasoning: Optional[str] = None
+    suite_id: Optional[str] = None  # Which suite this scenario belongs to
+    execution_count: int = 0
+    success_rate: float = 0.0
+    average_duration: float = 0.0
+    created_date: Optional[datetime] = None
+    last_modified: Optional[datetime] = None
+    last_executed: Optional[datetime] = None
+    enabled: bool = True
+    
+    def __post_init__(self):
+        if self.tags is None:
+            self.tags = []
+        if self.created_date is None:
+            self.created_date = datetime.now()
+        if self.last_modified is None:
+            self.last_modified = datetime.now()

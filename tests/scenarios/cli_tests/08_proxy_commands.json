@@ -1,0 +1,106 @@
+{
+  "test_suite_name": "Proxy Management Commands",
+  "test_suite_description": "Tests for MCP proxy server management",
+  "category": "proxy",
+  "priority": "medium",
+  "test_scenarios": [
+    {
+      "test_name": "proxy_help",
+      "description": "Test proxy command group help",
+      "command": "mcp-manager proxy --help",
+      "expected_output_contains": [
+        "MCP proxy management",
+        "start",
+        "status",
+        "stats",
+        "add-server",
+        "remove-server",
+        "test",
+        "config"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 10
+    },
+    {
+      "test_name": "proxy_start_help",
+      "description": "Test proxy start command help",
+      "command": "mcp-manager proxy start --help",
+      "expected_output_contains": [
+        "Start MCP proxy server",
+        "--port",
+        "--host"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 10
+    },
+    {
+      "test_name": "proxy_status_when_not_running",
+      "description": "Test proxy status when not running",
+      "command": "mcp-manager proxy status",
+      "expected_output_contains": [
+        "Proxy Status",
+        "not running",
+        "stopped"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 15
+    },
+    {
+      "test_name": "proxy_stats_when_not_running",
+      "description": "Test proxy stats when not running",
+      "command": "mcp-manager proxy stats",
+      "expected_output_contains": [
+        "Proxy Statistics",
+        "not running",
+        "No statistics available"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 15
+    },
+    {
+      "test_name": "proxy_config_display",
+      "description": "Test proxy configuration display",
+      "command": "mcp-manager proxy config",
+      "expected_output_contains": [
+        "Proxy Configuration",
+        "Configuration"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 15
+    },
+    {
+      "test_name": "proxy_add_server_help",
+      "description": "Test proxy add-server command help",
+      "command": "mcp-manager proxy add-server --help",
+      "expected_output_contains": [
+        "Add server to proxy",
+        "add-server"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 10
+    },
+    {
+      "test_name": "proxy_remove_server_help",
+      "description": "Test proxy remove-server command help",
+      "command": "mcp-manager proxy remove-server --help",
+      "expected_output_contains": [
+        "Remove server from proxy",
+        "remove-server"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 10
+    },
+    {
+      "test_name": "proxy_test_when_not_running",
+      "description": "Test proxy functionality when not running",
+      "command": "mcp-manager proxy test",
+      "expected_output_contains": [
+        "Proxy test",
+        "not running",
+        "failed"
+      ],
+      "expected_exit_code": 1,
+      "timeout": 15
+    }
+  ]
+}

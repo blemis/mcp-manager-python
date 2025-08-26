@@ -1,0 +1,80 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- macOS app icon rounded rectangle background -->
+  <defs>
+    <linearGradient id="appGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#007AFF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0056CC;stop-opacity:1" />
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#000000" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+  
+  <!-- Rounded rectangle background -->
+  <rect x="64" y="64" width="896" height="896" rx="180" ry="180" 
+        fill="url(#appGradient)" filter="url(#shadow)"/>
+  
+  <!-- MCP Manager Icon Content -->
+  <!-- Central gear/management symbol -->
+  <circle cx="512" cy="400" r="120" fill="white" opacity="0.9"/>
+  <circle cx="512" cy="400" r="80" fill="url(#appGradient)"/>
+  <circle cx="512" cy="400" r="40" fill="white"/>
+  
+  <!-- Gear teeth -->
+  <g fill="white" opacity="0.9">
+    <!-- Top -->
+    <rect x="500" y="260" width="24" height="40" rx="12"/>
+    <!-- Top right -->
+    <rect x="547" y="278" width="24" height="40" rx="12" transform="rotate(45 559 298)"/>
+    <!-- Right -->
+    <rect x="580" y="388" width="40" height="24" rx="12"/>
+    <!-- Bottom right -->
+    <rect x="547" y="506" width="24" height="40" rx="12" transform="rotate(135 559 526)"/>
+    <!-- Bottom -->
+    <rect x="500" y="524" width="24" height="40" rx="12"/>
+    <!-- Bottom left -->
+    <rect x="453" y="506" width="24" height="40" rx="12" transform="rotate(225 465 526)"/>
+    <!-- Left -->
+    <rect x="404" y="388" width="40" height="24" rx="12"/>
+    <!-- Top left -->
+    <rect x="453" y="278" width="24" height="40" rx="12" transform="rotate(315 465 298)"/>
+  </g>
+  
+  <!-- Connection nodes -->
+  <g fill="white" opacity="0.8">
+    <!-- Top connections -->
+    <circle cx="400" cy="300" r="16"/>
+    <circle cx="624" cy="300" r="16"/>
+    
+    <!-- Middle connections -->
+    <circle cx="350" cy="450" r="16"/>
+    <circle cx="674" cy="450" r="16"/>
+    
+    <!-- Server representation -->
+    <rect x="300" y="580" width="80" height="60" rx="8" fill="white" opacity="0.7"/>
+    <rect x="310" y="590" width="60" height="8" rx="4" fill="url(#appGradient)" opacity="0.6"/>
+    <rect x="310" y="605" width="60" height="8" rx="4" fill="url(#appGradient)" opacity="0.6"/>
+    <rect x="310" y="620" width="60" height="8" rx="4" fill="url(#appGradient)" opacity="0.6"/>
+    
+    <rect x="644" y="580" width="80" height="60" rx="8" fill="white" opacity="0.7"/>
+    <rect x="654" y="590" width="60" height="8" rx="4" fill="url(#appGradient)" opacity="0.6"/>
+    <rect x="654" y="605" width="60" height="8" rx="4" fill="url(#appGradient)" opacity="0.6"/>
+    <rect x="654" y="620" width="60" height="8" rx="4" fill="url(#appGradient)" opacity="0.6"/>
+  </g>
+  
+  <!-- Connection lines -->
+  <g stroke="white" stroke-width="4" stroke-opacity="0.6" fill="none">
+    <line x1="400" y1="300" x2="460" y2="350"/>
+    <line x1="624" y1="300" x2="564" y2="350"/>
+    <line x1="350" y1="450" x2="450" y2="420"/>
+    <line x1="674" y1="450" x2="574" y2="420"/>
+    <line x1="340" y1="580" x2="420" y2="520"/>
+    <line x1="684" y1="580" x2="604" y2="520"/>
+  </g>
+  
+  <!-- Bottom text area -->
+  <text x="512" y="760" text-anchor="middle" fill="white" font-family="SF Pro Display, -apple-system" 
+        font-size="64" font-weight="600" opacity="0.9">MCP</text>
+  <text x="512" y="820" text-anchor="middle" fill="white" font-family="SF Pro Display, -apple-system" 
+        font-size="48" font-weight="400" opacity="0.7">Manager</text>
+</svg>

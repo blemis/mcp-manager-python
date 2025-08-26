@@ -1,0 +1,139 @@
+{
+  "test_suite_name": "Discovery Commands",
+  "test_suite_description": "Comprehensive tests for MCP server discovery functionality",
+  "category": "discovery",
+  "priority": "high",
+  "test_scenarios": [
+    {
+      "test_name": "basic_discover",
+      "description": "Test basic discovery without filters",
+      "command": "mcp-manager discover",
+      "expected_output_contains": [
+        "Discovering MCP servers",
+        "servers found"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 30
+    },
+    {
+      "test_name": "discover_with_query",
+      "description": "Test discovery with search query",
+      "command": "mcp-manager discover --query filesystem",
+      "expected_output_contains": ["filesystem"],
+      "expected_exit_code": 0,
+      "timeout": 30
+    },
+    {
+      "test_name": "discover_with_type_filter",
+      "description": "Test discovery with type filter",
+      "command": "mcp-manager discover --type npm",
+      "expected_exit_code": 0,
+      "timeout": 30
+    },
+    {
+      "test_name": "discover_with_limit",
+      "description": "Test discovery with result limit",
+      "command": "mcp-manager discover --limit 5",
+      "expected_exit_code": 0,
+      "timeout": 30
+    },
+    {
+      "test_name": "discover_json_format",
+      "description": "Test discovery with JSON output format",
+      "command": "mcp-manager discover --format json --limit 3",
+      "expected_output_contains": ["[", "]"],
+      "expected_exit_code": 0,
+      "timeout": 30
+    },
+    {
+      "test_name": "discover_update_catalog",
+      "description": "Test discovery with catalog update",
+      "command": "mcp-manager discover --update-catalog --limit 3",
+      "expected_output_contains": ["Updating", "catalog"],
+      "expected_exit_code": 0,
+      "timeout": 60
+    },
+    {
+      "test_name": "discover_combined_options",
+      "description": "Test discovery with multiple options",
+      "command": "mcp-manager discover --query filesystem --type npm --limit 2",
+      "expected_exit_code": 0,
+      "timeout": 30
+    },
+    {
+      "test_name": "install_package_basic",
+      "description": "Test basic package installation",
+      "command": "mcp-manager install-package modelcontextprotocol-filesystem",
+      "expected_output_contains": ["Installing", "filesystem"],
+      "expected_exit_code": 0,
+      "timeout": 60,
+      "cleanup_commands": ["mcp-manager remove filesystem --force"]
+    },
+    {
+      "test_name": "install_package_dry_run",
+      "description": "Test package installation with dry run",
+      "command": "mcp-manager install-package modelcontextprotocol-filesystem --dry-run",
+      "expected_output_contains": ["Dry run", "would install"],
+      "expected_exit_code": 0,
+      "timeout": 30
+    },
+    {
+      "test_name": "install_package_with_scope",
+      "description": "Test package installation with scope",
+      "command": "mcp-manager install-package modelcontextprotocol-filesystem --scope project --dry-run",
+      "expected_output_contains": ["Dry run", "project"],
+      "expected_exit_code": 0,
+      "timeout": 30
+    },
+    {
+      "test_name": "install_nonexistent_package",
+      "description": "Test installing a package that doesn't exist",
+      "command": "mcp-manager install-package nonexistent-package-12345",
+      "expected_output_contains": ["not found", "No servers found"],
+      "expected_exit_code": 1,
+      "timeout": 30
+    },
+    {
+      "test_name": "install_package_force",
+      "description": "Test package installation with force flag",
+      "command": "mcp-manager install-package modelcontextprotocol-filesystem --force --dry-run",
+      "expected_output_contains": ["Dry run"],
+      "expected_exit_code": 0,
+      "timeout": 30
+    },
+    {
+      "test_name": "cleanup_basic",
+      "description": "Test basic cleanup command",
+      "command": "mcp-manager cleanup",
+      "expected_output_contains": ["Cleanup", "complete"],
+      "expected_exit_code": 0,
+      "timeout": 30
+    },
+    {
+      "test_name": "discover_help",
+      "description": "Test discover command help",
+      "command": "mcp-manager discover --help",
+      "expected_output_contains": [
+        "Discover available MCP servers",
+        "--query",
+        "--type",
+        "--limit"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 10
+    },
+    {
+      "test_name": "install_package_help",
+      "description": "Test install-package command help",
+      "command": "mcp-manager install-package --help",
+      "expected_output_contains": [
+        "Install an MCP server package",
+        "--force",
+        "--scope",
+        "--dry-run"
+      ],
+      "expected_exit_code": 0,
+      "timeout": 10
+    }
+  ]
+}

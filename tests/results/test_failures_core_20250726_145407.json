@@ -1,0 +1,256 @@
+{
+  "timestamp": "2025-07-26 14:54:07",
+  "category": "core",
+  "summary": {
+    "total_tests": 15,
+    "passed": 10,
+    "failed": 5,
+    "success_rate": "66.7%",
+    "total_duration": "11.62s"
+  },
+  "failed_tests": [
+    {
+      "test_name": "list_empty_servers",
+      "description": "Test list command with no servers configured",
+      "command": "mcp-manager list",
+      "error_message": "Missing output: ['No MCP servers configured', 'Discover and install servers with:', 'mcp-manager discover']",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "stdout": "\n                             MCP Servers (2 total)                              \n\u250f\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2533\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2533\u2501\u2501\u2501\u2501\u2501\u2533\u2501\u2501\u2501\u2501\u2501\u2501\u2533\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2513\n\u2503 Name            \u2503 Type    \u2503 Sc\u2026 \u2503 Sta\u2026 \u2503 Command                             \u2503\n\u2521\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2547\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2547\u2501\u2501\u2501\u2501\u2501\u2547\u2501\u2501\u2501\u2501\u2501\u2501\u2547\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2529\n\u2502 test-server     \u2502 custom  \u2502 us\u2026 \u2502 \u2705   \u2502 echo hello -...                     \u2502\n\u2502                 \u2502         \u2502     \u2502 Ena\u2026 \u2502                                     \u2502\n\u2502 env-server      \u2502 npm     \u2502 us\u2026 \u2502 \u2705   \u2502 node server.js -...                 \u2502\n\u2502                 \u2502         \u2502     \u2502 Ena\u2026 \u2502                                     \u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n\n\ud83d\udca1 Use 'mcp-manager server-details <name>' for detailed information\n",
+      "stderr": "",
+      "expected_output": [
+        "No MCP servers configured",
+        "Discover and install servers with:",
+        "mcp-manager discover"
+      ],
+      "missing_output": [
+        "No MCP servers configured",
+        "Discover and install servers with:",
+        "mcp-manager discover"
+      ],
+      "duration": 1.0154149532318115
+    },
+    {
+      "test_name": "list_json_output",
+      "description": "Test list command with JSON output format",
+      "command": "mcp-manager list --output-format json",
+      "error_message": "Missing output: ['[]']",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "stdout": "[\n  {\n    \"name\": \"test-server\",\n    \"type\": \"custom\",\n    \"scope\": \"user\",\n    \"enabled\": true,\n    \"command\": \"echo\",\n    \"args\": [\n      \"hello\",\n      \"-\",\n      \"\\u2717\",\n      \"Failed\",\n      \"to\",\n      \"connect\"\n    ]\n  },\n  {\n    \"name\": \"env-server\",\n    \"type\": \"npm\",\n    \"scope\": \"user\",\n    \"enabled\": true,\n    \"command\": \"node\",\n    \"args\": [\n      \"server.js\",\n      \"-\",\n      \"\\u2717\",\n      \"Failed\",\n      \"to\",\n      \"connect\"\n    ]\n  }\n]\n",
+      "stderr": "",
+      "expected_output": [
+        "[]"
+      ],
+      "missing_output": [
+        "[]"
+      ],
+      "duration": 1.0163099765777588
+    },
+    {
+      "test_name": "add_server_minimal",
+      "description": "Test adding a custom server with minimal options",
+      "command": "mcp-manager add test-server --type custom --command echo --args hello",
+      "error_message": "Exit code 1 != expected 0; Missing output: [\"Added server 'test-server' successfully\"]; Stderr: [07/26/25 14:54:00] ERROR    Failed to add server 'test-server': MCP server     \n                             test-server already exists in user config          \n                                      ",
+      "exit_code": 1,
+      "expected_exit_code": 0,
+      "stdout": "\u274c Failed to add server: Failed to add server: Failed to add server: MCP server \ntest-server already exists in user config\n\n",
+      "stderr": "[07/26/25 14:54:00] ERROR    Failed to add server 'test-server': MCP server     \n                             test-server already exists in user config          \n                                                                                \n                    ERROR    Failed to add server 'test-server': Failed to add  \n                             server: MCP server test-server already exists in   \n                             user config                                        \n                                                                                \n",
+      "expected_output": [
+        "Added server 'test-server' successfully"
+      ],
+      "missing_output": [
+        "Added server 'test-server' successfully"
+      ],
+      "duration": 0.9805686473846436
+    },
+    {
+      "test_name": "add_server_with_env",
+      "description": "Test adding a server with environment variables",
+      "command": "mcp-manager add env-server --type custom --command node --args server.js --env NODE_ENV=test --env PORT=3000",
+      "error_message": "Exit code 1 != expected 0; Missing output: [\"Added server 'env-server' successfully\"]; Stderr: [07/26/25 14:54:01] ERROR    Failed to add server 'env-server': MCP server      \n                             env-server already exists in user config           \n                                      ",
+      "exit_code": 1,
+      "expected_exit_code": 0,
+      "stdout": "\u274c Failed to add server: Failed to add server: Failed to add server: MCP server \nenv-server already exists in user config\n\n",
+      "stderr": "[07/26/25 14:54:01] ERROR    Failed to add server 'env-server': MCP server      \n                             env-server already exists in user config           \n                                                                                \n                    ERROR    Failed to add server 'env-server': Failed to add   \n                             server: MCP server env-server already exists in    \n                             user config                                        \n                                                                                \n",
+      "expected_output": [
+        "Added server 'env-server' successfully"
+      ],
+      "missing_output": [
+        "Added server 'env-server' successfully"
+      ],
+      "duration": 0.9598889350891113
+    },
+    {
+      "test_name": "nuke_dry_run",
+      "description": "Test nuclear cleanup without force flag (should prompt)",
+      "command": "echo 'n' | mcp-manager nuke",
+      "error_message": "Missing output: ['WARNING', 'Operation cancelled']",
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "stdout": "'n' | mcp-manager nuke\n",
+      "stderr": "",
+      "expected_output": [
+        "WARNING",
+        "Operation cancelled"
+      ],
+      "missing_output": [
+        "WARNING",
+        "Operation cancelled"
+      ],
+      "duration": 0.0027840137481689453
+    }
+  ],
+  "all_results": [
+    {
+      "test_name": "help_command",
+      "description": "Test main help command displays correctly",
+      "command": "mcp-manager --help",
+      "success": true,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.17576003074645996,
+      "error_message": null
+    },
+    {
+      "test_name": "version_command",
+      "description": "Test version display",
+      "command": "mcp-manager --version",
+      "success": true,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.17731022834777832,
+      "error_message": null
+    },
+    {
+      "test_name": "list_empty_servers",
+      "description": "Test list command with no servers configured",
+      "command": "mcp-manager list",
+      "success": false,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 1.0154149532318115,
+      "error_message": "Missing output: ['No MCP servers configured', 'Discover and install servers with:', 'mcp-manager discover']"
+    },
+    {
+      "test_name": "list_json_output",
+      "description": "Test list command with JSON output format",
+      "command": "mcp-manager list --output-format json",
+      "success": false,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 1.0163099765777588,
+      "error_message": "Missing output: ['[]']"
+    },
+    {
+      "test_name": "list_with_scope_filter",
+      "description": "Test list command with scope filter",
+      "command": "mcp-manager list --scope user",
+      "success": true,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 1.0325298309326172,
+      "error_message": null
+    },
+    {
+      "test_name": "add_server_minimal",
+      "description": "Test adding a custom server with minimal options",
+      "command": "mcp-manager add test-server --type custom --command echo --args hello",
+      "success": false,
+      "exit_code": 1,
+      "expected_exit_code": 0,
+      "duration": 0.9805686473846436,
+      "error_message": "Exit code 1 != expected 0; Missing output: [\"Added server 'test-server' successfully\"]; Stderr: [07/26/25 14:54:00] ERROR    Failed to add server 'test-server': MCP server     \n                             test-server already exists in user config          \n                                      "
+    },
+    {
+      "test_name": "add_server_with_env",
+      "description": "Test adding a server with environment variables",
+      "command": "mcp-manager add env-server --type custom --command node --args server.js --env NODE_ENV=test --env PORT=3000",
+      "success": false,
+      "exit_code": 1,
+      "expected_exit_code": 0,
+      "duration": 0.9598889350891113,
+      "error_message": "Exit code 1 != expected 0; Missing output: [\"Added server 'env-server' successfully\"]; Stderr: [07/26/25 14:54:01] ERROR    Failed to add server 'env-server': MCP server      \n                             env-server already exists in user config           \n                                      "
+    },
+    {
+      "test_name": "list_after_adding_servers",
+      "description": "Test list command shows servers after adding them",
+      "command": "mcp-manager list",
+      "success": true,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 1.008241891860962,
+      "error_message": null
+    },
+    {
+      "test_name": "enable_command_help",
+      "description": "Test enable command help (collection-agnostic)",
+      "command": "mcp-manager enable --help",
+      "success": true,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.17770814895629883,
+      "error_message": null
+    },
+    {
+      "test_name": "disable_command_help",
+      "description": "Test disable command help (collection-agnostic)",
+      "command": "mcp-manager disable --help",
+      "success": true,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.1770322322845459,
+      "error_message": null
+    },
+    {
+      "test_name": "add_server_invalid_type",
+      "description": "Test adding server with invalid type",
+      "command": "mcp-manager add bad-server --type invalid-type",
+      "success": true,
+      "exit_code": 2,
+      "expected_exit_code": 2,
+      "duration": 0.17522382736206055,
+      "error_message": null
+    },
+    {
+      "test_name": "remove_nonexistent_server",
+      "description": "Test removing a server that doesn't exist",
+      "command": "mcp-manager remove nonexistent-server --force",
+      "success": true,
+      "exit_code": 1,
+      "expected_exit_code": 1,
+      "duration": 1.855463981628418,
+      "error_message": null
+    },
+    {
+      "test_name": "enable_nonexistent_server",
+      "description": "Test enabling a server that doesn't exist",
+      "command": "mcp-manager enable nonexistent-server",
+      "success": true,
+      "exit_code": 1,
+      "expected_exit_code": 1,
+      "duration": 1.444275140762329,
+      "error_message": null
+    },
+    {
+      "test_name": "disable_nonexistent_server",
+      "description": "Test disabling a server that doesn't exist",
+      "command": "mcp-manager disable nonexistent-server",
+      "success": true,
+      "exit_code": 1,
+      "expected_exit_code": 1,
+      "duration": 1.418644905090332,
+      "error_message": null
+    },
+    {
+      "test_name": "nuke_dry_run",
+      "description": "Test nuclear cleanup without force flag (should prompt)",
+      "command": "echo 'n' | mcp-manager nuke",
+      "success": false,
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "duration": 0.0027840137481689453,
+      "error_message": "Missing output: ['WARNING', 'Operation cancelled']"
+    }
+  ]
+}

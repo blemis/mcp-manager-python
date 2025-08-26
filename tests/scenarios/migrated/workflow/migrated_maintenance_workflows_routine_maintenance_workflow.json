@@ -1,0 +1,76 @@
+{
+  "schema_version": "1.0",
+  "scenario": {
+    "id": "maintenance_workflows_routine_maintenance_workflow",
+    "name": "Test routine system maintenance workflow",
+    "description": "Test routine system maintenance workflow.",
+    "created_by": "migration",
+    "category": "workflow",
+    "confidence_score": 0.85,
+    "ai_reasoning": "Automatically migrated from pytest test TestMaintenanceWorkflows.test_routine_maintenance_workflow",
+    "tags": [],
+    "priority": "medium"
+  },
+  "mcp_requirements": {
+    "required_servers": [
+      {
+        "name": "modelcontextprotocol-filesystem",
+        "type": "npm",
+        "priority": "high"
+      },
+      {
+        "name": "dd-SQLite",
+        "type": "docker-desktop",
+        "priority": "medium"
+      }
+    ],
+    "optional_servers": [],
+    "scope": "user",
+    "deduplication_key": "workflow_maintenance_workflows_routine_maintenance_workflow",
+    "resource_requirements": {
+      "min_memory_mb": 128,
+      "max_execution_time_seconds": 120,
+      "parallel_safe": false
+    }
+  },
+  "test_steps": [
+    {
+      "step_id": 1,
+      "action": "cli_command",
+      "command": "--help",
+      "expect": "success",
+      "timeout": 15,
+      "description": "Placeholder command - requires manual conversion"
+    }
+  ],
+  "validation": {
+    "success_criteria": [
+      {
+        "type": "all_steps_pass",
+        "description": "All test steps must complete successfully"
+      }
+    ],
+    "failure_conditions": [
+      {
+        "type": "timeout",
+        "description": "Test steps timeout",
+        "value": "300"
+      }
+    ],
+    "cleanup_required": true,
+    "cleanup_steps": [
+      {
+        "action": "reset_config",
+        "ignore_errors": true
+      }
+    ]
+  },
+  "metadata": {
+    "created_date": "2025-07-25T12:12:39.335858",
+    "last_modified": "2025-07-25T12:12:39.335858",
+    "execution_count": 0,
+    "success_rate": 0.0,
+    "average_duration": 0.0,
+    "related_scenarios": []
+  }
+}

@@ -1,0 +1,86 @@
+{
+  "schema_version": "1.0",
+  "scenario": {
+    "id": "complex_integration_workflows_continuous_integration_workflow",
+    "name": "Test continuous integration workflow simulation",
+    "description": "Test continuous integration workflow simulation.",
+    "created_by": "migration",
+    "category": "workflow",
+    "confidence_score": 0.85,
+    "ai_reasoning": "Automatically migrated from pytest test TestComplexIntegrationWorkflows.test_continuous_integration_workflow",
+    "tags": [
+      "integration"
+    ],
+    "priority": "medium"
+  },
+  "mcp_requirements": {
+    "required_servers": [
+      {
+        "name": "modelcontextprotocol-filesystem",
+        "type": "npm",
+        "priority": "high",
+        "purpose": "Test MCP Manager deployment and Claude Code integration"
+      },
+      {
+        "name": "dd-SQLite",
+        "type": "docker-desktop",
+        "priority": "high",
+        "purpose": "Test MCP Manager deployment and Claude Code integration"
+      },
+      {
+        "name": "dd-http",
+        "type": "docker-desktop",
+        "priority": "high",
+        "purpose": "Test MCP Manager deployment and Claude Code integration"
+      }
+    ],
+    "optional_servers": [],
+    "scope": "user",
+    "deduplication_key": "workflow_complex_integration_workflows_continuous_integration_workflow",
+    "resource_requirements": {
+      "min_memory_mb": 160,
+      "max_execution_time_seconds": 150,
+      "parallel_safe": false
+    }
+  },
+  "test_steps": [
+    {
+      "step_id": 1,
+      "action": "cli_command",
+      "command": "--help",
+      "expect": "success",
+      "timeout": 15,
+      "description": "Placeholder command - requires manual conversion"
+    }
+  ],
+  "validation": {
+    "success_criteria": [
+      {
+        "type": "all_steps_pass",
+        "description": "All test steps must complete successfully"
+      }
+    ],
+    "failure_conditions": [
+      {
+        "type": "timeout",
+        "description": "Test steps timeout",
+        "value": "300"
+      }
+    ],
+    "cleanup_required": true,
+    "cleanup_steps": [
+      {
+        "action": "reset_config",
+        "ignore_errors": true
+      }
+    ]
+  },
+  "metadata": {
+    "created_date": "2025-07-25T12:12:39.337459",
+    "last_modified": "2025-07-25T12:12:39.337459",
+    "execution_count": 0,
+    "success_rate": 0.0,
+    "average_duration": 0.0,
+    "related_scenarios": []
+  }
+}
