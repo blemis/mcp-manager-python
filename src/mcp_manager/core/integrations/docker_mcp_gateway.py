@@ -41,10 +41,10 @@ class GatewayStatus:
 
 class DockerMCPGatewayClient:
     """
-    HTTP API client for Docker MCP Gateway.
+    MCP protocol client for Docker MCP Gateway over HTTP/SSE.
     
-    Manages lifecycle and communication with the Docker MCP Gateway HTTP server,
-    providing methods to enable/disable servers, check status, and retrieve server information.
+    Implements real JSON-RPC 2.0 over SSE transport for communicating with
+    Docker MCP Gateway, providing proper session management and bidirectional communication.
     """
     
     def __init__(self, host: str = "localhost", port: int = 8080, auto_start: bool = True):
@@ -64,6 +64,12 @@ class DockerMCPGatewayClient:
         self._gateway_process: Optional[subprocess.Popen] = None
         self._startup_timeout = 30  # seconds
         
+        # MCP session state
+        self._sse_response: Optional[aiohttp.ClientResponse] = None
+        self._endpoint_url: Optional[str] = None
+        self._message_id = 0
+        self._initialized = False
+        
         logger.debug(f"DockerMCPGatewayClient initialized for {self.base_url}")
     
     async def __aenter__(self):
@@ -76,20 +82,33 @@ class DockerMCPGatewayClient:
         await self.stop()
     
     async def start(self):
-        """Start the HTTP session and ensure gateway is running."""
+        """Start the HTTP session, ensure gateway is running, and establish MCP session."""
         if self.session is None:
-            timeout = aiohttp.ClientTimeout(total=10)  # 10 second timeout
+            timeout = aiohttp.ClientTimeout(total=30)  # Longer timeout for MCP operations
             self.session = aiohttp.ClientSession(timeout=timeout)
             
         if self.auto_start:
             await self._ensure_gateway_running()
+            
+        # Establish SSE connection and MCP session
+        await self._establish_mcp_session()
     
     async def stop(self):
-        """Stop the HTTP session and optionally stop gateway."""
+        """Stop MCP session, HTTP session and optionally stop gateway."""
+        # Close SSE connection
+        if self._sse_response:
+            self._sse_response.close()
+            self._sse_response = None
+            
         if self.session:
             await self.session.close()
             self.session = None
             
+        # Reset MCP session state
+        self._endpoint_url = None
+        self._message_id = 0
+        self._initialized = False
+        
         # Optionally stop the gateway process we started
         if self._gateway_process:
             try:
@@ -106,24 +125,35 @@ class DockerMCPGatewayClient:
     
     async def _ensure_gateway_running(self):
         """Ensure the Docker MCP Gateway is running."""
-        # Step 1: Check if API server is already running
-        if await self.is_healthy():
-            logger.debug("Gateway already running and healthy - using existing server")
+        # Step 1: Check if Gateway HTTP server is responding (simple HTTP check)
+        if await self._check_gateway_http_available():
+            logger.debug("Gateway HTTP server already running - using existing server")
             return
             
-        # Step 2: API server not running, start it once
+        # Step 2: Gateway not running, start it once
         logger.info("Docker MCP Gateway not running - starting persistent server...")
         await self._start_gateway_process()
         
-        # Step 3: Wait for gateway to become healthy
+        # Step 3: Wait for gateway HTTP server to become available
         start_time = time.time()
         while time.time() - start_time < self._startup_timeout:
-            if await self.is_healthy():
-                logger.info("Docker MCP Gateway started successfully - ready for all operations")
+            if await self._check_gateway_http_available():
+                logger.info("Docker MCP Gateway started successfully - HTTP server ready")
                 return
             await asyncio.sleep(1)
         
         raise RuntimeError(f"Gateway failed to start within {self._startup_timeout} seconds")
+    
+    async def _check_gateway_http_available(self) -> bool:
+        """Simple check if Gateway HTTP server is responding (before MCP session)."""
+        try:
+            timeout = aiohttp.ClientTimeout(total=2)
+            async with aiohttp.ClientSession(timeout=timeout) as temp_session:
+                async with temp_session.get(f"{self.base_url}/sse") as response:
+                    return response.status == 200
+        except Exception as e:
+            logger.debug(f"Gateway HTTP check failed: {e}")
+            return False
     
     async def _start_gateway_process(self):
         """Start the persistent Docker MCP Gateway HTTP server process."""
@@ -180,6 +210,131 @@ class DockerMCPGatewayClient:
         
         raise RuntimeError("Gateway restart failed")
     
+    def _get_next_message_id(self) -> int:
+        """Get next message ID for JSON-RPC requests."""
+        self._message_id += 1
+        return self._message_id
+    
+    async def _establish_mcp_session(self):
+        """Establish SSE connection and initialize MCP session."""
+        if self._initialized:
+            return
+            
+        logger.debug("Establishing MCP session with Docker Gateway")
+        
+        # Connect to SSE endpoint
+        self._sse_response = await self.session.get(f"{self.base_url}/sse")
+        if self._sse_response.status != 200:
+            raise RuntimeError(f"SSE connection failed with status {self._sse_response.status}")
+        
+        # Read endpoint event from SSE stream
+        async for line in self._sse_response.content:
+            line = line.decode('utf-8').strip()
+            logger.debug(f"SSE line: {line}")
+            
+            if line.startswith('data: '):
+                self._endpoint_url = line[6:]  # Remove 'data: '
+                logger.debug(f"Got message endpoint: {self._endpoint_url}")
+                break
+        
+        if not self._endpoint_url:
+            raise RuntimeError("No endpoint URL received from SSE stream")
+        
+        # Initialize MCP session
+        await self._initialize_mcp_protocol()
+        
+        logger.info("MCP session established successfully")
+    
+    async def _initialize_mcp_protocol(self):
+        """Send MCP initialize message and wait for response."""
+        logger.debug("Initializing MCP protocol")
+        
+        init_params = {
+            "protocolVersion": "2024-11-05",
+            "capabilities": {
+                "roots": {"listChanged": True}
+            },
+            "clientInfo": {
+                "name": "mcp-manager",
+                "version": "1.0.0"
+            }
+        }
+        
+        result = await self._send_mcp_request("initialize", init_params)
+        if not result or "serverInfo" not in result:
+            raise RuntimeError(f"MCP initialization failed: {result}")
+        
+        server_info = result["serverInfo"]
+        logger.info(f"MCP initialized with {server_info.get('name', 'unknown')} v{server_info.get('version', 'unknown')}")
+        
+        self._initialized = True
+    
+    async def _send_mcp_request(self, method: str, params: dict = None, timeout: int = 30) -> Optional[dict]:
+        """Send MCP JSON-RPC request and wait for response via SSE."""
+        if not self.session or not self._endpoint_url:
+            raise RuntimeError("MCP session not established - call start() first")
+        
+        message_id = self._get_next_message_id()
+        message = {
+            "jsonrpc": "2.0",
+            "method": method,
+            "id": message_id,
+            "params": params or {}
+        }
+        
+        logger.debug(f"Sending MCP request: {method} (id: {message_id})")
+        
+        # Send POST request
+        full_url = f"{self.base_url}{self._endpoint_url}"
+        try:
+            async with self.session.post(full_url, json=message) as resp:
+                logger.debug(f"MCP request status: {resp.status}")
+                
+                if resp.status == 202:  # Accepted - response will come via SSE
+                    # Listen for response on SSE stream
+                    timeout_count = 0
+                    max_timeout_count = timeout * 2  # Roughly timeout seconds (checking every 0.5s)
+                    
+                    async for line in self._sse_response.content:
+                        line = line.decode('utf-8').strip()
+                        
+                        if line.startswith('data: '):
+                            response_json = line[6:]  # Remove 'data: '
+                            try:
+                                response_data = json.loads(response_json)
+                                if response_data.get("id") == message_id:
+                                    logger.debug(f"Got MCP response for {method}")
+                                    
+                                    if "result" in response_data:
+                                        return response_data["result"]
+                                    elif "error" in response_data:
+                                        logger.error(f"MCP error for {method}: {response_data['error']}")
+                                        return None
+                                    else:
+                                        return response_data
+                            except json.JSONDecodeError:
+                                pass  # Not JSON, continue listening
+                        
+                        timeout_count += 1
+                        if timeout_count > max_timeout_count:
+                            logger.error(f"Timeout waiting for MCP response to {method}")
+                            return None
+                            
+                elif resp.status == 200:
+                    # Direct response (less common with SSE transport)
+                    response_text = await resp.text()
+                    if response_text:
+                        response_data = json.loads(response_text)
+                        return response_data.get("result")
+                    return {}
+                else:
+                    logger.error(f"MCP request failed with HTTP {resp.status}")
+                    return None
+                    
+        except Exception as e:
+            logger.error(f"Error sending MCP request {method}: {e}")
+            return None
+    
     async def ensure_healthy(self):
         """Ensure gateway is healthy, restart if needed."""
         if not await self.is_healthy():
@@ -187,18 +342,15 @@ class DockerMCPGatewayClient:
             await self.restart_gateway()
     
     async def is_healthy(self) -> bool:
-        """Check if the gateway is healthy and responding to SSE connection."""
+        """Check if the gateway is healthy and MCP session is established."""
         try:
-            if not self.session:
+            if not self.session or not self._initialized:
                 return False
                 
-            # Try to connect to the SSE endpoint briefly to check if gateway is responding
-            timeout = aiohttp.ClientTimeout(total=2)  # Short timeout for health check
-            async with aiohttp.ClientSession(timeout=timeout) as temp_session:
-                async with temp_session.get(f"{self.base_url}/sse") as response:
-                    if response.status == 200:
-                        # If we can connect to SSE endpoint, gateway is running
-                        return True
+            # Quick health check - try to get tools list
+            result = await self._send_mcp_request("tools/list", {}, timeout=5)
+            return result is not None and "tools" in result
+            
         except Exception as e:
             logger.debug(f"Health check failed: {e}")
         
@@ -226,43 +378,58 @@ class DockerMCPGatewayClient:
             raise
     
     async def list_servers(self) -> List[GatewayServerInfo]:
-        """List all available servers by checking what's enabled in the gateway."""
-        # For the existing gateway on port 8080 with servers "Ref,SQLite,filesystem"
-        # We'll return the known enabled servers since we can't dynamically query them
+        """List all available servers via MCP tools/list request."""
         try:
-            # Check if gateway is healthy first
-            if not await self.is_healthy():
-                logger.warning("Gateway not healthy, cannot list servers")
+            if not self._initialized:
+                logger.warning("MCP session not initialized, cannot list servers")
                 return []
             
-            # Return the servers that are configured in the gateway
-            # Based on the gateway startup command: --servers "Ref,SQLite,filesystem"  
-            known_servers = [
-                GatewayServerInfo(
-                    name="Ref",
-                    enabled=True,
-                    status="running",
-                    description="Reference documentation and web search server"
-                ),
-                GatewayServerInfo(
-                    name="SQLite", 
-                    enabled=True,
-                    status="running",
-                    description="SQLite database management server"
-                ),
-                GatewayServerInfo(
-                    name="filesystem",
-                    enabled=True, 
-                    status="running",
-                    description="File system operations server"
-                )
-            ]
+            # Get tools list from MCP Gateway
+            result = await self._send_mcp_request("tools/list")
+            if not result or "tools" not in result:
+                logger.error(f"Failed to get tools list: {result}")
+                return []
             
-            logger.debug(f"Listed {len(known_servers)} known gateway servers")
-            return known_servers
+            tools = result["tools"]
+            logger.debug(f"Retrieved {len(tools)} tools from MCP Gateway")
+            
+            # Group tools by server (infer server from tool name prefixes)
+            server_tools = {}
+            for tool in tools:
+                tool_name = tool.get("name", "")
+                
+                # Determine server based on tool naming patterns
+                if any(name in tool_name.lower() for name in ["sqlite", "database", "query", "table"]):
+                    server_name = "SQLite"
+                elif any(name in tool_name.lower() for name in ["ref", "documentation", "search"]):
+                    server_name = "Ref"
+                elif any(name in tool_name.lower() for name in ["file", "directory", "path"]):
+                    server_name = "filesystem"
+                else:
+                    # Group under generic server name or skip
+                    server_name = "Unknown"
+                
+                if server_name not in server_tools:
+                    server_tools[server_name] = []
+                server_tools[server_name].append(tool)
+            
+            # Create server info objects
+            servers = []
+            for server_name, tools_list in server_tools.items():
+                if server_name != "Unknown":  # Skip unknown servers
+                    servers.append(GatewayServerInfo(
+                        name=server_name,
+                        enabled=True,  # If tools are available, server is enabled
+                        status="running",
+                        description=f"MCP server with {len(tools_list)} tools",
+                        tools=tools_list
+                    ))
+            
+            logger.debug(f"Identified {len(servers)} servers from tools analysis")
+            return servers
             
         except Exception as e:
-            logger.error(f"Failed to list servers: {e}")
+            logger.error(f"Failed to list servers via MCP: {e}")
             return []
     
     async def enable_server(self, server_name: str) -> bool:
