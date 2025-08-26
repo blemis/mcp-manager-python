@@ -7,6 +7,7 @@ HTTP server, enabling programmatic control over Docker Desktop MCP servers.
 
 import asyncio
 import json
+import os
 import time
 from typing import Dict, List, Optional, Tuple
 import aiohttp
@@ -450,18 +451,20 @@ class DockerMCPGatewayClient:
                     logger.info(f"Server {server_name} is already enabled in gateway")
                     return True
             
-            # Add server to enabled list and restart gateway
-            if not hasattr(self, '_enabled_servers'):
-                self._enabled_servers = set()
-                # Get current servers as baseline
-                current_servers = await self.list_servers()
-                self._enabled_servers.update(s.name for s in current_servers)
+            # Get currently enabled servers from database
+            import sqlite3
+            import os
+            db_path = os.path.expanduser("~/.local/share/mcp-manager/server_state.db")
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            cursor.execute("SELECT name FROM mcp_server_registry WHERE enabled = 1 AND name LIKE 'dd-%'")
+            enabled_servers = [row[0].replace('dd-', '') for row in cursor.fetchall()]
+            conn.close()
             
-            self._enabled_servers.add(server_name)
-            logger.info(f"Enabling server {server_name}, restarting gateway with servers: {sorted(self._enabled_servers)}")
+            logger.info(f"Enabling server {server_name}, gateway will serve: {sorted(enabled_servers)}")
             
-            # Restart gateway with updated server list
-            await self._restart_gateway_with_servers(list(self._enabled_servers))
+            # Restart gateway with all enabled servers
+            await self._restart_gateway_with_servers(enabled_servers)
             
             return True
             
@@ -480,25 +483,21 @@ class DockerMCPGatewayClient:
             True if successfully disabled
         """
         try:
-            # Initialize enabled servers set if needed
-            if not hasattr(self, '_enabled_servers'):
-                self._enabled_servers = set()
-                # Get current servers as baseline
-                current_servers = await self.list_servers()
-                self._enabled_servers.update(s.name for s in current_servers)
+            # Get currently enabled servers from database  
+            import sqlite3
+            db_path = os.path.expanduser("~/.local/share/mcp-manager/server_state.db")
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            cursor.execute("SELECT name FROM mcp_server_registry WHERE enabled = 1 AND name LIKE 'dd-%'")
+            enabled_servers = [row[0].replace('dd-', '') for row in cursor.fetchall()]
+            conn.close()
             
-            # Remove server from enabled list
-            if server_name in self._enabled_servers:
-                self._enabled_servers.remove(server_name)
-                logger.info(f"Disabling server {server_name}, restarting gateway with servers: {sorted(self._enabled_servers)}")
-                
-                # Restart gateway with updated server list
-                await self._restart_gateway_with_servers(list(self._enabled_servers))
-                
-                return True
-            else:
-                logger.info(f"Server {server_name} was not in enabled list, no action needed")
-                return True
+            logger.info(f"Disabling server {server_name}, gateway will serve: {sorted(enabled_servers)}")
+            
+            # Restart gateway with remaining enabled servers
+            await self._restart_gateway_with_servers(enabled_servers)
+            
+            return True
                 
         except Exception as e:
             logger.error(f"Error disabling server {server_name}: {e}")
@@ -586,53 +585,30 @@ class DockerMCPGatewayClient:
         Args:
             server_list: List of server names to enable (e.g., ["Ref", "SQLite"])
         """
-        try:
-            # Stop current gateway
-            if self._gateway_process:
-                logger.info("Stopping current Docker MCP Gateway process")
-                self._gateway_process.terminate()
-                try:
-                    await asyncio.wait_for(self._gateway_process.wait(), timeout=10)
-                except asyncio.TimeoutError:
-                    logger.warning("Gateway process did not terminate gracefully, killing...")
-                    self._gateway_process.kill()
-                    await self._gateway_process.wait()
-                self._gateway_process = None
+        import subprocess
+        
+        # 1. Kill ANY existing gateway processes
+        logger.info("Stopping any existing Docker MCP Gateway processes")
+        subprocess.run(["pkill", "-f", "docker.*mcp.*gateway"], capture_output=True)
+        await asyncio.sleep(1)  # Give it time to die
+        
+        # 2. Update Claude's configuration
+        if server_list:
+            servers_arg = ",".join(server_list)
+            logger.info(f"Updating Claude config with servers: {servers_arg}")
             
-            # Reset session state
-            if self._sse_response:
-                self._sse_response.close()
-                self._sse_response = None
-            self._endpoint_url = None
-            self._message_id = 0
-            self._initialized = False
+            subprocess.run(["claude", "mcp", "remove", "docker-gateway"], capture_output=True, check=False)
+            subprocess.run(["claude", "mcp", "add", "docker-gateway", f"docker mcp gateway run --servers {servers_arg}"], capture_output=True, check=False)
             
-            # Start gateway with new server list
-            if server_list:
-                servers_arg = ",".join(server_list)
-                logger.info(f"Starting Docker MCP Gateway with servers: {servers_arg}")
-                
-                # Start new gateway process with specific servers
-                self._gateway_process = await asyncio.create_subprocess_exec(
-                    "docker", "mcp", "gateway", "run", "--servers", servers_arg,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE
-                )
-            else:
-                logger.warning("No servers to enable, not starting gateway")
-                return
-            
-            # Wait a bit for gateway to start
-            await asyncio.sleep(3)
-            
-            # Re-establish MCP session
-            await self._establish_mcp_session()
-            
-            logger.info(f"Gateway restarted successfully with servers: {server_list}")
-            
-        except Exception as e:
-            logger.error(f"Failed to restart gateway with servers {server_list}: {e}")
-            raise
+            logger.info(f"Gateway will be started by Claude with servers: {server_list}")
+        else:
+            logger.warning("No servers enabled, removing gateway from Claude")
+            subprocess.run(["claude", "mcp", "remove", "docker-gateway"], capture_output=True, check=False)
+        
+        # Reset our session state since gateway restarted
+        self._initialized = False
+        self._endpoint_url = None
+        self._message_id = 0
     
     async def sync_servers(self, desired_servers: List[str]) -> Tuple[List[str], List[str]]:
         """
