@@ -143,9 +143,19 @@ class SyncManager:
         claude_names = {s.name for s in claude_servers}
         db_names = {s.name for s in db_servers}
         
+        # Check if docker-gateway exists in Claude (means Docker Desktop servers are managed)
+        docker_gateway_exists = "docker-gateway" in claude_names
+        
         # Sync enabled state for servers in DB but not in Claude
         for db_server in db_servers:
             if db_server.name not in claude_names:
+                # Special handling for Docker Desktop servers
+                if db_server.name.startswith("dd-") and docker_gateway_exists:
+                    # Docker Desktop servers are managed through docker-gateway
+                    # Don't disable them here - their state is managed by sync_claude_status
+                    logger.debug(f"Skipping Docker Desktop server {db_server.name} (managed through gateway)")
+                    continue
+                
                 try:
                     # If server was enabled but isn't in Claude, mark it as disabled
                     # Don't remove - user might want to re-enable it later

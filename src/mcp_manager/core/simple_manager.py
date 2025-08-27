@@ -403,9 +403,6 @@ class SimpleMCPManager:
             if not success:
                 logger.warning(f"Handler failed to enable {name}, reverting database")
                 self.db_manager.update_server_status(name, enabled=False)
-            else:
-                # Sync Claude status after successful enable
-                await self.sync_claude_status()
             
             return success
         
@@ -556,9 +553,6 @@ class SimpleMCPManager:
         if not success:
             logger.warning(f"Handler failed to disable {name}, reverting database")
             self.db_manager.update_server_status(name, enabled=True)
-        else:
-            # Sync Claude status after successful disable
-            await self.sync_claude_status()
         
         return success
     
@@ -617,31 +611,60 @@ class SimpleMCPManager:
             except Exception as e:
                 logger.warning(f"Failed to get Claude status: {e}")
             
-            # Update database with Claude status for each server
+            # Sync should ONLY read Claude state and update database
+            # It should NEVER modify Claude configuration!
+            
+            # Now update database with correct status based on ACTUAL Claude state
             for server in db_servers:
                 new_status = "unknown"
                 
+                # Check ACTUAL status in Claude, not what database says
                 if server.server_type.value == "docker-desktop":
                     # Docker Desktop servers are proxied through docker-gateway
                     if "docker-gateway" in claude_status:
-                        # Check if this DD server is in the gateway
                         server_dd_name = server.name.replace("dd-", "") if server.name.startswith("dd-") else server.name
                         
                         if claude_status["docker-gateway"] == "connected":
+                            # Check if server is actually in the gateway's server list
                             if server_dd_name in docker_gateway_servers:
+                                # Server IS in gateway - it's connected
                                 new_status = "connected"
+                                
+                                # Fix database if there's a mismatch
+                                if not server.enabled:
+                                    logger.warning(f"Server {server.name} is connected in gateway but disabled in DB - fixing DB")
+                                    self.db_manager.update_server_status(server.name, enabled=True)
                             else:
-                                new_status = "not_enabled_in_dd"
+                                # Server is NOT in gateway
+                                if server.enabled:
+                                    # Should be enabled but isn't in gateway - fix the gateway
+                                    logger.warning(f"Server {server.name} is enabled but not in gateway - needs gateway update")
+                                    new_status = "not_in_gateway"
+                                else:
+                                    # Correctly disabled
+                                    new_status = "disabled"
                         else:
                             new_status = "gateway_failed"
                     else:
-                        new_status = "gateway_missing"
+                        # No gateway found
+                        if server.enabled:
+                            new_status = "gateway_missing"
+                        else:
+                            new_status = "disabled"
                 else:
                     # Regular servers - check Claude directly
                     if server.name in claude_status:
                         new_status = claude_status[server.name]
+                        # Fix database if there's a mismatch
+                        if new_status == "connected" and not server.enabled:
+                            logger.warning(f"Server {server.name} is connected but disabled in DB - fixing DB")
+                            self.db_manager.update_server_status(server.name, enabled=True)
                     else:
-                        new_status = "not_in_claude"
+                        # Not in Claude
+                        if server.enabled:
+                            new_status = "not_in_claude"
+                        else:
+                            new_status = "disabled"
                 
                 # Update database if status changed
                 if self.db_manager.update_claude_status(server.name, new_status):
@@ -3714,8 +3737,13 @@ class SimpleMCPManager:
             
             logger.info(f"Found {len(claude_servers)} servers in Claude, importing to mcp-manager database...")
             
-            # Import each server to our database
+            # Import each server to our database (but skip docker-gateway - it's infrastructure)
             for server in claude_servers:
+                # NEVER import docker-gateway - it's infrastructure, not a user server
+                if server.name == "docker-gateway":
+                    logger.debug("Skipping docker-gateway (infrastructure)")
+                    continue
+                    
                 try:
                     # Add server to database
                     from mcp_manager.core.database.server_state import ServerInfo, ServerType as DBServerType

@@ -179,12 +179,48 @@ class DockerDesktopServerHandler(ServerHandler):
             return False
         
         try:
-            # Use HTTP API to enable server
+            # Use HTTP API to enable server in Docker Desktop
             gateway = await self._get_gateway_client()
             success = await gateway.enable_server(dd_server_name)
             
             if success:
                 logger.info(f"Successfully enabled Docker Desktop server: {server.name} ({dd_server_name})")
+                
+                # CRITICAL: Also update Claude's docker-gateway configuration
+                # The HTTP API only enables in Docker Desktop, we need to update Claude too
+                from mcp_manager.core.claude_interface import ClaudeInterface
+                claude = ClaudeInterface()
+                
+                # Get all currently enabled DD servers to build the complete gateway command
+                enabled_servers = []
+                try:
+                    gateway_servers = await gateway.list_servers()
+                    for gw_server in gateway_servers:
+                        if gw_server.enabled:
+                            enabled_servers.append(gw_server.name)
+                except Exception as e:
+                    logger.warning(f"Could not get enabled servers list: {e}")
+                    # Fallback: at least include the server we just enabled
+                    if dd_server_name not in enabled_servers:
+                        enabled_servers.append(dd_server_name)
+                
+                if enabled_servers:
+                    # Remove existing gateway and re-add with updated server list
+                    if claude.server_exists("docker-gateway"):
+                        claude.remove_server("docker-gateway")
+                    
+                    # Add gateway with all enabled servers
+                    servers_arg = ",".join(sorted(enabled_servers))
+                    claude_success = claude.add_server(
+                        name="docker-gateway",
+                        command="docker",
+                        args=["mcp", "gateway", "run", "--servers", servers_arg],
+                        env=None,
+                    )
+                    
+                    if not claude_success:
+                        logger.warning("Failed to update docker-gateway in Claude configuration")
+                
             else:
                 logger.warning(f"Failed to enable Docker Desktop server {server.name} ({dd_server_name}) via HTTP API")
             
@@ -214,12 +250,60 @@ class DockerDesktopServerHandler(ServerHandler):
             return False
         
         try:
-            # Use HTTP API to disable server
+            # Use HTTP API to disable server in Docker Desktop
             gateway = await self._get_gateway_client()
             success = await gateway.disable_server(dd_server_name)
             
             if success:
                 logger.info(f"Successfully disabled Docker Desktop server: {server.name} ({dd_server_name})")
+                
+                # CRITICAL: Also update Claude's docker-gateway configuration
+                from mcp_manager.core.claude_interface import ClaudeInterface
+                claude = ClaudeInterface()
+                
+                # Get remaining enabled DD servers from DATABASE (source of truth)
+                # Don't query gateway API as it might have stale data
+                enabled_servers = []
+                try:
+                    from mcp_manager.core.database.server_state import ServerRegistry
+                    db_manager = ServerRegistry()
+                    db_servers = db_manager.list_servers_fast()
+                    
+                    for db_server in db_servers:
+                        # Check if it's a Docker Desktop server and enabled (but not the one we just disabled)
+                        if (db_server.server_type.value == "docker-desktop" and 
+                            db_server.enabled and 
+                            db_server.name != server.name):  # Use the original server name, not dd_server_name
+                            # Extract the DD name (e.g., "dd-Ref" -> "Ref")
+                            server_dd_name = db_server.name.replace("dd-", "") if db_server.name.startswith("dd-") else db_server.name
+                            enabled_servers.append(server_dd_name)
+                    
+                    logger.debug(f"Remaining enabled DD servers from DB: {enabled_servers}")
+                except Exception as e:
+                    logger.warning(f"Could not get enabled servers list from database: {e}")
+                
+                # Update or remove gateway based on remaining servers
+                if enabled_servers:
+                    # Update gateway with remaining servers
+                    if claude.server_exists("docker-gateway"):
+                        claude.remove_server("docker-gateway")
+                    
+                    servers_arg = ",".join(sorted(enabled_servers))
+                    claude_success = claude.add_server(
+                        name="docker-gateway",
+                        command="docker",
+                        args=["mcp", "gateway", "run", "--servers", servers_arg],
+                        env=None,
+                    )
+                    
+                    if not claude_success:
+                        logger.warning("Failed to update docker-gateway in Claude configuration")
+                else:
+                    # No servers left, remove gateway entirely
+                    if claude.server_exists("docker-gateway"):
+                        claude.remove_server("docker-gateway")
+                        logger.info("Removed docker-gateway from Claude (no servers enabled)")
+                
             else:
                 logger.warning(f"Failed to disable Docker Desktop server {server.name} ({dd_server_name}) via HTTP API")
             

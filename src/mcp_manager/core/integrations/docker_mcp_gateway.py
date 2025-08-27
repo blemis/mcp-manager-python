@@ -451,24 +451,30 @@ class DockerMCPGatewayClient:
                     logger.info(f"Server {server_name} is already enabled in gateway")
                     return True
             
-            # Get currently enabled servers from database
-            import sqlite3
-            import os
-            db_path = os.path.expanduser("~/.local/share/mcp-manager/server_state.db")
-            conn = sqlite3.connect(db_path)
-            cursor = conn.cursor()
-            cursor.execute("SELECT name FROM mcp_server_registry WHERE enabled = 1 AND name LIKE 'dd-%'")
-            enabled_servers = [row[0].replace('dd-', '') for row in cursor.fetchall()]
-            conn.close()
+            # Get the CURRENT servers from the gateway (not database!)
+            # The database has already been updated, we need to know what's actually in Claude
+            from mcp_manager.core.claude_interface import ClaudeInterface
+            claude = ClaudeInterface()
+            gateway_server = claude.get_server("docker-gateway")
             
-            # Add the server we're enabling to the list if not already there
-            if server_name not in enabled_servers:
-                enabled_servers.append(server_name)
+            current_servers = []
+            if gateway_server and gateway_server.args:
+                # Parse --servers argument from current gateway
+                args_str = " ".join(gateway_server.args)
+                if "--servers" in args_str:
+                    servers_part = args_str.split("--servers")[1].split()[0]
+                    current_servers = [s.strip() for s in servers_part.split(",")]
             
-            logger.info(f"Enabling server {server_name}, gateway will serve: {sorted(enabled_servers)}")
+            # Add the server we're enabling if not already there
+            if server_name not in current_servers:
+                current_servers.append(server_name)
+            
+            logger.info(f"Enabling server {server_name}, gateway will serve: {sorted(current_servers)}")
             
             # Restart gateway with all enabled servers
-            await self._restart_gateway_with_servers(enabled_servers)
+            logger.info(f"Calling _restart_gateway_with_servers with: {current_servers}")
+            await self._restart_gateway_with_servers(current_servers)
+            logger.info(f"_restart_gateway_with_servers completed")
             
             return True
             
@@ -487,23 +493,28 @@ class DockerMCPGatewayClient:
             True if successfully disabled
         """
         try:
-            # Get currently enabled servers from database  
-            import sqlite3
-            db_path = os.path.expanduser("~/.local/share/mcp-manager/server_state.db")
-            conn = sqlite3.connect(db_path)
-            cursor = conn.cursor()
-            cursor.execute("SELECT name FROM mcp_server_registry WHERE enabled = 1 AND name LIKE 'dd-%'")
-            enabled_servers = [row[0].replace('dd-', '') for row in cursor.fetchall()]
-            conn.close()
+            # Get the CURRENT servers from the gateway (not database!)
+            # The database has already been updated, we need to know what's actually in Claude
+            from mcp_manager.core.claude_interface import ClaudeInterface
+            claude = ClaudeInterface()
+            gateway_server = claude.get_server("docker-gateway")
             
-            # Remove the server we're disabling from the list
-            if server_name in enabled_servers:
-                enabled_servers.remove(server_name)
+            current_servers = []
+            if gateway_server and gateway_server.args:
+                # Parse --servers argument from current gateway
+                args_str = " ".join(gateway_server.args)
+                if "--servers" in args_str:
+                    servers_part = args_str.split("--servers")[1].split()[0]
+                    current_servers = [s.strip() for s in servers_part.split(",")]
             
-            logger.info(f"Disabling server {server_name}, gateway will serve: {sorted(enabled_servers)}")
+            # Remove the server we're disabling
+            if server_name in current_servers:
+                current_servers.remove(server_name)
+            
+            logger.info(f"Disabling server {server_name}, gateway will serve: {sorted(current_servers)}")
             
             # Restart gateway with remaining enabled servers
-            await self._restart_gateway_with_servers(enabled_servers)
+            await self._restart_gateway_with_servers(current_servers)
             
             return True
                 
@@ -601,26 +612,38 @@ class DockerMCPGatewayClient:
             # Initialize Claude interface
             claude = ClaudeInterface()
             
-            # Remove existing docker-gateway from Claude config
-            # Try removing from different scopes until successful
-            removed = False
-            for scope in ["user", "project", "local"]:
+            # Remove existing docker-gateway from Claude config (if it exists)
+            # First check if it exists
+            if claude.server_exists("docker-gateway"):
+                # Try removing without scope first (uses default)
                 try:
                     result = subprocess.run(
-                        [claude.claude_path, "mcp", "remove", "--scope", scope, "docker-gateway"],
+                        [claude.claude_path, "mcp", "remove", "docker-gateway"],
                         capture_output=True,
                         text=True,
                         timeout=30,
                     )
                     if result.returncode == 0:
-                        logger.debug(f"Removed existing docker-gateway from {scope} scope")
-                        removed = True
-                        break
-                except Exception:
-                    continue
-            
-            if not removed:
-                logger.warning("docker-gateway not found in any scope, adding new entry")
+                        logger.debug("Removed existing docker-gateway")
+                    else:
+                        # Try with explicit scopes
+                        for scope in ["user", "project", "local"]:
+                            try:
+                                result = subprocess.run(
+                                    [claude.claude_path, "mcp", "remove", "--scope", scope, "docker-gateway"],
+                                    capture_output=True,
+                                    text=True,
+                                    timeout=30,
+                                )
+                                if result.returncode == 0:
+                                    logger.debug(f"Removed existing docker-gateway from {scope} scope")
+                                    break
+                            except Exception:
+                                continue
+                except Exception as e:
+                    logger.warning(f"Failed to remove docker-gateway: {e}")
+            else:
+                logger.debug("docker-gateway not found, will create new entry")
             
             # Only add gateway if we have servers to expose
             if server_list:

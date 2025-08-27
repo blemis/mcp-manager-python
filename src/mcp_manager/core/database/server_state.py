@@ -362,6 +362,11 @@ class MCPServerStateManager:
     # Server Management Methods
     def add_server(self, server_info: ServerInfo) -> bool:
         """Add or update a server in the registry."""
+        # NEVER allow docker-gateway to be added - it's infrastructure, not a user server
+        if server_info.name == "docker-gateway":
+            logger.debug("Rejected attempt to add docker-gateway to database (infrastructure)")
+            return False
+            
         try:
             with sqlite3.connect(str(self.db_path)) as conn:
                 now = datetime.now(timezone.utc).isoformat()

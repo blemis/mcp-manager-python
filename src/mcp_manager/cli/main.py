@@ -393,37 +393,13 @@ def list_cmd(scope: Optional[str], output_format: str):
             # Get Claude status from database (already synced)
             # No dynamic checks - database is the source of truth!
             
-            # Get real-time status using polymorphic handlers
-            real_status = {}
-            try:
-                async def get_real_status():
-                    result = {}
-                    for server in servers:
-                        try:
-                            status = await manager.handler_factory.get_server_status(server)
-                            result[server.name] = status
-                        except Exception as e:
-                            logger.debug(f"Failed to get status for {server.name}: {e}")
-                            result[server.name] = "error"
-                    return result
-                
-                real_status = asyncio.run(get_real_status())
-            except Exception as e:
-                logger.debug(f"Failed to get real-time status: {e}")
-                # Fall back to database status
-                real_status = {server.name: ("enabled" if server.enabled else "disabled") for server in servers}
-            
+            # Use database status - it's the source of truth!
             for server in servers:
-                # Use real-time status from handlers instead of database enabled flag
-                server_status = real_status.get(server.name, "unknown")
-                if server_status == "enabled":
+                # Database enabled flag is the source of truth
+                if server.enabled:
                     db_status = "✅ Enabled"
-                elif server_status == "disabled":
-                    db_status = "❌ Disabled"
-                elif server_status == "error":
-                    db_status = "⚠️ Error"
                 else:
-                    db_status = f"❓ {server_status.title()}"
+                    db_status = "❌ Disabled"
                 
                 # Use database claude_status - it's the source of truth!
                 claude_conn = server.claude_status
@@ -433,6 +409,12 @@ def list_cmd(scope: Optional[str], output_format: str):
                     claude_status_display = "✓ Connected"
                 elif claude_conn == "failed":
                     claude_status_display = "✗ Failed"
+                elif claude_conn == "disabled":
+                    claude_status_display = "-"  # Disabled servers show nothing
+                elif claude_conn == "error_still_in_gateway":
+                    claude_status_display = "🔴 ERROR: In Gateway"
+                elif claude_conn == "error_still_in_claude":
+                    claude_status_display = "🔴 ERROR: In Claude"
                 elif claude_conn == "not_in_claude":
                     claude_status_display = "⚠️ Not in Claude"
                 elif claude_conn == "not_enabled_in_dd":
@@ -1027,6 +1009,10 @@ def enable(name: str, scope: Optional[str], dry_run: bool):
                         
                         console.print("")
                         console.print(f"[bold green]🎯 Enabled {enabled_count} of {len(disabled_servers)} servers![/bold green]")
+                        
+                        # Sync Claude status after bulk enable operation
+                        console.print("[dim]Syncing Claude status...[/dim]")
+                        await manager.sync_claude_status()
                     else:
                         console.print("")
                         console.print("[dim]All servers are already enabled[/dim]")
@@ -1091,6 +1077,10 @@ def disable(name: str, scope: Optional[str], dry_run: bool):
                     console.print("[yellow]📭 No servers found to disable[/yellow]")
                     return
                 
+                # Debug: Show actual enabled status
+                for server in all_servers:
+                    logger.debug(f"Server {server.name}: enabled={server.enabled}, claude_status={server.claude_status}")
+                
                 enabled_servers = [server for server in all_servers if server.enabled]
                 already_disabled = [server for server in all_servers if not server.enabled]
                 
@@ -1126,6 +1116,10 @@ def disable(name: str, scope: Optional[str], dry_run: bool):
                         
                         console.print("")
                         console.print(f"[bold green]🎯 Disabled {disabled_count} of {len(enabled_servers)} servers![/bold green]")
+                        
+                        # Sync Claude status after bulk disable operation  
+                        console.print("[dim]Syncing Claude status...[/dim]")
+                        await manager.sync_claude_status()
                     else:
                         console.print("")
                         console.print("[dim]All servers are already disabled[/dim]")
